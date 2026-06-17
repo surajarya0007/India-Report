@@ -1,221 +1,551 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useNews } from '../hooks/useNews';
-import { NewsTicker } from '../components/NewsTicker';
-import { SentimentFilter } from '../components/SentimentFilter';
-import { ArticleCard } from '../components/ArticleCard';
-import { RefreshCw, Cpu, Database, Server, ShieldAlert } from 'lucide-react';
+import { Article } from '../lib/api';
+import { Search, Menu, X, Clock, RefreshCw, Cpu, ChevronRight } from 'lucide-react';
 
-export default function Home() {
-  const {
-    articles,
-    filteredArticles,
-    loading,
-    ingesting,
-    error,
-    sentimentFilter,
-    setSentimentFilter,
-    categoryFilter,
-    setCategoryFilter,
-    availableCategories,
-    refresh,
-    triggerIngest
-  } = useNews();
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+function timeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+}
 
-  const handleManualIngest = async () => {
-    setNotification(null);
-    const result = await triggerIngest();
-    if (result.success) {
-      setNotification({
-        message: `Successfully completed. Ingested: ${result.ingestedCount}, Skipped: ${result.skippedCount}, Errors: ${result.errorsCount}`,
-        type: 'success'
-      });
-    } else {
-      setNotification({
-        message: result.message || 'Ingestion pipeline execution failed.',
-        type: 'error'
-      });
-    }
-    // Clear notification after 5 seconds
-    setTimeout(() => {
-      setNotification(null);
-    }, 5000);
-  };
+const CAT_COLORS: Record<string, string> = {
+  Tech: '#1565c0', Business: '#2e7d32', Finance: '#6a1b9a',
+  Science: '#00695c', Health: '#ad1457', Entertainment: '#e65100',
+  Politics: '#b71c1c', India: '#c62828', World: '#37474f', Default: '#455a64',
+};
 
-  // Compute stats
-  const positiveCount = articles.filter(a => a.sentiment === 'Positive').length;
-  const positivePercentage = articles.length > 0 ? Math.round((positiveCount / articles.length) * 100) : 0;
+function catColor(cat?: string) {
+  return CAT_COLORS[cat || ''] || CAT_COLORS.Default;
+}
+
+// ─── Shared: Image placeholder ────────────────────────────────────────────────
+
+function ImgBox({ article, height = 180, style = {} }: { article: Article; height?: number; style?: React.CSSProperties }) {
+  const cat = article.categories?.[0];
+  const bg = catColor(cat);
+  return (
+    <div style={{
+      height,
+      background: `linear-gradient(140deg, ${bg}dd 0%, ${bg}77 100%)`,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      overflow: 'hidden', flexShrink: 0,
+      ...style,
+    }}>
+      <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 48, fontWeight: 900, lineHeight: 1, fontFamily: 'Georgia, serif' }}>IR</span>
+      <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 }}>{cat || 'News'}</span>
+    </div>
+  );
+}
+
+// ─── Shared: Category tag ─────────────────────────────────────────────────────
+
+function CatTag({ cat }: { cat?: string }) {
+  const label = cat || 'India';
+  return (
+    <span style={{
+      display: 'inline-block',
+      background: catColor(cat),
+      color: '#fff', fontSize: 9, fontWeight: 800,
+      letterSpacing: '0.12em', textTransform: 'uppercase',
+      padding: '2px 7px', borderRadius: 2, flexShrink: 0,
+    }}>
+      {label}
+    </span>
+  );
+}
+
+// ─── Breaking ticker ─────────────────────────────────────────────────────────
+
+function BreakingTicker({ articles }: { articles: Article[] }) {
+  const texts = articles.length > 0
+    ? [...articles, ...articles].map(a => a.headline)
+    : ['India Reports: AI-Powered News Platform — Updated Automatically Every 15 Minutes', 'Breaking coverage from India and the world, synthesized by Gemini 1.5 Flash', 'Live pipeline: Firecrawl extraction • Supabase storage • Upstash caching'];
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
-      {/* Header / Brand */}
-      <header className="border-b border-zinc-800 bg-zinc-900/30 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-orange-500 via-white to-emerald-600 flex items-center justify-center p-[2px] shadow-lg shadow-orange-500/10">
-              <div className="w-full h-full bg-zinc-950 rounded-[6px] flex items-center justify-center font-black text-sm text-transparent bg-clip-text bg-gradient-to-tr from-orange-400 via-zinc-100 to-emerald-400">
-                IR
-              </div>
-            </div>
-            <div>
-              <span className="font-extrabold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-zinc-100 to-emerald-500">
-                INDIA REPORTS
-              </span>
-              <span className="text-[10px] block font-mono text-zinc-500 tracking-widest uppercase">Autonomous News Platform</span>
-            </div>
+    <div style={{ display: 'flex', background: '#c62828', overflow: 'hidden', borderBottom: '1px solid #a81c1c' }}>
+      <div style={{
+        flexShrink: 0, display: 'flex', alignItems: 'center', padding: '0 14px',
+        background: '#7f0000', color: '#fff', fontSize: 10, fontWeight: 800,
+        letterSpacing: '0.15em', textTransform: 'uppercase', whiteSpace: 'nowrap',
+        borderRight: '2px solid #a81c1c', gap: 6, height: 36,
+      }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', display: 'inline-block' }} />
+        BREAKING
+      </div>
+      <div style={{ overflow: 'hidden', flex: 1 }}>
+        <div className="ticker-track" style={{ display: 'flex', width: 'max-content', alignItems: 'center', height: 36 }}>
+          {texts.map((t, i) => (
+            <span key={i} style={{ display: 'inline-flex', alignItems: 'center', color: '#fff', fontSize: 13, padding: '0 28px', whiteSpace: 'nowrap', gap: 10 }}>
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'inline-block', flexShrink: 0 }} />
+              {t}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Article Cards ────────────────────────────────────────────────────────────
+
+/** Large feature card — image on top, big headline */
+function FeatureCard({ article }: { article: Article }) {
+  const router = useRouter();
+  const [hov, setHov] = useState(false);
+  const firstSentence = article.summary?.split(/(?<=[.!?])\s+/)?.[0] ?? article.summary;
+
+  return (
+    <div
+      onClick={() => router.push(`/article/${article.id}`)}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ cursor: 'pointer' }}
+    >
+      <div style={{ overflow: 'hidden', borderRadius: 3 }}>
+        <ImgBox article={article} height={230} style={{ transform: hov ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.35s ease' }} />
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <CatTag cat={article.categories?.[0]} />
+        <h2 style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          fontSize: 22, fontWeight: 800, lineHeight: 1.25, marginTop: 8, marginBottom: 8,
+          color: hov ? '#c62828' : '#111', transition: 'color 0.2s',
+        }}>
+          {article.headline}
+        </h2>
+        <p style={{ fontSize: 13, color: '#555', lineHeight: 1.65, marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          {firstSentence}
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#999' }}>
+          <span style={{ fontWeight: 600, color: '#666' }}>{article.sourceName}</span>
+          <span>·</span>
+          <Clock style={{ width: 11, height: 11 }} />
+          <span>{timeAgo(article.createdAt)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Compact horizontal card — thumbnail left, text right */
+function CompactCard({ article, showDivider = true }: { article: Article; showDivider?: boolean }) {
+  const router = useRouter();
+  const [hov, setHov] = useState(false);
+  return (
+    <>
+      {showDivider && <div style={{ height: 1, background: '#f0f0f0', margin: '0' }} />}
+      <div
+        onClick={() => router.push(`/article/${article.id}`)}
+        onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+        style={{ display: 'flex', gap: 12, padding: '13px 0', cursor: 'pointer' }}
+      >
+        <div style={{ flexShrink: 0, width: 82, height: 62, borderRadius: 3, overflow: 'hidden' }}>
+          <ImgBox article={article} height={62} style={{ transform: hov ? 'scale(1.06)' : 'scale(1)', transition: 'transform 0.3s', width: 82 }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <CatTag cat={article.categories?.[0]} />
+          <h3 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 14, fontWeight: 700, lineHeight: 1.3, marginTop: 5,
+            color: hov ? '#c62828' : '#111', transition: 'color 0.2s',
+            display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>
+            {article.headline}
+          </h3>
+          <div style={{ fontSize: 11, color: '#bbb', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Clock style={{ width: 10, height: 10 }} />
+            {timeAgo(article.createdAt)}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** Grid card for section rows */
+function GridCard({ article }: { article: Article }) {
+  const router = useRouter();
+  const [hov, setHov] = useState(false);
+  const firstSentence = article.summary?.split(/(?<=[.!?])\s+/)?.[0] ?? article.summary;
+  return (
+    <div
+      onClick={() => router.push(`/article/${article.id}`)}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{
+        cursor: 'pointer', borderRadius: 4, overflow: 'hidden',
+        border: '1px solid #ebebeb',
+        boxShadow: hov ? '0 4px 18px rgba(0,0,0,0.09)' : '0 1px 4px rgba(0,0,0,0.04)',
+        transition: 'box-shadow 0.25s',
+      }}
+    >
+      <div style={{ overflow: 'hidden' }}>
+        <ImgBox article={article} height={140} style={{ transform: hov ? 'scale(1.05)' : 'scale(1)', transition: 'transform 0.35s' }} />
+      </div>
+      <div style={{ padding: '12px 13px 14px' }}>
+        <CatTag cat={article.categories?.[0]} />
+        <h3 style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          fontSize: 14, fontWeight: 700, lineHeight: 1.3, marginTop: 7, marginBottom: 5,
+          color: hov ? '#c62828' : '#111', transition: 'color 0.2s',
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>
+          {article.headline}
+        </h3>
+        <p style={{ fontSize: 12, color: '#777', lineHeight: 1.5, marginBottom: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          {firstSentence}
+        </p>
+        <div style={{ fontSize: 11, color: '#bbb', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontWeight: 600, color: '#999' }}>{article.sourceName}</span>
+          <span>·</span>
+          <Clock style={{ width: 10, height: 10 }} />
+          {timeAgo(article.createdAt)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Sidebar list item */
+function SidebarItem({ article, rank }: { article: Article; rank: number }) {
+  const router = useRouter();
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      onClick={() => router.push(`/article/${article.id}`)}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 0', borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}
+    >
+      <span style={{ fontSize: 20, fontWeight: 900, color: '#e8e8e8', fontFamily: 'Georgia, serif', lineHeight: 1, flexShrink: 0, minWidth: 26, textAlign: 'right' }}>
+        {String(rank).padStart(2, '0')}
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <CatTag cat={article.categories?.[0]} />
+        <h4 style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          fontSize: 13, fontWeight: 700, lineHeight: 1.35, marginTop: 5,
+          color: hov ? '#c62828' : '#111', transition: 'color 0.2s',
+          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>
+          {article.headline}
+        </h4>
+        <div style={{ fontSize: 11, color: '#bbb', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Clock style={{ width: 10, height: 10 }} />
+          {timeAgo(article.createdAt)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Section Header ────────────────────────────────────────────────────────────
+
+function SectionHead({ title }: { title: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid #111' }}>
+      <div style={{ width: 4, height: 20, background: '#c62828', borderRadius: 2, flexShrink: 0 }} />
+      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 900, color: '#111', letterSpacing: '-0.01em' }}>{title}</h2>
+      <div style={{ flex: 1, height: 1, background: '#ebebeb', marginLeft: 4 }} />
+    </div>
+  );
+}
+
+// ─── Navigation categories ────────────────────────────────────────────────────
+
+const NAV_ITEMS = ['Home', 'India', 'World', 'Business', 'Tech', 'Science', 'Finance', 'Health', 'Entertainment', 'Politics'];
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export default function Home() {
+  const { articles, loading, ingesting, refresh, triggerIngest } = useNews();
+  const [activeNav, setActiveNav] = useState('Home');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [now, setNow] = useState(new Date());
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Filter articles by category / search
+  const filtered = useMemo(() => {
+    let list = articles;
+    const cat = activeNav === 'Home' ? null : activeNav;
+    if (cat) list = list.filter(a => a.categories?.includes(cat));
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(a => a.headline.toLowerCase().includes(q) || a.summary.toLowerCase().includes(q));
+    }
+    return list;
+  }, [articles, activeNav, searchQuery]);
+
+  const handleIngest = async () => {
+    const res = await triggerIngest();
+    setToast({ msg: res.success ? `✓ Added ${res.ingestedCount} new stories` : '✗ ' + res.message, ok: res.success });
+    setTimeout(() => setToast(null), 5000);
+  };
+
+  // Layout slots
+  const leftFeed = filtered.slice(0, 5);     // Left sidebar: 5 compact items
+  const centerHero = filtered[0];             // Center top: big hero
+  const centerGrid = filtered.slice(1, 5);   // Center: 4-card grid below hero
+  const rightFeed = filtered.slice(5, 11);   // Right sidebar: 6 latest items
+
+  const sectionTitle = activeNav === 'Home' ? 'More Stories' : activeNav;
+  const moreStories = filtered.slice(filtered.length > 9 ? 9 : filtered.length);
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#fff', color: '#111', fontFamily: "'Inter', Arial, sans-serif" }}>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 16, right: 16, zIndex: 9999,
+          background: toast.ok ? '#14532d' : '#7f1d1d',
+          color: '#fff', padding: '10px 18px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.2)', animation: 'fadeIn 0.2s ease',
+        }}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* ── BBC-style Top Bar ─────────────────────────────────────────────────── */}
+      <header style={{ background: '#fff', borderBottom: '1px solid #e8e8e8' }}>
+        {/* Top strip: hamburger | logo center | actions right */}
+        <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
+
+          {/* Left: hamburger + search */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 3, display: 'flex', alignItems: 'center', gap: 6, color: '#111' }}
+              title="Menu"
+            >
+              {menuOpen ? <X style={{ width: 20, height: 20 }} /> : <Menu style={{ width: 20, height: 20 }} />}
+            </button>
+            <button
+              onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) setSearchQuery(''); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 3, color: '#111', display: 'flex' }}
+              title="Search"
+            >
+              {searchOpen ? <X style={{ width: 18, height: 18 }} /> : <Search style={{ width: 18, height: 18 }} />}
+            </button>
+            {searchOpen && (
+              <input
+                autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search articles..."
+                style={{ border: '1px solid #ddd', borderRadius: 3, padding: '5px 12px', fontSize: 13, width: 220, outline: 'none', marginLeft: 4 }}
+              />
+            )}
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Center: Logo */}
+          <a href="/" style={{ textDecoration: 'none', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              {['I', 'R'].map((l, i) => (
+                <span key={i} style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 32, height: 32, background: '#111', color: '#fff',
+                  fontWeight: 900, fontSize: 18, fontFamily: 'Georgia, serif',
+                  letterSpacing: '-0.02em',
+                }}>{l}</span>
+              ))}
+              <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 22, fontWeight: 900, letterSpacing: '-0.03em', color: '#111', marginLeft: 8 }}>
+                INDIA REPORTS
+              </span>
+            </div>
+          </a>
+
+          {/* Right: date + feed button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 11, color: '#999', display: 'none' }} className="date-hide">
+              {now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
             <button
-              onClick={() => refresh()}
-              disabled={loading || ingesting}
-              className="p-2 text-zinc-400 hover:text-zinc-100 border border-zinc-800 hover:border-zinc-700 bg-zinc-900/50 hover:bg-zinc-900 rounded-lg transition-all disabled:opacity-50 cursor-pointer"
-              title="Refresh News Feed"
+              onClick={handleIngest} disabled={ingesting}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, border: '2px solid #111',
+                background: ingesting ? '#f5f5f5' : '#111', color: ingesting ? '#999' : '#fff',
+                borderRadius: 3, padding: '6px 14px', fontSize: 11, fontWeight: 700,
+                cursor: ingesting ? 'not-allowed' : 'pointer', letterSpacing: '0.04em',
+                transition: 'all 0.2s', whiteSpace: 'nowrap',
+              }}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <Cpu style={{ width: 11, height: 11 }} />
+              {ingesting ? 'Updating…' : 'Update Feed'}
             </button>
-            <button
-              onClick={handleManualIngest}
-              disabled={loading || ingesting}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-600 to-emerald-600 hover:from-orange-500 hover:to-emerald-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-50 cursor-pointer"
-            >
-              <Cpu className={`w-4 h-4 ${ingesting ? 'animate-pulse' : ''}`} />
-              {ingesting ? 'Running Ingestion...' : 'Trigger Pipeline'}
+            <button onClick={refresh} disabled={loading} title="Refresh"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#777', display: 'flex', padding: 4 }}>
+              <RefreshCw style={{ width: 14, height: 14 }} className={loading ? 'animate-spin' : ''} />
             </button>
+          </div>
+        </div>
+
+        {/* Nav bar — centered */}
+        <div style={{ borderTop: '1px solid #f0f0f0' }}>
+          <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 0 }}>
+            {NAV_ITEMS.map(item => {
+              const active = item === activeNav;
+              return (
+                <button key={item} onClick={() => setActiveNav(item)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '10px 14px', fontSize: 13, fontWeight: active ? 700 : 500,
+                    color: active ? '#111' : '#444',
+                    borderBottom: active ? '2.5px solid #111' : '2.5px solid transparent',
+                    whiteSpace: 'nowrap', transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#111'; }}
+                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#444'; }}
+                >
+                  {item}
+                </button>
+              );
+            })}
           </div>
         </div>
       </header>
 
-      {/* Breaking News Marquee */}
-      <NewsTicker articles={articles} />
+      {/* Breaking Ticker */}
+      <BreakingTicker articles={articles.slice(0, 6)} />
 
-      {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-grow w-full">
-        {/* Banner/Hero Section */}
-        <div className="mb-10 text-center md:text-left relative overflow-hidden bg-gradient-to-br from-zinc-900/50 via-zinc-900/10 to-transparent p-6 sm:p-8 rounded-2xl border border-zinc-800/60">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-10 -left-10 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-          
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3">
-            Autonomous News Intelligence
-          </h1>
-          <p className="text-zinc-400 max-w-2xl text-sm sm:text-base leading-relaxed mb-6">
-            Monitored, scraped, synthesized, and categorized entirely by AI. Updated automatically every 15 minutes. Powered by Firecrawl extraction, Gemini 1.5 Flash structured synthesis, and Upstash Redis caching.
-          </p>
+      {/* ── Main 3-column layout ───────────────────────────────────────────────── */}
+      <main style={{ maxWidth: 1260, margin: '0 auto', padding: '24px 20px' }}>
 
-          {/* Stats Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-zinc-800/80">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
-                <Database className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-xs text-zinc-500 font-medium block">Total Articles</span>
-                <span className="text-lg font-bold text-zinc-200">{articles.length}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
-                <Cpu className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-xs text-zinc-500 font-medium block">Positive Sentiment</span>
-                <span className="text-lg font-bold text-zinc-200">{positivePercentage}%</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-500/10 rounded-lg text-orange-400">
-                <Server className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-xs text-zinc-500 font-medium block">Active Sources</span>
-                <span className="text-lg font-bold text-zinc-200">
-                  {new Set(articles.map(a => a.sourceName)).size}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-pink-500/10 rounded-lg text-pink-400">
-                <div className="w-5 h-5 flex items-center justify-center font-bold text-xs">OK</div>
-              </div>
-              <div>
-                <span className="text-xs text-zinc-500 font-medium block">Pipeline Status</span>
-                <span className="text-lg font-bold text-emerald-400 animate-pulse flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                  Live
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Notifications */}
-        {notification && (
-          <div className={`p-4 rounded-xl border mb-6 flex items-start gap-3 transition-all animate-in fade-in slide-in-from-top-4 duration-300 ${
-            notification.type === 'success' 
-              ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-400' 
-              : 'bg-rose-950/30 border-rose-500/30 text-rose-400'
-          }`}>
-            <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold">{notification.type === 'success' ? 'Ingestion Success' : 'Pipeline Alert'}</p>
-              <p className="text-xs opacity-90">{notification.message}</p>
-            </div>
+        {/* Loading */}
+        {loading && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0', gap: 12 }}>
+            <div style={{ width: 36, height: 36, border: '3px solid #c62828', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <span style={{ fontSize: 14, color: '#888' }}>Loading latest reports…</span>
           </div>
         )}
 
-        {error && (
-          <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-950/30 text-rose-400 mb-6 flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold">Feed Error</p>
-              <p className="text-xs opacity-90">{error}</p>
-            </div>
+        {/* No articles */}
+        {!loading && filtered.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '80px 0' }}>
+            <p style={{ fontSize: 16, color: '#888', fontWeight: 600 }}>No stories found</p>
+            <p style={{ fontSize: 13, color: '#bbb', marginTop: 6 }}>{searchQuery ? `No results for "${searchQuery}"` : 'Try another category or refresh the feed.'}</p>
           </div>
         )}
 
-        {/* Interactive Filter Toggles */}
-        <SentimentFilter
-          sentimentFilter={sentimentFilter}
-          setSentimentFilter={setSentimentFilter}
-          categoryFilter={categoryFilter}
-          setCategoryFilter={setCategoryFilter}
-          availableCategories={availableCategories}
-        />
+        {!loading && filtered.length > 0 && (
+          <>
+            {/* 3-column grid: LEFT (240px) | CENTER (flex) | RIGHT (240px) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: '0 24px', marginBottom: 36 }}>
 
-        {/* News Grid */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
-            <span className="text-zinc-500 text-sm font-medium">Fetching reports from database...</span>
-          </div>
-        ) : filteredArticles.length === 0 ? (
-          <div className="text-center py-20 border border-zinc-800/50 rounded-2xl bg-zinc-900/10">
-            <Cpu className="w-10 h-10 mx-auto text-zinc-600 mb-3" />
-            <h3 className="text-base font-bold text-zinc-400 mb-1">No articles match your criteria</h3>
-            <p className="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed">
-              {sentimentFilter === 'Positive' 
-                ? 'Try turning off "Only Positive News" or click "Trigger Pipeline" to ingest fresh articles.'
-                : 'Try selecting another category or click "Trigger Pipeline" to scan the web.'}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredArticles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
-            ))}
-          </div>
+              {/* ── LEFT COLUMN ────────────────────────────────────────────── */}
+              <aside style={{ borderRight: '1px solid #ebebeb', paddingRight: 24 }}>
+                <div style={{ borderBottom: '2px solid #111', paddingBottom: 8, marginBottom: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#111' }}>Top Stories</span>
+                </div>
+                {leftFeed.map((a, i) => <CompactCard key={a.id} article={a} showDivider={i > 0} />)}
+              </aside>
+
+              {/* ── CENTER COLUMN ──────────────────────────────────────────── */}
+              <div style={{ borderRight: '1px solid #ebebeb', paddingRight: 24 }}>
+                {/* Hero */}
+                {centerHero && (
+                  <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid #ebebeb' }}>
+                    <FeatureCard article={centerHero} />
+                  </div>
+                )}
+                {/* 2×2 card grid */}
+                {centerGrid.length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    {centerGrid.map(a => <GridCard key={a.id} article={a} />)}
+                  </div>
+                )}
+              </div>
+
+              {/* ── RIGHT COLUMN ───────────────────────────────────────────── */}
+              <aside style={{ paddingLeft: 0 }}>
+                <div style={{ borderBottom: '2px solid #111', paddingBottom: 8, marginBottom: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#111' }}>Latest News</span>
+                </div>
+                {rightFeed.map((a, i) => <SidebarItem key={a.id} article={a} rank={i + 1} />)}
+              </aside>
+            </div>
+
+            {/* ── Section row: more stories ─────────────────────────────────── */}
+            {filtered.slice(9).length > 0 && (
+              <section style={{ marginBottom: 36 }}>
+                <SectionHead title={sectionTitle} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                  {filtered.slice(9, 13).map(a => <GridCard key={a.id} article={a} />)}
+                </div>
+              </section>
+            )}
+
+            {/* ── Extra stories ─────────────────────────────────────────────── */}
+            {filtered.slice(13).length > 0 && (
+              <section style={{ marginBottom: 36 }}>
+                <SectionHead title="All Reports" />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                  {filtered.slice(13).map(a => <GridCard key={a.id} article={a} />)}
+                </div>
+              </section>
+            )}
+          </>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-zinc-900 bg-zinc-950/80 py-8 text-center text-xs text-zinc-600">
-        <p>© 2026 India Reports. Driven by Autonomous AI Agents. All Rights Reserved.</p>
-        <p className="mt-1 text-zinc-700 font-mono">Status: Connected to Supabase & Redis Cache</p>
+      {/* ── Footer ────────────────────────────────────────────────────────────── */}
+      <footer style={{ background: '#111', color: '#ccc', marginTop: 20, borderTop: '3px solid #c62828' }}>
+        <div style={{ maxWidth: 1260, margin: '0 auto', padding: '40px 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 40, marginBottom: 32 }}>
+            <div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: '#fff', marginBottom: 12, letterSpacing: '-0.02em' }}>
+                INDIA REPORTS
+              </div>
+              <p style={{ fontSize: 13, lineHeight: 1.75, color: '#777', maxWidth: 340 }}>
+                An autonomous AI-powered news platform. Every 15 minutes, our pipeline ingests the latest stories, extracts full text via Firecrawl, and synthesizes structured summaries using Gemini 1.5 Flash.
+              </p>
+            </div>
+            <div>
+              <h4 style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#fff', marginBottom: 16 }}>Sections</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {NAV_ITEMS.filter(n => n !== 'Home').map(n => (
+                  <button key={n} onClick={() => { setActiveNav(n); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    style={{ background: 'none', border: 'none', color: '#888', fontSize: 13, cursor: 'pointer', textAlign: 'left', padding: 0 }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#888')}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h4 style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#fff', marginBottom: 16 }}>Powered By</h4>
+              {['Gemini 1.5 Flash · AI', 'Firecrawl · Scraping', 'Supabase · Database', 'Upstash Redis · Cache', 'Currents API · News', 'Next.js · Frontend'].map(t => (
+                <div key={t} style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>{t}</div>
+              ))}
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #222', paddingTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: '#555' }}>
+            <span>© 2026 India Reports. All Rights Reserved.</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+              Pipeline Active — Updates every 15 minutes
+            </span>
+          </div>
+        </div>
       </footer>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   );
 }

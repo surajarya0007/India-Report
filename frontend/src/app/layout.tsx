@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "India Reports - Autonomous News Intelligence",
-  description: "An autonomous, self-updating news platform tracking tech and business reports with AI-synthesized summaries.",
+  title: "India Reports - India's Autonomous News Intelligence Platform",
+  description: "India Reports delivers AI-synthesized news covering India, World, Business, Tech, Science, Health and more. Updated every 15 minutes.",
 };
 
 export default function RootLayout({
@@ -23,11 +23,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   );
 }
+

@@ -70,3 +70,18 @@ export async function triggerIngest(): Promise<IngestResponse> {
     };
   }
 }
+
+/**
+ * Fetch a single article by its ID.
+ */
+export async function fetchArticleById(id: string): Promise<Article | null> {
+  try {
+    const response = await fetch(`${API_URL}/api/news/${id}`, { cache: 'no-store' });
+    if (!response.ok) return null;
+    const res = await response.json();
+    return res.success ? res.data : null;
+  } catch (error) {
+    console.error('[API] fetchArticleById error:', error);
+    return null;
+  }
+}
