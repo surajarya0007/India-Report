@@ -26,7 +26,7 @@ export interface IngestTriggerResponse {
   message: string;
 }
 
-export type IngestJobStatus = 'idle' | 'processing' | 'complete' | 'error';
+export type IngestJobStatus = 'idle' | 'processing' | 'scraping' | 'complete' | 'error';
 
 export interface IngestStatusResponse {
   success: boolean;
@@ -192,6 +192,24 @@ export async function fetchArticleById(id: string): Promise<Article | null> {
     return res.success ? res.data : null;
   } catch (error) {
     console.error('[API] fetchArticleById error:', error);
+    return null;
+  }
+}
+
+/**
+ * Triggers on-demand scraping and AI enrichment for a single article stub.
+ */
+export async function enrichArticleById(id: string): Promise<Article | null> {
+  try {
+    const response = await fetch(`${API_URL}/api/news/${id}/enrich`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) return null;
+    const res = await response.json();
+    return res.success ? res.data : null;
+  } catch (error) {
+    console.error('[API] enrichArticleById error:', error);
     return null;
   }
 }

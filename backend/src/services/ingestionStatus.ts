@@ -1,4 +1,4 @@
-export type IngestionJobStatus = 'idle' | 'processing' | 'complete' | 'error';
+export type IngestionJobStatus = 'idle' | 'processing' | 'scraping' | 'complete' | 'error';
 
 export interface IngestionStatus {
   status: IngestionJobStatus;
@@ -21,7 +21,7 @@ export function getIngestionStatus(): IngestionStatus {
 }
 
 export function isIngestionRunning(): boolean {
-  return currentStatus.status === 'processing';
+  return currentStatus.status === 'processing' || currentStatus.status === 'scraping';
 }
 
 export function markIngestionStarted(): void {
@@ -29,6 +29,14 @@ export function markIngestionStarted(): void {
     status: 'processing',
     message: 'Ingestion pipeline is running.',
     startedAt: new Date().toISOString(),
+  };
+}
+
+export function markIngestionScraping(): void {
+  currentStatus = {
+    ...currentStatus,
+    status: 'scraping',
+    message: 'Ingestion pipeline: scraping article details in background.',
   };
 }
 

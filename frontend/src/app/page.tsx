@@ -55,6 +55,7 @@ function ImgBox({ article, height = 180, style = {} }: { article: Article; heigh
             objectFit: 'cover',
             display: 'block',
           }}
+          className="img-fade-in"
         />
       </div>
     );
@@ -141,7 +142,7 @@ function BreakingTicker({ articles }: { articles: Article[] }) {
 // ─── Article Cards ────────────────────────────────────────────────────────────
 
 /** Large feature card — image on top, big headline */
-function FeatureCard({ article }: { article: Article }) {
+function FeatureCard({ article, index = 0 }: { article: Article; index?: number }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
   const firstSentence = article.summary?.split(/(?<=[.!?])\s+/)?.[0] ?? article.summary;
@@ -150,7 +151,8 @@ function FeatureCard({ article }: { article: Article }) {
     <div
       onClick={() => router.push(`/article/${article.id}`)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ cursor: 'pointer' }}
+      className="card-entrance"
+      style={{ cursor: 'pointer', animationDelay: `${index * 50}ms` }}
     >
       <div style={{ overflow: 'hidden', borderRadius: 3 }}>
         <ImgBox article={article} height={230} style={{ transform: hov ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.35s ease' }} />
@@ -182,7 +184,7 @@ function FeatureCard({ article }: { article: Article }) {
 }
 
 /** Compact horizontal card — thumbnail left, text right */
-function CompactCard({ article, showDivider = true }: { article: Article; showDivider?: boolean }) {
+function CompactCard({ article, showDivider = true, index = 0 }: { article: Article; showDivider?: boolean; index?: number }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
   return (
@@ -191,7 +193,11 @@ function CompactCard({ article, showDivider = true }: { article: Article; showDi
       <div
         onClick={() => router.push(`/article/${article.id}`)}
         onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-        style={{ display: 'flex', gap: 12, padding: '13px 0', cursor: 'pointer' }}
+        className="card-entrance"
+        style={{
+          display: 'flex', gap: 12, padding: '13px 0', cursor: 'pointer',
+          animationDelay: `${index * 50}ms`,
+        }}
       >
         <div style={{ flexShrink: 0, width: 82, height: 62, borderRadius: 3, overflow: 'hidden' }}>
           <ImgBox article={article} height={62} style={{ transform: hov ? 'scale(1.06)' : 'scale(1)', transition: 'transform 0.3s', width: 82 }} />
@@ -220,7 +226,7 @@ function CompactCard({ article, showDivider = true }: { article: Article; showDi
 }
 
 /** Grid card for section rows */
-function GridCard({ article }: { article: Article }) {
+function GridCard({ article, index = 0 }: { article: Article; index?: number }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
   const firstSentence = article.summary?.split(/(?<=[.!?])\s+/)?.[0] ?? article.summary;
@@ -228,11 +234,13 @@ function GridCard({ article }: { article: Article }) {
     <div
       onClick={() => router.push(`/article/${article.id}`)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      className="card-entrance"
       style={{
         cursor: 'pointer', borderRadius: 4, overflow: 'hidden',
         border: '1px solid #ebebeb',
         boxShadow: hov ? '0 4px 18px rgba(0,0,0,0.09)' : '0 1px 4px rgba(0,0,0,0.04)',
         transition: 'box-shadow 0.25s',
+        animationDelay: `${index * 50}ms`,
       }}
     >
       <div style={{ overflow: 'hidden' }}>
@@ -266,14 +274,19 @@ function GridCard({ article }: { article: Article }) {
 }
 
 /** Sidebar list item */
-function SidebarItem({ article, rank }: { article: Article; rank: number }) {
+function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: number; index?: number }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
   return (
     <div
       onClick={() => router.push(`/article/${article.id}`)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 0', borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}
+      className="card-entrance"
+      style={{
+        display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 0',
+        borderBottom: '1px solid #f2f2f2', cursor: 'pointer',
+        animationDelay: `${index * 50}ms`,
+      }}
     >
       <span style={{ fontSize: 20, fontWeight: 900, color: '#e8e8e8', fontFamily: 'Georgia, serif', lineHeight: 1, flexShrink: 0, minWidth: 26, textAlign: 'right' }}>
         {String(rank).padStart(2, '0')}
@@ -373,13 +386,12 @@ export default function Home() {
   };
 
   // Layout slots
-  const leftFeed = filtered.slice(0, 5);     // Left sidebar: 5 compact items
-  const centerHero = filtered[0];             // Center top: big hero
-  const centerGrid = filtered.slice(1, 5);   // Center: 4-card grid below hero
-  const rightFeed = filtered.slice(5, 11);   // Right sidebar: 6 latest items
+  const centerHero = filtered[0];             // Center top: big hero (1 item)
+  const centerGrid = filtered.slice(1, 5);   // Center: 4-card grid below hero (4 items)
+  const leftFeed = filtered.slice(5, 9);     // Left sidebar: 4 compact items (4 items)
+  const rightFeed = filtered.slice(9, 15);   // Right sidebar: 6 latest items (6 items)
 
   const sectionTitle = activeSearch ? `Results for "${activeSearch}"` : activeNav === 'Home' ? 'More Stories' : activeNav;
-  const moreStories = filtered.slice(filtered.length > 9 ? 9 : filtered.length);
 
   return (
     <div style={{ minHeight: '100vh', background: '#fff', color: '#111', fontFamily: "'Inter', Arial, sans-serif" }}>
@@ -567,7 +579,7 @@ export default function Home() {
                 <div style={{ borderBottom: '2px solid #111', paddingBottom: 8, marginBottom: 0 }}>
                   <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#111' }}>Top Stories</span>
                 </div>
-                {leftFeed.map((a, i) => <CompactCard key={a.id} article={a} showDivider={i > 0} />)}
+                {leftFeed.map((a, i) => <CompactCard key={a.id} article={a} showDivider={i > 0} index={i} />)}
               </aside>
 
               {/* ── CENTER COLUMN ──────────────────────────────────────────── */}
@@ -575,13 +587,13 @@ export default function Home() {
                 {/* Hero */}
                 {centerHero && (
                   <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid #ebebeb' }}>
-                    <FeatureCard article={centerHero} />
+                    <FeatureCard article={centerHero} index={0} />
                   </div>
                 )}
                 {/* 2×2 card grid */}
                 {centerGrid.length > 0 && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    {centerGrid.map(a => <GridCard key={a.id} article={a} />)}
+                    {centerGrid.map((a, i) => <GridCard key={a.id} article={a} index={i + 1} />)}
                   </div>
                 )}
               </div>
@@ -591,26 +603,26 @@ export default function Home() {
                 <div style={{ borderBottom: '2px solid #111', paddingBottom: 8, marginBottom: 0 }}>
                   <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#111' }}>Latest News</span>
                 </div>
-                {rightFeed.map((a, i) => <SidebarItem key={a.id} article={a} rank={i + 1} />)}
+                {rightFeed.map((a, i) => <SidebarItem key={a.id} article={a} rank={i + 1} index={i} />)}
               </aside>
             </div>
 
             {/* ── Section row: more stories ─────────────────────────────────── */}
-            {filtered.slice(9).length > 0 && (
+            {filtered.slice(11).length > 0 && (
               <section style={{ marginBottom: 36 }}>
                 <SectionHead title={sectionTitle} />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-                  {filtered.slice(9, 13).map(a => <GridCard key={a.id} article={a} />)}
+                  {filtered.slice(11, 15).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
                 </div>
               </section>
             )}
 
             {/* ── Extra stories ─────────────────────────────────────────────── */}
-            {filtered.slice(13).length > 0 && (
+            {filtered.slice(15).length > 0 && (
               <section style={{ marginBottom: 36 }}>
                 <SectionHead title="All Reports" />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-                  {filtered.slice(13).map(a => <GridCard key={a.id} article={a} />)}
+                  {filtered.slice(15).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
                 </div>
               </section>
             )}
@@ -664,6 +676,26 @@ export default function Home() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes cardEntrance {
+          from {
+            opacity: 0;
+            transform: translateY(15px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .card-entrance {
+          animation: cardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        @keyframes imageFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .img-fade-in {
+          animation: imageFadeIn 0.5s ease-out forwards;
+        }
       `}</style>
     </div>
   );

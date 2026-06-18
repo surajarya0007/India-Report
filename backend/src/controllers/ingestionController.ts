@@ -4,7 +4,7 @@ import redis from '../config/redis';
 import { fetchLatestNews } from '../services/newsService';
 import { scrapeArticle } from '../services/scraperService';
 import { synthesizeArticle } from '../services/aiService';
-import { sanitizeImageUrl } from '../utils/imageUtils';
+import { sanitizeImageUrl, extractOgImageFromUrl } from '../utils/imageUtils';
 import {
   GEMINI_INPUT_MAX_CHARS,
   GEMINI_RPM_DELAY_BY_MODEL,
@@ -17,6 +17,7 @@ import {
   markIngestionComplete,
   markIngestionError,
   markIngestionStarted,
+  markIngestionScraping,
 } from '../services/ingestionStatus';
 
 interface PipelineContext {
@@ -98,7 +99,11 @@ function mapCategoryToCacheKey(category?: string): string | undefined {
 /**
  * Invalidate only the Redis keys affected by this ingest run.
  */
-async function invalidateIngestionCache(ctx: PipelineContext, hadIngest: boolean): Promise<void> {
+async function invalidateIngestionCache(
+  ctx: PipelineContext,
+  hadIngest: boolean,
+  additionalCategories?: string[]
+): Promise<void> {
   if (!hadIngest || !redis) return;
 
   const keysToDelete = new Set<string>(['homepage:news:all']);
@@ -114,6 +119,12 @@ async function invalidateIngestionCache(ctx: PipelineContext, hadIngest: boolean
 
   if (ctx.targetSearch) {
     keysToDelete.add(`homepage:news:search:${ctx.targetSearch.toLowerCase()}`);
+  }
+
+  if (additionalCategories) {
+    additionalCategories.forEach((cat) => {
+      keysToDelete.add(`homepage:news:${cat}`);
+    });
   }
 
   const keys = [...keysToDelete];
@@ -171,7 +182,12 @@ export async function runIngestionPipeline(
   category?: string,
   country?: string,
   search?: string
-): Promise<{ ingestedCount: number; skippedCount: number; errorsCount: number }> {
+): Promise<{
+  ingestedCount: number;
+  skippedCount: number;
+  errorsCount: number;
+  createdArticles?: any[];
+}> {
   let ingestedCount = 0;
   let skippedCount = 0;
   let errorsCount = 0;
@@ -214,117 +230,66 @@ export async function runIngestionPipeline(
       return { ingestedCount, skippedCount, errorsCount };
     }
 
-    // Phase 1: save RSS stubs immediately
-    const stubRecords = await Promise.all(
-      newArticles.map((raw) =>
-        prisma.article.create({
-          data: {
-            sourceUrl: raw.url,
-            headline: raw.title.substring(0, 100),
-            summary: raw.description || raw.title,
-            content: raw.description || null,
-            sentiment: 'Neutral',
-            categories: buildStubCategories(raw, ctx),
-            sourceName: raw.source,
-            imageUrl: null,
-            enrichmentStatus: 'pending',
-          },
-        })
-      )
-    );
+    // Phase 1: save RSS stubs immediately (scraper happens in background later)
+    const stubRecords = [];
+    for (const raw of newArticles) {
+      const created = await prisma.article.create({
+        data: {
+          sourceUrl: raw.realUrl || raw.url,
+          headline: raw.title.substring(0, 100),
+          summary: raw.description || raw.title,
+          content: null,
+          rawContent: null,
+          sentiment: 'Neutral',
+          categories: buildStubCategories(raw, ctx),
+          sourceName: raw.source,
+          imageUrl: null,
+          enrichmentStatus: 'pending',
+        },
+      });
+      stubRecords.push(created);
+    }
 
     ingestedCount = stubRecords.length;
     console.log(`[Pipeline] Saved ${stubRecords.length} stub articles (pending enrichment).`);
     await invalidateIngestionCache(ctx, true);
-
-    // Phase 2: scrape in parallel batches, enrich sequentially with Gemini
-    type EnrichTarget = { raw: (typeof newArticles)[0]; articleId: string };
-
-    const enrichTargets: EnrichTarget[] = newArticles.map((raw, i) => ({
-      raw,
-      articleId: stubRecords[i].id,
-    }));
-
-    const scrapeResults = await runWithConcurrency(enrichTargets, SCRAPE_CONCURRENCY, async ({ raw }) => {
-      let rawContent = '';
-      let articleImageUrl: string | undefined;
-      const scrapeUrl = raw.realUrl || raw.url;
-
-      try {
-        const scrapeResult = await scrapeArticle(scrapeUrl, raw.title);
-        rawContent = scrapeResult.markdown;
-        articleImageUrl = scrapeResult.imageUrl;
-      } catch (scrapeError) {
-        console.warn(`[Pipeline] Scraper failed for ${scrapeUrl}. Falling back to description:`, scrapeError);
-        rawContent = raw.description || raw.title;
-      }
-
-      return { rawContent, articleImageUrl };
-    });
-
-    let lastModelDelay = GEMINI_RPM_DELAY_MS;
-
-    for (let i = 0; i < enrichTargets.length; i++) {
-      const { raw, articleId } = enrichTargets[i];
-      const { rawContent, articleImageUrl } = scrapeResults[i];
-
-      try {
-        console.log(`[Pipeline] Enriching article: "${raw.title}"`);
-
-        const trimmedContent = rawContent.slice(0, GEMINI_INPUT_MAX_CHARS);
-
-        let synthesis;
-        try {
-          const result = await synthesizeArticle(raw.title, trimmedContent);
-          synthesis = result;
-          if (result.modelUsed) {
-            lastModelDelay = GEMINI_RPM_DELAY_BY_MODEL[result.modelUsed] ?? GEMINI_RPM_DELAY_MS;
-          }
-        } catch (geminiError) {
-          console.warn(`[Pipeline] Gemini synthesis failed for "${raw.title}". Falling back to raw metadata:`, geminiError);
-          synthesis = buildFallbackSynthesis(raw, rawContent, ctx);
-        }
-
-        const finalCategories = applyFilterCategories(synthesis.categories, ctx);
-        const cleanedImageUrl = sanitizeImageUrl(articleImageUrl);
-        if (articleImageUrl && !cleanedImageUrl) {
-          console.log(`[Pipeline] Rejected Google News placeholder image for "${raw.title}"`);
-        }
-
-        await prisma.article.update({
-          where: { id: articleId },
-          data: {
-            headline: synthesis.headline,
-            summary: synthesis.summary,
-            content: synthesis.content,
-            sentiment: synthesis.sentiment,
-            categories: finalCategories,
-            imageUrl: cleanedImageUrl,
-            enrichmentStatus: 'complete',
-          },
-        });
-
-        console.log(`[Pipeline] Enriched: "${synthesis.headline}"`);
-
-        if (i < enrichTargets.length - 1) {
-          console.log(`[Pipeline] Waiting ${lastModelDelay / 1000}s before next article (RPM pacing)...`);
-          await new Promise((resolve) => setTimeout(resolve, lastModelDelay));
-        }
-      } catch (err) {
-        console.error(`[Pipeline] Error enriching article at ${raw.url}:`, err);
-        errorsCount++;
-      }
-    }
-
-    await invalidateIngestionCache(ctx, ingestedCount > 0);
-
-    console.log(`[Pipeline] Pipeline finished. Ingested: ${ingestedCount}, Skipped: ${skippedCount}, Errors: ${errorsCount}`);
+    return { ingestedCount, skippedCount, errorsCount, createdArticles: stubRecords };
   } catch (error) {
     console.error('[Pipeline] Critical error during ingestion pipeline execution:', error);
     throw error;
   }
+}
 
-  return { ingestedCount, skippedCount, errorsCount };
+/**
+ * Scrapes saved articles in the background and populates their rawContent and imageUrl fields.
+ */
+async function scrapeArticlesInBackground(articles: any[], ctx: PipelineContext) {
+  console.log(`[Pipeline Background] Starting background scraping for ${articles.length} articles...`);
+
+  await runWithConcurrency(articles, SCRAPE_CONCURRENCY, async (article) => {
+    try {
+      console.log(`[Pipeline Background] Crawling article: "${article.headline}"`);
+      const scrapeResult = await scrapeArticle(article.sourceUrl, article.headline);
+      const cleanedImageUrl = sanitizeImageUrl(scrapeResult.imageUrl) || null;
+
+      const updatedArticle = await prisma.article.update({
+        where: { id: article.id },
+        data: {
+          rawContent: scrapeResult.markdown,
+          imageUrl: cleanedImageUrl,
+        },
+      });
+
+      console.log(`[Pipeline Background] Scraped & saved background details for: "${article.headline}"`);
+      // Invalidate cache immediately for this article's categories
+      await invalidateIngestionCache(ctx, true, updatedArticle.categories);
+    } catch (err) {
+      console.error(`[Pipeline Background] Failed to scrape background details for ${article.sourceUrl}:`, err);
+    }
+  });
+
+  console.log(`[Pipeline Background] Completed background scraping. Invalidating caches.`);
+  await invalidateIngestionCache(ctx, true);
 }
 
 /**
@@ -362,7 +327,38 @@ export async function triggerIngestion(req: Request, res: Response) {
 
   void runIngestionPipeline(category, country, search)
     .then((result) => {
-      markIngestionComplete(result);
+      if (result.createdArticles && result.createdArticles.length > 0) {
+        markIngestionScraping(); // transition to scraping status in background
+
+        const ctx: PipelineContext = {
+          targetCategory: category,
+          targetCountry: country,
+          targetSearch: search?.trim() || undefined,
+        };
+        
+        scrapeArticlesInBackground(result.createdArticles, ctx)
+          .then(() => {
+            markIngestionComplete({
+              ingestedCount: result.ingestedCount,
+              skippedCount: result.skippedCount,
+              errorsCount: result.errorsCount,
+            });
+          })
+          .catch((err) => {
+            console.error('[Pipeline Background] Scrape error:', err);
+            markIngestionComplete({
+              ingestedCount: result.ingestedCount,
+              skippedCount: result.skippedCount,
+              errorsCount: result.errorsCount,
+            });
+          });
+      } else {
+        markIngestionComplete({
+          ingestedCount: result.ingestedCount,
+          skippedCount: result.skippedCount,
+          errorsCount: result.errorsCount,
+        });
+      }
     })
     .catch((error: Error) => {
       markIngestionError(error.message || 'Unknown error');

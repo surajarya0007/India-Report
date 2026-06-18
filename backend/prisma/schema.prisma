@@ -13,6 +13,7 @@ model Article {
   headline          String
   summary           String   @db.Text
   content           String?  @db.Text
+  rawContent        String?  @db.Text
   sentiment         String   // "Positive" | "Negative" | "Neutral"
   categories        String[] // ["Tech", "Business", "Science", "Health", "Entertainment", "Finance"]
   sourceName        String

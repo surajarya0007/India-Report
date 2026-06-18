@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { fetchArticleById, fetchNews, Article } from '../../../lib/api';
+import { fetchArticleById, fetchNews, Article, enrichArticleById } from '../../../lib/api';
 import { Clock, ChevronLeft, Share2, ExternalLink, BookOpen, TrendingUp } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -88,6 +88,47 @@ function SentimentBadge({ s }: { s: string }) {
       <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.dot, display: 'inline-block' }} />
       {s} Tone
     </span>
+  );
+}
+
+function AISummaryLoader() {
+  return (
+    <div style={{
+      padding: '24px 28px',
+      background: 'linear-gradient(135deg, #fbfbfb 0%, #f7f7f7 100%)',
+      borderRadius: 8,
+      border: '1px solid #ebebeb',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
+      position: 'relative',
+      overflow: 'hidden',
+      margin: '10px 0 30px',
+    }}>
+      <div style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0, height: 2,
+        background: 'linear-gradient(90deg, #c62828 0%, #1565c0 50%, #c62828 100%)',
+        backgroundSize: '200% auto',
+        animation: 'shimmer 1.8s linear infinite',
+      }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: '#c62828' }}>
+            <path d="M12 2L14.85 9.15L22 12L14.85 14.85L12 22L9.15 14.85L2 12L9.15 9.15L12 2Z" fill="currentColor" />
+          </svg>
+        </div>
+        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#c62828' }}>
+          AI Enrichment in Progress
+        </span>
+      </div>
+      <p style={{ fontSize: 14, color: '#444', lineHeight: 1.6, margin: 0, fontWeight: 500, fontFamily: 'inherit' }}>
+        Gemini is scraping the source text and synthesizing a structured journalistic report. The full article content will appear here in a few seconds...
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 18 }}>
+        <div className="pulse-line" style={{ height: 12, background: '#e0e0e0', borderRadius: 4, width: '100%' }} />
+        <div className="pulse-line" style={{ height: 12, background: '#e0e0e0', borderRadius: 4, width: '92%' }} />
+        <div className="pulse-line" style={{ height: 12, background: '#e0e0e0', borderRadius: 4, width: '75%' }} />
+      </div>
+    </div>
   );
 }
 
@@ -178,6 +219,51 @@ function ArticleBody({ text }: { text: string }) {
 
 // ─── Article Detail Page ──────────────────────────────────────────────────────
 
+// ─── Skeleton Loaders ──────────────────────────────────────────────────────────
+
+function ArticleSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', padding: '10px 0' }}>
+      <div className="skeleton-line" style={{ width: '100%', height: 16 }} />
+      <div className="skeleton-line" style={{ width: '98%', height: 16 }} />
+      <div className="skeleton-line" style={{ width: '95%', height: 16 }} />
+      <div className="skeleton-line" style={{ width: '92%', height: 16 }} />
+      <div className="skeleton-line" style={{ width: '89%', height: 16, marginBottom: 12 }} />
+      
+      <div className="skeleton-line" style={{ width: '100%', height: 16 }} />
+      <div className="skeleton-line" style={{ width: '96%', height: 16 }} />
+      <div className="skeleton-line" style={{ width: '94%', height: 16 }} />
+      <div className="skeleton-line" style={{ width: '70%', height: 16 }} />
+    </div>
+  );
+}
+
+function PageSkeleton() {
+  return (
+    <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column', fontFamily: "'Inter', Arial, sans-serif" }}>
+      <header style={{ background: '#fff', borderBottom: '1px solid #e8e8e8', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', height: 56 }}>
+          <div className="skeleton-line" style={{ width: 80, height: 24 }} />
+        </div>
+      </header>
+      <div style={{ maxWidth: 1260, margin: '0 auto', width: '100%', padding: '32px 20px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '0 40px' }}>
+        <div>
+          <div className="skeleton-line" style={{ width: 120, height: 18, marginBottom: 16 }} />
+          <div className="skeleton-line" style={{ width: '90%', height: 38, marginBottom: 24 }} />
+          <div className="skeleton-line" style={{ width: '100%', height: 420, borderRadius: 4, marginBottom: 28 }} />
+          <ArticleSkeleton />
+        </div>
+        <div>
+          <div className="skeleton-line" style={{ width: '100%', height: 200, borderRadius: 4, marginBottom: 20 }} />
+          <div className="skeleton-line" style={{ width: '100%', height: 150, borderRadius: 4 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Article Detail Page ──────────────────────────────────────────────────────
+
 export default function ArticlePage() {
   const params = useParams();
   const router = useRouter();
@@ -187,21 +273,40 @@ export default function ArticlePage() {
   const [related, setRelated] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [showMoreClicked, setShowMoreClicked] = useState(false);
+  const [enrichedData, setEnrichedData] = useState<Article | null>(null);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
+    let active = true;
 
     Promise.all([fetchArticleById(id), fetchNews()]).then(([art, all]) => {
+      if (!active) return;
       setArticle(art);
-      // Related: same category, excluding current article
+      setLoading(false);
+
       if (art) {
         const cats = art.categories || [];
         const rel = all.filter(a => a.id !== id && a.categories?.some(c => cats.includes(c))).slice(0, 6);
         setRelated(rel.length > 0 ? rel : all.filter(a => a.id !== id).slice(0, 6));
+
+        // Prefetch/start enrichment in background immediately if pending
+        if (art.enrichmentStatus === 'pending') {
+          enrichArticleById(id).then((enriched) => {
+            if (!active) return;
+            if (enriched) {
+              setArticle(enriched);
+              setEnrichedData(enriched);
+            }
+          });
+        }
       }
-      setLoading(false);
     });
+
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const handleShare = () => {
@@ -213,16 +318,7 @@ export default function ArticlePage() {
   };
 
   if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <TopBar onBack={() => router.push('/')} />
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, gap: 12 }}>
-          <div style={{ width: 36, height: 36, border: '3px solid #c62828', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <span style={{ fontSize: 14, color: '#888' }}>Loading story…</span>
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!article) {
@@ -241,10 +337,8 @@ export default function ArticlePage() {
     );
   }
 
-  const sentimentColor = article.sentiment === 'Positive' ? '#22c55e' : article.sentiment === 'Negative' ? '#ef4444' : '#9ca3af';
-
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', fontFamily: "'Inter', Arial, sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: '#fff', fontFamily: "'Inter', Arial, sans-serif" }} className="page-slide-up">
       <TopBar onBack={() => router.push('/')} />
 
       {/* Breadcrumb */}
@@ -320,7 +414,54 @@ export default function ArticlePage() {
 
           {/* Article body */}
           <div style={{ maxWidth: 720 }}>
-            <ArticleBody text={article.content || article.summary} />
+            {article.enrichmentStatus === 'complete' ? (
+              <div className="fade-in">
+                <ArticleBody text={article.content || article.summary} />
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize: 17, lineHeight: 1.85, color: '#222', marginBottom: 22, fontFamily: "'Source Serif 4', Georgia, serif" }}>
+                  {article.summary}
+                </p>
+
+                {showMoreClicked ? (
+                  enrichedData ? (
+                    <div className="fade-in">
+                      <ArticleBody text={enrichedData.content || enrichedData.summary} />
+                    </div>
+                  ) : (
+                    <div className="fade-in">
+                      <ArticleSkeleton />
+                    </div>
+                  )
+                ) : (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 30, marginBottom: 20 }}>
+                    <button
+                      onClick={() => setShowMoreClicked(true)}
+                      style={{
+                        padding: '12px 32px',
+                        background: 'linear-gradient(135deg, #111 0%, #333 100%)',
+                        color: '#fff',
+                        fontWeight: 600,
+                        fontSize: 14,
+                        border: 'none',
+                        borderRadius: 30,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                      }}
+                      className="show-more-btn"
+                    >
+                      <BookOpen style={{ width: 16, height: 16 }} />
+                      Read Full Article
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Source attribution */}
             <div style={{ marginTop: 28, padding: '14px 18px', background: '#f8f8f8', borderLeft: '3px solid #c62828', borderRadius: '0 3px 3px 0' }}>
@@ -363,7 +504,70 @@ export default function ArticlePage() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .skeleton-line {
+          background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.6s infinite linear;
+          border-radius: 4px;
+        }
+        .fade-in {
+          animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .page-slide-up {
+          animation: slideUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(24px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .show-more-btn {
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s;
+        }
+        .show-more-btn:hover {
+          transform: translateY(-2px);
+          background: linear-gradient(135deg, #222 0%, #444 100%) !important;
+          box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
+        }
+        .show-more-btn:active {
+          transform: translateY(0);
+        }
         .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+
+        /* Loading Overlay Animations */
+        @keyframes overlayFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes textPulse {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
+        }
+        @keyframes shimmerBar {
+          0% { left: -50%; }
+          100% { left: 100%; }
+        }
+        .animate-logo-i {
+          animation: bounceInLogoI 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .animate-logo-r {
+          animation: bounceInLogoR 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.15s forwards;
+        }
+        @keyframes bounceInLogoI {
+          from { opacity: 0; transform: scale(0.3) rotate(-15deg); }
+          to { opacity: 1; transform: scale(1) rotate(0); }
+        }
+        @keyframes bounceInLogoR {
+          from { opacity: 0; transform: scale(0.3) rotate(15deg); }
+          to { opacity: 1; transform: scale(1) rotate(0); }
+        }
       `}</style>
     </div>
   );

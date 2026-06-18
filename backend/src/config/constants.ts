@@ -1,8 +1,8 @@
 /** How many new articles to pull from Google News RSS per ingest run */
-export const INGEST_LIMIT = 5;
+export const INGEST_LIMIT = 15;
 
 /** How many articles GET /api/news returns from DB/Redis for the homepage */
-export const DISPLAY_LIMIT = 20;
+export const DISPLAY_LIMIT = 15;
 
 /** @deprecated Use INGEST_LIMIT or DISPLAY_LIMIT */
 export const ARTICLE_FETCH_LIMIT = INGEST_LIMIT;
@@ -31,4 +31,4 @@ export const GEMINI_RPM_DELAY_BY_MODEL: Record<string, number> = {
 };
 
 /** Max articles scraped in parallel during ingestion */
-export const SCRAPE_CONCURRENCY = 3;
+export const SCRAPE_CONCURRENCY = 10;
