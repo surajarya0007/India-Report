@@ -5,9 +5,11 @@ export interface Article {
   sourceUrl: string;
   headline: string;
   summary: string;
+  content?: string;
   sentiment: 'Positive' | 'Negative' | 'Neutral';
   categories: string[];
   sourceName: string;
+  imageUrl?: string;
   createdAt: string;
 }
 
@@ -26,11 +28,19 @@ export interface IngestResponse {
 }
 
 /**
- * Fetch the latest news articles from the backend API.
+ * Fetch the latest news articles from the backend API, optionally filtered by category.
  */
-export async function fetchNews(): Promise<Article[]> {
+export async function fetchNews(category?: string, search?: string): Promise<Article[]> {
   try {
-    const response = await fetch(`${API_URL}/api/news`, {
+    const params = new URLSearchParams();
+    if (search) {
+      params.append('search', search);
+    } else if (category && category !== 'Home') {
+      params.append('category', category);
+    }
+    const queryString = params.toString();
+    const url = queryString ? `${API_URL}/api/news?${queryString}` : `${API_URL}/api/news`;
+    const response = await fetch(url, {
       cache: 'no-store'
     });
     if (!response.ok) {
@@ -45,11 +55,20 @@ export async function fetchNews(): Promise<Article[]> {
 }
 
 /**
- * Manually trigger the news ingestion pipeline.
+ * Manually trigger the news ingestion pipeline with optional category/country filter.
  */
-export async function triggerIngest(): Promise<IngestResponse> {
+export async function triggerIngest(category?: string, country?: string, search?: string): Promise<IngestResponse> {
   try {
-    const response = await fetch(`${API_URL}/api/news/ingest`, {
+    let url = `${API_URL}/api/news/ingest`;
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (category) params.append('category', category);
+    if (country) params.append('country', country);
+    const queryString = params.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

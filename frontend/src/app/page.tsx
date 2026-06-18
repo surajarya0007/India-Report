@@ -19,7 +19,7 @@ function timeAgo(dateStr: string): string {
 const CAT_COLORS: Record<string, string> = {
   Tech: '#1565c0', Business: '#2e7d32', Finance: '#6a1b9a',
   Science: '#00695c', Health: '#ad1457', Entertainment: '#e65100',
-  Politics: '#b71c1c', India: '#c62828', World: '#37474f', Default: '#455a64',
+  Politics: '#b71c1c', India: '#c62828', World: '#37474f', Sports: '#d84315', Default: '#455a64',
 };
 
 function catColor(cat?: string) {
@@ -31,6 +31,35 @@ function catColor(cat?: string) {
 function ImgBox({ article, height = 180, style = {} }: { article: Article; height?: number; style?: React.CSSProperties }) {
   const cat = article.categories?.[0];
   const bg = catColor(cat);
+  const [imgError, setImgError] = useState(false);
+  const hasImage = !!article.imageUrl && !imgError;
+
+  if (hasImage) {
+    return (
+      <div style={{
+        height,
+        overflow: 'hidden',
+        flexShrink: 0,
+        position: 'relative',
+        background: `linear-gradient(140deg, ${bg}dd 0%, ${bg}77 100%)`,
+        ...style,
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={article.imageUrl}
+          alt={article.headline}
+          onError={() => setImgError(true)}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{
       height,
@@ -45,6 +74,7 @@ function ImgBox({ article, height = 180, style = {} }: { article: Article; heigh
     </div>
   );
 }
+
 
 // ─── Shared: Category tag ─────────────────────────────────────────────────────
 
@@ -68,7 +98,7 @@ function CatTag({ cat }: { cat?: string }) {
 function BreakingTicker({ articles }: { articles: Article[] }) {
   const texts = articles.length > 0
     ? [...articles, ...articles].map(a => a.headline)
-    : ['India Reports: AI-Powered News Platform — Updated Automatically Every 15 Minutes', 'Breaking coverage from India and the world, synthesized by Gemini 1.5 Flash', 'Live pipeline: Firecrawl extraction • Supabase storage • Upstash caching'];
+    : ['India Reports: AI-Powered News Platform — Updated On Demand', 'Breaking coverage from India and the world, synthesized by Gemini 1.5 Flash', 'Live pipeline: Firecrawl extraction • Supabase storage • Upstash caching'];
 
   return (
     <div style={{ display: 'flex', background: '#c62828', overflow: 'hidden', borderBottom: '1px solid #a81c1c' }}>
@@ -259,13 +289,14 @@ function SectionHead({ title }: { title: string }) {
 
 // ─── Navigation categories ────────────────────────────────────────────────────
 
-const NAV_ITEMS = ['Home', 'India', 'World', 'Business', 'Tech', 'Science', 'Finance', 'Health', 'Entertainment', 'Politics'];
+const NAV_ITEMS = ['Home', 'India', 'World', 'Business', 'Tech', 'Sports', 'Science', 'Finance', 'Health', 'Entertainment', 'Politics'];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const { articles, loading, ingesting, refresh, triggerIngest } = useNews();
   const [activeNav, setActiveNav] = useState('Home');
+  const [activeSearch, setActiveSearch] = useState<string | undefined>(undefined);
+  const { articles, loading, ingesting, refresh, triggerIngest, searchNews } = useNews(activeNav, activeSearch);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -277,22 +308,43 @@ export default function Home() {
     return () => clearInterval(t);
   }, []);
 
-  // Filter articles by category / search
   const filtered = useMemo(() => {
     let list = articles;
-    const cat = activeNav === 'Home' ? null : activeNav;
-    if (cat) list = list.filter(a => a.categories?.includes(cat));
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(a => a.headline.toLowerCase().includes(q) || a.summary.toLowerCase().includes(q));
+    if (!activeSearch) {
+      const cat = activeNav === 'Home' ? null : activeNav;
+      if (cat) list = list.filter(a => a.categories?.includes(cat));
     }
     return list;
-  }, [articles, activeNav, searchQuery]);
+  }, [articles, activeNav, activeSearch]);
 
   const handleIngest = async () => {
     const res = await triggerIngest();
     setToast({ msg: res.success ? `✓ Added ${res.ingestedCount} new stories` : '✗ ' + res.message, ok: res.success });
     setTimeout(() => setToast(null), 5000);
+  };
+
+  const handleSearch = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    setActiveNav('Home');
+    setActiveSearch(q);
+    const res = await searchNews(q);
+    const toastMsg = !res.success
+      ? '✗ ' + res.message
+      : res.ingestedCount > 0
+        ? `✓ Added ${res.ingestedCount} new stories for "${q}"`
+        : res.hadCachedResults
+          ? `✓ Showing ${res.cachedCount} stories for "${q}" (already up to date)`
+          : `✓ No stories found for "${q}"`;
+    setToast({ msg: toastMsg, ok: res.success });
+    setTimeout(() => setToast(null), 5000);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setActiveSearch(undefined);
+    setSearchOpen(false);
   };
 
   // Layout slots
@@ -301,7 +353,7 @@ export default function Home() {
   const centerGrid = filtered.slice(1, 5);   // Center: 4-card grid below hero
   const rightFeed = filtered.slice(5, 11);   // Right sidebar: 6 latest items
 
-  const sectionTitle = activeNav === 'Home' ? 'More Stories' : activeNav;
+  const sectionTitle = activeSearch ? `Results for "${activeSearch}"` : activeNav === 'Home' ? 'More Stories' : activeNav;
   const moreStories = filtered.slice(filtered.length > 9 ? 9 : filtered.length);
 
   return (
@@ -334,18 +386,34 @@ export default function Home() {
               {menuOpen ? <X style={{ width: 20, height: 20 }} /> : <Menu style={{ width: 20, height: 20 }} />}
             </button>
             <button
-              onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) setSearchQuery(''); }}
+              onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) clearSearch(); }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 3, color: '#111', display: 'flex' }}
               title="Search"
             >
               {searchOpen ? <X style={{ width: 18, height: 18 }} /> : <Search style={{ width: 18, height: 18 }} />}
             </button>
             {searchOpen && (
-              <input
-                autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search articles..."
-                style={{ border: '1px solid #ddd', borderRadius: 3, padding: '5px 12px', fontSize: 13, width: 220, outline: 'none', marginLeft: 4 }}
-              />
+              <form onSubmit={handleSearch} style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 4 }}>
+                <input
+                  autoFocus
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search Google News..."
+                  style={{ border: '1px solid #ddd', borderRadius: 3, padding: '5px 12px', fontSize: 13, width: 220, outline: 'none' }}
+                />
+                <button
+                  type="submit"
+                  disabled={ingesting || !searchQuery.trim()}
+                  style={{
+                    border: '1px solid #111', background: '#111', color: '#fff',
+                    borderRadius: 3, padding: '5px 10px', fontSize: 11, fontWeight: 700,
+                    cursor: ingesting || !searchQuery.trim() ? 'not-allowed' : 'pointer',
+                    opacity: ingesting || !searchQuery.trim() ? 0.5 : 1,
+                  }}
+                >
+                  Go
+                </button>
+              </form>
             )}
           </div>
 
@@ -397,7 +465,7 @@ export default function Home() {
             {NAV_ITEMS.map(item => {
               const active = item === activeNav;
               return (
-                <button key={item} onClick={() => setActiveNav(item)}
+                <button key={item} onClick={() => { setActiveNav(item); setActiveSearch(undefined); setSearchQuery(''); setSearchOpen(false); }}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
                     padding: '10px 14px', fontSize: 13, fontWeight: active ? 700 : 500,
@@ -422,23 +490,39 @@ export default function Home() {
       {/* ── Main 3-column layout ───────────────────────────────────────────────── */}
       <main style={{ maxWidth: 1260, margin: '0 auto', padding: '24px 20px' }}>
 
-        {/* Loading */}
-        {loading && (
+        {/* Full-page loader — only when nothing to show yet */}
+        {(loading || ingesting) && filtered.length === 0 && (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0', gap: 12 }}>
             <div style={{ width: 36, height: 36, border: '3px solid #c62828', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            <span style={{ fontSize: 14, color: '#888' }}>Loading latest reports…</span>
+            <span style={{ fontSize: 14, color: '#888' }}>
+              {loading
+                ? `Looking for "${searchQuery || activeSearch || 'your topic'}" in database…`
+                : `Fetching latest stories for "${searchQuery || activeSearch || 'your topic'}"…`}
+            </span>
+          </div>
+        )}
+
+        {/* Background refresh banner when cached results are already visible */}
+        {ingesting && filtered.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '10px 16px', marginBottom: 16, borderRadius: 4,
+            background: '#f5f5f5', border: '1px solid #e8e8e8', fontSize: 13, color: '#666',
+          }}>
+            <RefreshCw style={{ width: 14, height: 14, animation: 'spin 0.8s linear infinite' }} />
+            Fetching latest stories for &ldquo;{activeSearch}&rdquo;…
           </div>
         )}
 
         {/* No articles */}
-        {!loading && filtered.length === 0 && (
+        {!loading && !ingesting && filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
             <p style={{ fontSize: 16, color: '#888', fontWeight: 600 }}>No stories found</p>
-            <p style={{ fontSize: 13, color: '#bbb', marginTop: 6 }}>{searchQuery ? `No results for "${searchQuery}"` : 'Try another category or refresh the feed.'}</p>
+            <p style={{ fontSize: 13, color: '#bbb', marginTop: 6 }}>{activeSearch ? `No results for "${activeSearch}". Try a different topic.` : 'Try another category or click Update Feed.'}</p>
           </div>
         )}
 
-        {!loading && filtered.length > 0 && (
+        {filtered.length > 0 && (
           <>
             {/* 3-column grid: LEFT (240px) | CENTER (flex) | RIGHT (240px) */}
             <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: '0 24px', marginBottom: 36 }}>
@@ -508,7 +592,7 @@ export default function Home() {
                 INDIA REPORTS
               </div>
               <p style={{ fontSize: 13, lineHeight: 1.75, color: '#777', maxWidth: 340 }}>
-                An autonomous AI-powered news platform. Every 15 minutes, our pipeline ingests the latest stories, extracts full text via Firecrawl, and synthesizes structured summaries using Gemini 1.5 Flash.
+                An autonomous AI-powered news platform. Click Update Feed to pull the latest stories — our pipeline extracts full text via Firecrawl and synthesizes structured summaries using Gemini 1.5 Flash.
               </p>
             </div>
             <div>
@@ -536,7 +620,7 @@ export default function Home() {
             <span>© 2026 India Reports. All Rights Reserved.</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-              Pipeline Active — Updates every 15 minutes
+              Pipeline Active — Manual updates via Update Feed
             </span>
           </div>
         </div>

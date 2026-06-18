@@ -12,9 +12,11 @@ model Article {
   sourceUrl   String   @unique
   headline    String
   summary     String   @db.Text
+  content     String?   @db.Text
   sentiment   String   // "Positive" | "Negative" | "Neutral"
   categories  String[] // ["Tech", "Business", "Science", "Health", "Entertainment", "Finance"]
   sourceName  String
+  imageUrl    String?  // og:image extracted from the article page
   createdAt   DateTime @default(now())
 
   @@index([sourceUrl])

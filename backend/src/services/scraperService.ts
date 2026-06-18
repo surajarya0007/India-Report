@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { sanitizeImageUrl } from '../utils/imageUtils';
 
 dotenv.config();
 
@@ -8,13 +9,18 @@ const isRealApiConfigured = (): boolean => {
   return !!(FIRECRAWL_API_KEY && FIRECRAWL_API_KEY !== 'your_firecrawl_key' && !FIRECRAWL_API_KEY.startsWith('your_'));
 };
 
+export interface ScrapeResult {
+  markdown: string;
+  imageUrl?: string;
+}
+
 /**
- * Scrape the clean text content (markdown) of a given URL.
+ * Scrape the clean text content (markdown) and og:image of a given URL.
+ * Returns both the markdown body and the primary image URL when available.
  */
-export async function scrapeArticle(url: string, title: string): Promise<string> {
+export async function scrapeArticle(url: string, title: string): Promise<ScrapeResult> {
   if (!isRealApiConfigured()) {
-    console.log(`[ScraperService] Running in Demo Mode. Generating mock page content for title: "${title}"`);
-    return getMockScrapedContent(url, title);
+    throw new Error('[ScraperService] API key not configured.');
   }
 
   try {
@@ -27,7 +33,7 @@ export async function scrapeArticle(url: string, title: string): Promise<string>
       },
       body: JSON.stringify({
         url: url,
-        formats: ['markdown']
+        formats: ['markdown'],
       })
     });
 
@@ -36,32 +42,59 @@ export async function scrapeArticle(url: string, title: string): Promise<string>
     }
 
     const data: any = await response.json();
-    if (data.success && data.data && typeof data.data.markdown === 'string') {
-      return data.data.markdown;
+    if (data.success && data.data) {
+      const markdown = typeof data.data.markdown === 'string' ? data.data.markdown : '';
+
+      // Extract image from Firecrawl metadata — scan all keys for image-related fields
+      const meta = data.data.metadata || {};
+
+      // Firecrawl uses both colon-style (og:image) and camelCase (ogImage) keys
+      let imageUrl: string | undefined =
+        sanitizeImageUrl(
+          meta['og:image'] ||
+          meta['ogImage'] ||
+          meta['twitter:image'] ||
+          meta['twitterImage'] ||
+          meta['og:image:url']
+        ) ?? undefined;
+
+      // Fallback: scan all metadata keys for any image URL
+      if (!imageUrl) {
+        for (const key of Object.keys(meta)) {
+          if (key.toLowerCase().includes('image')) {
+            const val = meta[key];
+            const candidate = typeof val === 'string' ? val : (Array.isArray(val) ? val[0] : undefined);
+            const sanitized = sanitizeImageUrl(candidate);
+            if (sanitized) {
+              imageUrl = sanitized;
+              break;
+            }
+          }
+        }
+      }
+
+      imageUrl = sanitizeImageUrl(imageUrl) ?? undefined;
+
+      if (imageUrl) {
+        console.log(`[ScraperService] Found image for "${title}": ${imageUrl}`);
+      } else if (
+        meta['og:image'] ||
+        meta['ogImage'] ||
+        meta['twitter:image'] ||
+        meta['twitterImage']
+      ) {
+        console.log(`[ScraperService] Rejected Google News placeholder image for "${title}"`);
+      } else {
+        console.log(`[ScraperService] No image found for "${title}". Meta keys: ${Object.keys(meta).filter(k => k.toLowerCase().includes('image') || k.toLowerCase().includes('og')).join(', ')}`);
+      }
+
+      return { markdown, imageUrl };
     } else {
-      console.warn('[ScraperService] Firecrawl returned success=false or missing markdown data. Data:', data);
+      console.warn('[ScraperService] Firecrawl returned success=false or missing data. Data:', data);
       throw new Error('Firecrawl parsing failed or returned empty content');
     }
   } catch (error) {
-    console.error(`[ScraperService] Failed to scrape ${url}, falling back to mock content:`, error);
-    return getMockScrapedContent(url, title);
+    console.error(`[ScraperService] Failed to scrape ${url}:`, error);
+    throw error;
   }
-}
-
-function getMockScrapedContent(url: string, title: string): string {
-  return `
-# ${title}
-
-Published on tech news portal.
-
-## Main Article Content
-In recent developments related to ${title.split(' ').slice(0, 3).join(' ')}, industry experts and company representatives announced major changes. This initiative aims to address existing bottlenecks in the technology sector, bringing modern solutions to scale.
-
-### Key Milestones
-- **Efficiency Boost**: Early tests indicate a 40% performance increase under standard enterprise workloads.
-- **Widespread Integration**: Leading tech giants have already signed letters of intent to support the platform.
-- **Next Steps**: The public release is scheduled for the upcoming quarter, with pre-registrations opening soon.
-
-*Reported by staff correspondents from the tech newsroom. Reference: ${url}*
-`;
 }

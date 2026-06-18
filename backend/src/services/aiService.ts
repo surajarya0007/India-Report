@@ -12,6 +12,7 @@ const isRealApiConfigured = (): boolean => {
 export interface SynthesizedArticle {
   headline: string;
   summary: string;
+  content: string;
   sentiment: 'Positive' | 'Negative' | 'Neutral';
   categories: string[];
 }
@@ -21,8 +22,7 @@ export interface SynthesizedArticle {
  */
 export async function synthesizeArticle(title: string, rawText: string): Promise<SynthesizedArticle> {
   if (!isRealApiConfigured()) {
-    console.log(`[AIService] Running in Demo Mode. Analyzing locally: "${title}"`);
-    return getLocalMockAnalysis(title, rawText);
+    throw new Error('[AIService] API key not configured.');
   }
 
   try {
@@ -30,7 +30,8 @@ export async function synthesizeArticle(title: string, rawText: string): Promise
     
     // Using structured output mode by specifying responseMimeType and responseSchema
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.5-flash',
+      tools: [{ googleSearch: {} } as any],
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: {
@@ -42,7 +43,11 @@ export async function synthesizeArticle(title: string, rawText: string): Promise
             },
             summary: {
               type: 'string' as any,
-              description: 'AI-generated 3-sentence objective summary of the article.'
+              description: 'AI-generated 3-sentence objective summary of the article, enriched with verified facts.'
+            },
+            content: {
+              type: 'string' as any,
+              description: 'AI-generated detailed and descriptive news article of 3 to 4 paragraphs (minimum 250 words) covering all facts, using standard journalistic structure, separated by double newlines (\\n\\n).'
             },
             sentiment: {
               type: 'string' as any,
@@ -57,27 +62,50 @@ export async function synthesizeArticle(title: string, rawText: string): Promise
               description: 'Array of categories applicable to the article content.'
             }
           },
-          required: ['headline', 'summary', 'sentiment', 'categories']
+          required: ['headline', 'summary', 'content', 'sentiment', 'categories']
         }
       }
     });
 
     const systemPrompt = `You are a professional journalist and AI news assistant for "India Reports", an autonomous self-updating news platform.
-Your task is to analyze the provided scraped article text and output a JSON object containing:
+Your task is to analyze the provided scraped article text and output a JSON object.
+Use the Google Search tool to:
+1. Verify the facts in the article to ensure only confirmed details are included.
+2. Search Google to retrieve additional relevant details, context, and background information to write a more descriptive, informative summary and full article.
+3. If the input text is short or is a fallback description, query Google Search for the full story to ensure the output is rich and detailed.
+
+Output a JSON object containing:
 1. "headline": A catchy and engaging headline summarizing the news in under 10 words.
-2. "summary": A concise, objective 3-sentence summary of the article. Do not write more or less than exactly 3 sentences.
-3. "sentiment": Evaluate the tone of the article and classify it strictly as "Positive", "Negative", or "Neutral".
-4. "categories": A list of applicable categories. Select only from these values: "Tech", "Business", "Science", "Health", "Entertainment", "Finance".
+2. "summary": A concise, objective 3-sentence summary of the article containing rich, verified details. Do not write more or less than exactly 3 sentences. This is used for the homepage newsfeed cards.
+3. "content": A highly detailed and descriptive news article of 3 to 4 paragraphs (at least 250 words) written in a premium, professional journalistic style. Include background details, quotes, stats, or consequences of the event. Use double newlines (\\n\\n) to separate paragraphs. Do not use markdown tags inside the paragraphs.
+4. "sentiment": Evaluate the tone of the article and classify it strictly as "Positive", "Negative", or "Neutral".
+5. "categories": A list of applicable categories. Select only from these values: "Tech", "Business", "Science", "Health", "Entertainment", "Finance".
 
 Format the output strictly as a JSON object matching the requested schema.`;
 
     const userPrompt = `Title: ${title}\n\nContent:\n${rawText}`;
 
     console.log(`[AIService] Synthesizing article with Gemini: "${title}"`);
-    const result = await model.generateContent([
-      { text: systemPrompt },
-      { text: userPrompt }
-    ]);
+    
+    let result;
+    let attempts = 3;
+    for (let i = 1; i <= attempts; i++) {
+      try {
+        result = await model.generateContent([
+          { text: systemPrompt },
+          { text: userPrompt }
+        ]);
+        break;
+      } catch (err: any) {
+        if (i === attempts) throw err;
+        console.warn(`[AIService] Gemini call failed (attempt ${i}/${attempts}), retrying in 2s... Error:`, err.message || err);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    if (!result) {
+      throw new Error('Gemini execution returned empty result.');
+    }
 
     const responseText = result.response.text();
     const synthesized: SynthesizedArticle = JSON.parse(responseText);
@@ -86,6 +114,7 @@ Format the output strictly as a JSON object matching the requested schema.`;
     return {
       headline: (synthesized.headline || title).substring(0, 100),
       summary: synthesized.summary || 'Summary could not be generated.',
+      content: synthesized.content || synthesized.summary || '',
       sentiment: ['Positive', 'Negative', 'Neutral'].includes(synthesized.sentiment) 
         ? synthesized.sentiment 
         : 'Neutral',
@@ -95,64 +124,8 @@ Format the output strictly as a JSON object matching the requested schema.`;
     };
 
   } catch (error) {
-    console.error(`[AIService] Gemini synthesis failed for "${title}", using fallback:`, error);
-    return getLocalMockAnalysis(title, rawText);
+    console.error(`[AIService] Gemini synthesis failed for "${title}":`, error);
+    throw error;
   }
 }
 
-/**
- * Perform a deterministic heuristic analysis when Gemini API is unavailable.
- */
-function getLocalMockAnalysis(title: string, rawText: string): SynthesizedArticle {
-  // Catchy headline under 10 words
-  const titleWords = title.split(' ');
-  const headline = titleWords.length <= 9 ? title : titleWords.slice(0, 8).join(' ') + '...';
-
-  // Categories deduction based on content keywords
-  const categories: string[] = [];
-  const textLower = (title + ' ' + rawText).toLowerCase();
-  
-  if (textLower.includes('ai') || textLower.includes('software') || textLower.includes('google') || textLower.includes('apple') || textLower.includes('tech') || textLower.includes('gpu')) {
-    categories.push('Tech');
-  }
-  if (textLower.includes('raise') || textLower.includes('acquire') || textLower.includes('valuation') || textLower.includes('business') || textLower.includes('million') || textLower.includes('billion')) {
-    categories.push('Business');
-  }
-  if (textLower.includes('space') || textLower.includes('launch') || textLower.includes('starship') || textLower.includes('science') || textLower.includes('nasa')) {
-    categories.push('Science');
-  }
-  if (textLower.includes('health') || textLower.includes('clinical') || textLower.includes('medicine')) {
-    categories.push('Health');
-  }
-  if (textLower.includes('movie') || textLower.includes('show') || textLower.includes('event') || textLower.includes('entertainment')) {
-    categories.push('Entertainment');
-  }
-  if (textLower.includes('finance') || textLower.includes('shares') || textLower.includes('stock') || textLower.includes('market')) {
-    categories.push('Finance');
-  }
-
-  if (categories.length === 0) {
-    categories.push('Tech');
-  }
-
-  // Sentiment deduction
-  let sentiment: 'Positive' | 'Negative' | 'Neutral' = 'Neutral';
-  if (textLower.includes('record') || textLower.includes('success') || textLower.includes('growth') || textLower.includes('breakthrough') || textLower.includes('positive') || textLower.includes('soar')) {
-    sentiment = 'Positive';
-  } else if (textLower.includes('fail') || textLower.includes('decline') || textLower.includes('lawsuit') || textLower.includes('negative') || textLower.includes('drop') || textLower.includes('down')) {
-    sentiment = 'Negative';
-  }
-
-  // 3-sentence summary creation
-  const sentence1 = `${title} marks a significant milestone in the technology and industry space.`;
-  const sentence2 = `Key indicators show that this development will impact both developers and end-users alike.`;
-  const sentence3 = `Furthermore, analysts predict that this shift could trigger widespread adoption of similar paradigms.`;
-  const summary = `${sentence1} ${sentence2} ${sentence3}`;
-
-  return {
-    headline,
-    summary,
-    sentiment,
-    categories
-  };
-}

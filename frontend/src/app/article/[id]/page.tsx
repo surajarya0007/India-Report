@@ -34,20 +34,36 @@ function catColor(cat?: string) { return CAT_COLORS[cat || ''] || CAT_COLORS.Def
 function ArticleHero({ article }: { article: Article }) {
   const cat = article.categories?.[0];
   const bg = catColor(cat);
+  const [imgError, setImgError] = useState(false);
+  const hasImage = !!article.imageUrl && !imgError;
+
   return (
     <div style={{
       width: '100%', height: 420,
       background: `linear-gradient(145deg, ${bg}ee 0%, ${bg}55 100%)`,
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
       position: 'relative', borderRadius: 4, overflow: 'hidden',
     }}>
-      {/* Pattern overlay */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.06) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.04) 0%, transparent 50%)',
-      }} />
-      <span style={{ color: 'rgba(255,255,255,0.12)', fontSize: 120, fontWeight: 900, lineHeight: 1, fontFamily: 'Georgia, serif', userSelect: 'none' }}>IR</span>
+      {hasImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={article.imageUrl}
+          alt={article.headline}
+          onError={() => setImgError(true)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : (
+        <>
+          {/* Pattern overlay */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.06) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.04) 0%, transparent 50%)',
+          }} />
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: 'rgba(255,255,255,0.12)', fontSize: 120, fontWeight: 900, lineHeight: 1, fontFamily: 'Georgia, serif', userSelect: 'none' }}>IR</span>
+          </div>
+        </>
+      )}
+      {/* Category tags overlay at bottom */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 32px', background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)' }}>
         {article.categories?.map(c => (
           <span key={c} style={{
@@ -80,8 +96,10 @@ function SentimentBadge({ s }: { s: string }) {
 function SideCard({ article }: { article: Article }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const cat = article.categories?.[0];
   const bg = catColor(cat);
+  const hasImage = !!article.imageUrl && !imgError;
   return (
     <div
       onClick={() => router.push(`/article/${article.id}`)}
@@ -89,7 +107,13 @@ function SideCard({ article }: { article: Article }) {
       style={{ display: 'flex', gap: 10, padding: '12px 0', borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}
     >
       <div style={{ flexShrink: 0, width: 72, height: 54, borderRadius: 3, overflow: 'hidden', background: `linear-gradient(135deg, ${bg}cc, ${bg}66)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 22, fontWeight: 900, fontFamily: 'Georgia, serif' }}>IR</span>
+        {hasImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={article.imageUrl} alt={article.headline} onError={() => setImgError(true)}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        ) : (
+          <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 22, fontWeight: 900, fontFamily: 'Georgia, serif' }}>IR</span>
+        )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         {cat && <span style={{ fontSize: 9, fontWeight: 800, color: bg, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{cat}</span>}
@@ -112,22 +136,40 @@ function SideCard({ article }: { article: Article }) {
 
 // ─── Article body renderer ────────────────────────────────────────────────────
 
-function ArticleBody({ summary }: { summary: string }) {
-  // Split into paragraphs by '. ' boundaries
-  const sentences = summary.split(/(?<=[.!?])\s+/).filter(Boolean);
-  const paras: string[][] = [];
-  for (let i = 0; i < sentences.length; i += 3) {
-    paras.push(sentences.slice(i, i + 3));
+function ArticleBody({ text }: { text: string }) {
+  const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+
+  if (paragraphs.length <= 1) {
+    // Fallback: split summary by 3-sentence chunks
+    const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
+    const paras: string[][] = [];
+    for (let i = 0; i < sentences.length; i += 3) {
+      paras.push(sentences.slice(i, i + 3));
+    }
+    return (
+      <div>
+        {paras.map((para, i) => (
+          <p key={i} style={{
+            fontSize: 17, lineHeight: 1.85, color: '#222',
+            marginBottom: 22,
+            fontFamily: "'Source Serif 4', Georgia, serif",
+          }}>
+            {para.join(' ')}
+          </p>
+        ))}
+      </div>
+    );
   }
+
   return (
     <div>
-      {paras.map((para, i) => (
+      {paragraphs.map((para, i) => (
         <p key={i} style={{
           fontSize: 17, lineHeight: 1.85, color: '#222',
           marginBottom: 22,
           fontFamily: "'Source Serif 4', Georgia, serif",
         }}>
-          {para.join(' ')}
+          {para}
         </p>
       ))}
     </div>
@@ -278,7 +320,7 @@ export default function ArticlePage() {
 
           {/* Article body */}
           <div style={{ maxWidth: 720 }}>
-            <ArticleBody summary={article.summary} />
+            <ArticleBody text={article.content || article.summary} />
 
             {/* Source attribution */}
             <div style={{ marginTop: 28, padding: '14px 18px', background: '#f8f8f8', borderLeft: '3px solid #c62828', borderRadius: '0 3px 3px 0' }}>

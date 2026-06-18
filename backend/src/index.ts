@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import newsRoutes from './routes/newsRoutes';
-import { initScheduler } from './cron/scheduler';
 
 dotenv.config();
 
@@ -26,9 +25,6 @@ app.get('/', (req, res) => {
     time: new Date().toISOString()
   });
 });
-
-// Start the 15-minute cron pipeline
-initScheduler();
 
 // Start Express Listener
 app.listen(PORT, () => {
