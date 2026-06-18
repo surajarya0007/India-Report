@@ -93,6 +93,19 @@ function CatTag({ cat }: { cat?: string }) {
   );
 }
 
+function EnrichingBadge() {
+  return (
+    <span style={{
+      display: 'inline-block', marginLeft: 6,
+      background: '#fff8e1', color: '#f57f17', fontSize: 8, fontWeight: 800,
+      letterSpacing: '0.08em', textTransform: 'uppercase',
+      padding: '2px 6px', borderRadius: 2, border: '1px solid #ffe082',
+    }}>
+      Updating
+    </span>
+  );
+}
+
 // ─── Breaking ticker ─────────────────────────────────────────────────────────
 
 function BreakingTicker({ articles }: { articles: Article[] }) {
@@ -143,7 +156,10 @@ function FeatureCard({ article }: { article: Article }) {
         <ImgBox article={article} height={230} style={{ transform: hov ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.35s ease' }} />
       </div>
       <div style={{ marginTop: 12 }}>
-        <CatTag cat={article.categories?.[0]} />
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+          <CatTag cat={article.categories?.[0]} />
+          {article.enrichmentStatus === 'pending' && <EnrichingBadge />}
+        </div>
         <h2 style={{
           fontFamily: "'Playfair Display', Georgia, serif",
           fontSize: 22, fontWeight: 800, lineHeight: 1.25, marginTop: 8, marginBottom: 8,
@@ -181,7 +197,10 @@ function CompactCard({ article, showDivider = true }: { article: Article; showDi
           <ImgBox article={article} height={62} style={{ transform: hov ? 'scale(1.06)' : 'scale(1)', transition: 'transform 0.3s', width: 82 }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <CatTag cat={article.categories?.[0]} />
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+            <CatTag cat={article.categories?.[0]} />
+            {article.enrichmentStatus === 'pending' && <EnrichingBadge />}
+          </div>
           <h3 style={{
             fontFamily: "'Playfair Display', Georgia, serif",
             fontSize: 14, fontWeight: 700, lineHeight: 1.3, marginTop: 5,
@@ -220,7 +239,10 @@ function GridCard({ article }: { article: Article }) {
         <ImgBox article={article} height={140} style={{ transform: hov ? 'scale(1.05)' : 'scale(1)', transition: 'transform 0.35s' }} />
       </div>
       <div style={{ padding: '12px 13px 14px' }}>
-        <CatTag cat={article.categories?.[0]} />
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+          <CatTag cat={article.categories?.[0]} />
+          {article.enrichmentStatus === 'pending' && <EnrichingBadge />}
+        </div>
         <h3 style={{
           fontFamily: "'Playfair Display', Georgia, serif",
           fontSize: 14, fontWeight: 700, lineHeight: 1.3, marginTop: 7, marginBottom: 5,
@@ -257,7 +279,10 @@ function SidebarItem({ article, rank }: { article: Article; rank: number }) {
         {String(rank).padStart(2, '0')}
       </span>
       <div style={{ minWidth: 0 }}>
-        <CatTag cat={article.categories?.[0]} />
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+          <CatTag cat={article.categories?.[0]} />
+          {article.enrichmentStatus === 'pending' && <EnrichingBadge />}
+        </div>
         <h4 style={{
           fontFamily: "'Playfair Display', Georgia, serif",
           fontSize: 13, fontWeight: 700, lineHeight: 1.35, marginTop: 5,
@@ -296,7 +321,7 @@ const NAV_ITEMS = ['Home', 'India', 'World', 'Business', 'Tech', 'Sports', 'Scie
 export default function Home() {
   const [activeNav, setActiveNav] = useState('Home');
   const [activeSearch, setActiveSearch] = useState<string | undefined>(undefined);
-  const { articles, loading, ingesting, refresh, triggerIngest, searchNews } = useNews(activeNav, activeSearch);
+  const { articles, loading, ingesting, hasPendingArticles, refresh, triggerIngest, searchNews } = useNews(activeNav, activeSearch);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -490,27 +515,37 @@ export default function Home() {
       {/* ── Main 3-column layout ───────────────────────────────────────────────── */}
       <main style={{ maxWidth: 1260, margin: '0 auto', padding: '24px 20px' }}>
 
-        {/* Full-page loader — only when nothing to show yet */}
-        {(loading || ingesting) && filtered.length === 0 && (
+        {/* Full-page loader — only on initial DB fetch, not during background ingest */}
+        {loading && filtered.length === 0 && (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0', gap: 12 }}>
             <div style={{ width: 36, height: 36, border: '3px solid #c62828', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             <span style={{ fontSize: 14, color: '#888' }}>
-              {loading
-                ? `Looking for "${searchQuery || activeSearch || 'your topic'}" in database…`
-                : `Fetching latest stories for "${searchQuery || activeSearch || 'your topic'}"…`}
+              {`Looking for "${searchQuery || activeSearch || 'your topic'}" in database…`}
             </span>
           </div>
         )}
 
-        {/* Background refresh banner when cached results are already visible */}
-        {ingesting && filtered.length > 0 && (
+        {/* Ingest started on empty feed — stubs arrive in seconds */}
+        {ingesting && !loading && filtered.length === 0 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0', gap: 12 }}>
+            <div style={{ width: 36, height: 36, border: '3px solid #c62828', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <span style={{ fontSize: 14, color: '#888' }}>Pulling latest stories from Google News…</span>
+          </div>
+        )}
+
+        {/* Background refresh banner when articles are already visible */}
+        {(ingesting || hasPendingArticles) && filtered.length > 0 && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             padding: '10px 16px', marginBottom: 16, borderRadius: 4,
             background: '#f5f5f5', border: '1px solid #e8e8e8', fontSize: 13, color: '#666',
           }}>
             <RefreshCw style={{ width: 14, height: 14, animation: 'spin 0.8s linear infinite' }} />
-            Fetching latest stories for &ldquo;{activeSearch}&rdquo;…
+            {activeSearch
+              ? `Fetching latest stories for "${activeSearch}"…`
+              : ingesting
+                ? 'Updating feed — new stories appear below while AI enriches summaries…'
+                : 'AI is enriching summaries in the background…'}
           </div>
         )}
 

@@ -10,6 +10,7 @@ export interface Article {
   categories: string[];
   sourceName: string;
   imageUrl?: string;
+  enrichmentStatus?: 'pending' | 'complete';
   createdAt: string;
 }
 
@@ -19,7 +20,27 @@ export interface FetchNewsResponse {
   data: Article[];
 }
 
-export interface IngestResponse {
+export interface IngestTriggerResponse {
+  success: boolean;
+  status: 'processing';
+  message: string;
+}
+
+export type IngestJobStatus = 'idle' | 'processing' | 'complete' | 'error';
+
+export interface IngestStatusResponse {
+  success: boolean;
+  status: IngestJobStatus;
+  message: string;
+  startedAt?: string;
+  completedAt?: string;
+  ingestedCount?: number;
+  skippedCount?: number;
+  errorsCount?: number;
+  error?: string;
+}
+
+export interface IngestResult {
   success: boolean;
   message: string;
   ingestedCount: number;
@@ -27,8 +48,15 @@ export interface IngestResponse {
   errorsCount: number;
 }
 
+const POLL_INTERVAL_MS = 4_000;
+const POLL_TIMEOUT_MS = 10 * 60 * 1000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
- * Fetch the latest news articles from the backend API, optionally filtered by category.
+ * Fetch the latest news articles from the backend API.
  */
 export async function fetchNews(category?: string, search?: string): Promise<Article[]> {
   try {
@@ -40,9 +68,7 @@ export async function fetchNews(category?: string, search?: string): Promise<Art
     }
     const queryString = params.toString();
     const url = queryString ? `${API_URL}/api/news?${queryString}` : `${API_URL}/api/news`;
-    const response = await fetch(url, {
-      cache: 'no-store'
-    });
+    const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`API error: ${response.statusText}`);
     }
@@ -55,9 +81,75 @@ export async function fetchNews(category?: string, search?: string): Promise<Art
 }
 
 /**
- * Manually trigger the news ingestion pipeline with optional category/country filter.
+ * Poll ingestion status until complete, error, or timeout.
  */
-export async function triggerIngest(category?: string, country?: string, search?: string): Promise<IngestResponse> {
+export async function pollIngestStatus(
+  onTick?: (status: IngestStatusResponse) => void
+): Promise<IngestResult> {
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    const status = await fetchIngestStatus();
+    onTick?.(status);
+
+    if (status.status === 'complete') {
+      return {
+        success: true,
+        message: status.message,
+        ingestedCount: status.ingestedCount ?? 0,
+        skippedCount: status.skippedCount ?? 0,
+        errorsCount: status.errorsCount ?? 0,
+      };
+    }
+
+    if (status.status === 'error') {
+      return {
+        success: false,
+        message: status.error || status.message,
+        ingestedCount: status.ingestedCount ?? 0,
+        skippedCount: status.skippedCount ?? 0,
+        errorsCount: status.errorsCount ?? 0,
+      };
+    }
+
+    await sleep(POLL_INTERVAL_MS);
+  }
+
+  return {
+    success: false,
+    message: 'Ingestion timed out. Try refreshing in a moment.',
+    ingestedCount: 0,
+    skippedCount: 0,
+    errorsCount: 0,
+  };
+}
+
+export async function fetchIngestStatus(): Promise<IngestStatusResponse> {
+  try {
+    const response = await fetch(`${API_URL}/api/news/ingest/status`, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`API error: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error: any) {
+    console.error('[API] fetchIngestStatus error:', error);
+    return {
+      success: false,
+      status: 'error',
+      message: error.message || 'Failed to fetch ingestion status.',
+    };
+  }
+}
+
+/**
+ * Start background ingestion (202 Accepted) and wait for completion via polling.
+ */
+export async function triggerIngest(
+  category?: string,
+  country?: string,
+  search?: string,
+  onStatus?: (status: IngestStatusResponse) => void
+): Promise<IngestResult> {
   try {
     let url = `${API_URL}/api/news/ingest`;
     const params = new URLSearchParams();
@@ -65,19 +157,18 @@ export async function triggerIngest(category?: string, country?: string, search?
     if (category) params.append('category', category);
     if (country) params.append('country', country);
     const queryString = params.toString();
-    if (queryString) {
-      url += `?${queryString}`;
-    }
+    if (queryString) url += `?${queryString}`;
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' },
     });
-    if (!response.ok) {
+
+    if (response.status !== 202 && !response.ok) {
       throw new Error(`API error: ${response.statusText}`);
     }
-    return await response.json();
+
+    return await pollIngestStatus(onStatus);
   } catch (error: any) {
     console.error('[API] triggerIngest error:', error);
     return {
@@ -85,13 +176,13 @@ export async function triggerIngest(category?: string, country?: string, search?
       message: error.message || 'Failed to trigger ingestion pipeline.',
       ingestedCount: 0,
       skippedCount: 0,
-      errorsCount: 0
+      errorsCount: 0,
     };
   }
 }
 
 /**
- * Fetch a single article by its ID.
+ * Fetch a single article by its ID (includes full content).
  */
 export async function fetchArticleById(id: string): Promise<Article | null> {
   try {

@@ -1,16 +1,12 @@
 import { Router } from 'express';
 import { getRecentNews, getArticleById } from '../controllers/newsController';
-import { triggerIngestion } from '../controllers/ingestionController';
+import { triggerIngestion, getIngestionStatusHandler } from '../controllers/ingestionController';
 
 const router = Router();
 
-// Retrieve news articles (cached-first)
-router.get('/', getRecentNews);
-
-// Retrieve a single article by ID
-router.get('/:id', getArticleById);
-
-// Trigger ingestion manually
+router.get('/ingest/status', getIngestionStatusHandler);
 router.post('/ingest', triggerIngestion);
+router.get('/', getRecentNews);
+router.get('/:id', getArticleById);
 
 export default router;

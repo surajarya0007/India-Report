@@ -1,48 +1,81 @@
 import dotenv from 'dotenv';
 import Parser from 'rss-parser';
-import { ARTICLE_FETCH_LIMIT } from '../config/constants';
+import { INGEST_LIMIT } from '../config/constants';
 
 dotenv.config();
 
-// Configure rss-parser to also capture the <source> element's url attribute
 const parser = new Parser({
   customFields: {
     item: [['source', 'source', { keepArray: false }]],
-  }
+  },
 });
 
 export interface RawArticle {
   title: string;
-  url: string;          // Google News redirect URL (used as DB unique key)
-  realUrl?: string;     // Resolved actual article URL (used for scraping)
+  url: string;
+  realUrl?: string;
   source: string;
   publishedAt: string;
   description: string;
   category?: string[];
 }
 
+function isGoogleNewsUrl(url: string): boolean {
+  return url.includes('news.google.com');
+}
+
+function extractHrefFromHtml(html: string): string | undefined {
+  const match = html.match(/href=["'](https?:\/\/[^"']+)["']/i);
+  if (!match) return undefined;
+  const href = match[1];
+  return isGoogleNewsUrl(href) ? undefined : href;
+}
+
 /**
- * Extract the real article URL from the RSS item's source element.
- * Google News RSS <source> tags contain the publisher URL.
- * Falls back to undefined if not available.
+ * Extract the publisher article URL from a Google News RSS item.
  */
 function extractRealUrl(item: any): string | undefined {
-  // rss-parser captures <source url="..."> as item.source
+  const candidates: (string | undefined)[] = [];
+
   if (item.source && typeof item.source === 'object' && item.source.$?.url) {
-    return item.source.$.url;
+    candidates.push(item.source.$.url);
   }
+
   if (item.source && typeof item.source === 'string' && item.source.startsWith('http')) {
-    return item.source;
+    candidates.push(item.source);
   }
-  // Some feeds expose the real link in item['content:encoded'] or item.link directly as non-google URL
-  if (item.link && !item.link.includes('news.google.com')) {
-    return item.link;
+
+  if (item.guid && typeof item.guid === 'string' && item.guid.startsWith('http') && !isGoogleNewsUrl(item.guid)) {
+    candidates.push(item.guid);
   }
+
+  if (item['content:encoded']) {
+    candidates.push(extractHrefFromHtml(item['content:encoded']));
+  }
+
+  if (item.content) {
+    candidates.push(extractHrefFromHtml(item.content));
+  }
+
+  if (item.description) {
+    candidates.push(extractHrefFromHtml(item.description));
+  }
+
+  if (item.link && !isGoogleNewsUrl(item.link)) {
+    candidates.push(item.link);
+  }
+
+  for (const url of candidates) {
+    if (url && url.startsWith('http') && !isGoogleNewsUrl(url)) {
+      return url;
+    }
+  }
+
   return undefined;
 }
 
 /**
- * Fetch the latest news articles from Google News RSS feed, optionally filtered by category, country, or free-text search.
+ * Fetch the latest news articles from Google News RSS feed.
  */
 export async function fetchLatestNews(category?: string, country?: string, searchQuery?: string): Promise<RawArticle[]> {
   try {
@@ -54,53 +87,44 @@ export async function fetchLatestNews(category?: string, country?: string, searc
       query = 'latest news';
     } else {
       const parts = [];
-      if (category) {
-        parts.push(category);
-      }
-      if (country === 'IN') {
-        parts.push('India');
-      } else if (country) {
-        parts.push(country);
-      }
+      if (category) parts.push(category);
+      if (country === 'IN') parts.push('India');
+      else if (country) parts.push(country);
       query = parts.join(' ');
     }
 
-    // Determine language and country parameters for Google News
     const hl = 'en-IN';
     const gl = 'IN';
     const ceid = 'IN:en';
-    
+
     const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${hl}&gl=${gl}&ceid=${ceid}`;
     console.log(`[NewsService] Fetching Google News RSS: ${url}`);
-    
+
     const feed = await parser.parseURL(url);
     if (!feed.items || feed.items.length === 0) {
       console.warn('[NewsService] Google News RSS returned empty feed.');
       return [];
     }
 
-    const items = feed.items.slice(0, ARTICLE_FETCH_LIMIT);
+    const items = feed.items.slice(0, INGEST_LIMIT);
 
-    // Extract real URLs from RSS source attributes
-    const resolvedUrls = items.map(item => extractRealUrl(item));
-
-    return items.map((item, i) => {
-      // Google News title usually ends with " - Source Name"
+    return items.map((item) => {
       let cleanTitle = item.title || 'Untitled Article';
       let sourceName = 'Google News';
-      
+
       const parts = cleanTitle.split(' - ');
       if (parts.length > 1) {
         sourceName = parts.pop()?.trim() || 'Google News';
         cleanTitle = parts.join(' - ').trim();
       }
 
-      const realUrl = resolvedUrls[i];
+      const realUrl = extractRealUrl(item);
       if (realUrl) {
         console.log(`[NewsService] Resolved: ${cleanTitle.substring(0, 50)} → ${realUrl.substring(0, 80)}`);
+      } else if (item.link) {
+        console.warn(`[NewsService] Could not resolve publisher URL for: ${cleanTitle.substring(0, 50)}`);
       }
 
-      // Build categories matching the queried category
       const articleCategories: string[] = [];
       if (category) {
         const lower = category.toLowerCase();
@@ -117,12 +141,12 @@ export async function fetchLatestNews(category?: string, country?: string, searc
 
       return {
         title: cleanTitle,
-        url: item.link || '',       // Google redirect URL = unique DB key
-        realUrl: realUrl,           // Real article URL = used for scraping
+        url: item.link || '',
+        realUrl,
         source: sourceName,
         publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
         description: item.contentSnippet || item.content || '',
-        category: articleCategories
+        category: articleCategories,
       };
     });
   } catch (error) {
@@ -130,4 +154,3 @@ export async function fetchLatestNews(category?: string, country?: string, searc
     throw error;
   }
 }
-

@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchNews, triggerIngest, Article } from '../lib/api';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { fetchNews, triggerIngest, Article, IngestResult } from '../lib/api';
+
+const STUB_REFRESH_INTERVAL_MS = 4_000;
 
 export function useNews(category?: string, search?: string) {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -9,6 +11,15 @@ export function useNews(category?: string, search?: string) {
 
   const [sentimentFilter, setSentimentFilter] = useState<'All' | 'Positive'>('All');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
+
+  const stubPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopStubPolling = useCallback(() => {
+    if (stubPollRef.current) {
+      clearInterval(stubPollRef.current);
+      stubPollRef.current = null;
+    }
+  }, []);
 
   const loadNews = useCallback(async (showLoading = true) => {
     if (search) return;
@@ -39,9 +50,20 @@ export function useNews(category?: string, search?: string) {
     }
   }, []);
 
-  const runManualIngest = useCallback(async () => {
-    setIngesting(true);
-    try {
+  const startStubPolling = useCallback(
+    (refreshFn: () => Promise<Article[] | void>) => {
+      stopStubPolling();
+      stubPollRef.current = setInterval(() => {
+        void refreshFn();
+      }, STUB_REFRESH_INTERVAL_MS);
+    },
+    [stopStubPolling]
+  );
+
+  const runBackgroundIngest = useCallback(
+    async (refreshFn: () => Promise<Article[] | void>): Promise<IngestResult> => {
+      setIngesting(true);
+
       let queryCategory: string | undefined;
       let queryCountry: string | undefined;
       let querySearch: string | undefined;
@@ -58,68 +80,74 @@ export function useNews(category?: string, search?: string) {
         queryCategory = category.toLowerCase();
       }
 
-      const res = await triggerIngest(queryCategory, queryCountry, querySearch);
-      if (search) {
-        await loadSearchResults(search, false);
-      } else {
-        await loadNews(false);
+      await refreshFn();
+      startStubPolling(refreshFn);
+
+      try {
+        const res = await triggerIngest(queryCategory, queryCountry, querySearch);
+        await refreshFn();
+        return res;
+      } catch (err: any) {
+        console.error(err);
+        return {
+          success: false,
+          message: err.message || 'Failed to trigger ingestion pipeline.',
+          ingestedCount: 0,
+          skippedCount: 0,
+          errorsCount: 0,
+        };
+      } finally {
+        stopStubPolling();
+        setIngesting(false);
       }
-      return res;
-    } catch (err: any) {
-      console.error(err);
-      return {
-        success: false,
-        message: err.message || 'Failed to trigger ingestion pipeline.',
-        ingestedCount: 0,
-        skippedCount: 0,
-        errorsCount: 0
-      };
-    } finally {
+    },
+    [category, search, startStubPolling, stopStubPolling]
+  );
+
+  const runManualIngest = useCallback(async () => {
+    const refreshFn = () => (search ? loadSearchResults(search, false) : loadNews(false));
+    return runBackgroundIngest(refreshFn);
+  }, [search, loadNews, loadSearchResults, runBackgroundIngest]);
+
+  const runSearch = useCallback(
+    async (query: string) => {
+      setError(null);
+      setArticles([]);
+      setLoading(true);
       setIngesting(false);
-    }
-  }, [category, search, loadNews, loadSearchResults]);
 
-  const runSearch = useCallback(async (query: string) => {
-    setError(null);
-    setArticles([]);
-    setLoading(true);
-    setIngesting(false);
+      try {
+        const existing = await loadSearchResults(query, true);
+        const hadCachedResults = existing.length > 0;
 
-    try {
-      // 1. Load existing matches from the database first
-      const existing = await loadSearchResults(query, true);
-      const hadCachedResults = existing.length > 0;
+        const res = await runBackgroundIngest(() => loadSearchResults(query, false));
 
-      // 2. Fetch additional latest stories from Google News
-      setIngesting(true);
-      const res = await triggerIngest(undefined, undefined, query);
-
-      // 3. Refresh with any newly ingested articles
-      await loadSearchResults(query, false);
-
-      return { ...res, hadCachedResults, cachedCount: existing.length };
-    } catch (err: any) {
-      setError(err.message || 'Failed to search news.');
-      return {
-        success: false,
-        message: err.message || 'Failed to search news.',
-        ingestedCount: 0,
-        skippedCount: 0,
-        errorsCount: 0,
-        hadCachedResults: false,
-        cachedCount: 0,
-      };
-    } finally {
-      setIngesting(false);
-      setLoading(false);
-    }
-  }, [loadSearchResults]);
+        return { ...res, hadCachedResults, cachedCount: existing.length };
+      } catch (err: any) {
+        setError(err.message || 'Failed to search news.');
+        return {
+          success: false,
+          message: err.message || 'Failed to search news.',
+          ingestedCount: 0,
+          skippedCount: 0,
+          errorsCount: 0,
+          hadCachedResults: false,
+          cachedCount: 0,
+        };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadSearchResults, runBackgroundIngest]
+  );
 
   useEffect(() => {
     if (!search) {
       loadNews();
     }
   }, [loadNews, search]);
+
+  useEffect(() => () => stopStubPolling(), [stopStubPolling]);
 
   const filteredArticles = useMemo(() => {
     return articles.filter((article) => {
@@ -143,11 +171,17 @@ export function useNews(category?: string, search?: string) {
     return Array.from(cats);
   }, [articles]);
 
+  const hasPendingArticles = useMemo(
+    () => articles.some((a) => a.enrichmentStatus === 'pending'),
+    [articles]
+  );
+
   return {
     articles,
     filteredArticles,
     loading,
     ingesting,
+    hasPendingArticles,
     error,
     sentimentFilter,
     setSentimentFilter,
@@ -159,4 +193,5 @@ export function useNews(category?: string, search?: string) {
     searchNews: runSearch,
   };
 }
+
 export type UseNewsReturn = ReturnType<typeof useNews>;

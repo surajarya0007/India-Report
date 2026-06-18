@@ -2,17 +2,25 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import redis from '../config/redis';
 import { sanitizeArticleImage } from '../utils/imageUtils';
-import { ARTICLE_FETCH_LIMIT } from '../config/constants';
+import { DISPLAY_LIMIT } from '../config/constants';
 
-const CACHE_KEY = 'homepage:news';
-const CACHE_TTL = 3600; // 1 hour in seconds
+const CACHE_TTL = 3600;
 
-
+const LIST_SELECT = {
+  id: true,
+  sourceUrl: true,
+  headline: true,
+  summary: true,
+  imageUrl: true,
+  categories: true,
+  sentiment: true,
+  sourceName: true,
+  enrichmentStatus: true,
+  createdAt: true,
+} as const;
 
 /**
- * GET /api/news
- * Returns the most recent articles (up to ARTICLE_FETCH_LIMIT).
- * Checks Upstash Redis first, falls back to Supabase and updates cache on miss.
+ * GET /api/news — list endpoint (no full content field).
  */
 export async function getRecentNews(req: Request, res: Response) {
   const category = req.query.category as string;
@@ -24,7 +32,6 @@ export async function getRecentNews(req: Request, res: Response) {
       : 'homepage:news:all';
 
   try {
-    // 1. Check Upstash Redis cache
     if (redis) {
       try {
         const cachedData = await redis.get(cacheKey);
@@ -37,7 +44,7 @@ export async function getRecentNews(req: Request, res: Response) {
           return res.status(200).json({
             success: true,
             source: 'cache',
-            data: sanitized
+            data: sanitized,
           });
         }
       } catch (redisError) {
@@ -45,9 +52,8 @@ export async function getRecentNews(req: Request, res: Response) {
       }
     }
 
-    // 2. Cache Miss: Query Supabase (PostgreSQL) via Prisma
-    console.log(`[NewsController] Cache miss for "${cacheKey}". Querying Supabase database...`);
-    
+    console.log(`[NewsController] Cache miss for "${cacheKey}". Querying database...`);
+
     let whereClause = {};
     if (search) {
       whereClause = {
@@ -60,24 +66,24 @@ export async function getRecentNews(req: Request, res: Response) {
     } else if (category && category !== 'Home' && category !== 'undefined') {
       whereClause = {
         categories: {
-          has: category
-        }
+          has: category,
+        },
       };
     }
 
-    const articles = (await prisma.article.findMany({
-      where: whereClause,
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: ARTICLE_FETCH_LIMIT
-    })).map((a) => sanitizeArticleImage(a));
+    const articles = (
+      await prisma.article.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        take: DISPLAY_LIMIT,
+        select: LIST_SELECT,
+      })
+    ).map((a) => sanitizeArticleImage(a));
 
-    // 3. Cache the query results in Redis (TTL = 3600s)
     if (redis && articles.length > 0) {
       try {
         await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(articles));
-        console.log(`[NewsController] Cached ${articles.length} articles in Redis for key "${cacheKey}" with TTL of ${CACHE_TTL}s.`);
+        console.log(`[NewsController] Cached ${articles.length} articles in Redis for key "${cacheKey}".`);
       } catch (redisError) {
         console.error('[NewsController] Redis write error:', redisError);
       }
@@ -86,22 +92,20 @@ export async function getRecentNews(req: Request, res: Response) {
     return res.status(200).json({
       success: true,
       source: 'database',
-      data: articles
+      data: articles,
     });
-
   } catch (error: any) {
     console.error('[NewsController] Critical error retrieving news:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve news articles.',
-      error: error.message || error
+      error: error.message || error,
     });
   }
 }
 
 /**
- * GET /api/news/:id
- * Returns a single article by ID from DB or mock fallback.
+ * GET /api/news/:id — full article including content.
  */
 export async function getArticleById(req: Request, res: Response) {
   const { id } = req.params;
