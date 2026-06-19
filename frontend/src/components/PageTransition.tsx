@@ -35,7 +35,7 @@ function PageTransitionTrigger({ children }: { children: React.ReactNode }) {
           style={{
             position: 'fixed',
             inset: 0,
-            background: '#fff',
+            background: 'var(--bg-primary)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -44,22 +44,22 @@ function PageTransitionTrigger({ children }: { children: React.ReactNode }) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
-            <div className="logo-box animate-logo-i" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, background: '#111', color: '#fff', fontWeight: 900, fontSize: 28, fontFamily: 'Georgia, serif', borderRadius: 4 }}>I</div>
-            <div className="logo-box animate-logo-r" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, background: '#111', color: '#fff', fontWeight: 900, fontSize: 28, fontFamily: 'Georgia, serif', borderRadius: 4 }}>R</div>
+            <div className="logo-box animate-logo-i" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, background: 'var(--color-ink)', color: 'var(--bg-primary)', fontWeight: 900, fontSize: 28, fontFamily: 'Georgia, serif', borderRadius: 4 }}>I</div>
+            <div className="logo-box animate-logo-r" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, background: 'var(--color-ink)', color: 'var(--bg-primary)', fontWeight: 900, fontSize: 28, fontFamily: 'Georgia, serif', borderRadius: 4 }}>R</div>
           </div>
           <div className="animate-text" style={{
             fontFamily: "'Playfair Display', Georgia, serif",
             fontSize: 22,
             fontWeight: 900,
             letterSpacing: '0.08em',
-            color: '#111',
+            color: 'var(--color-ink)',
           }}>
             INDIA REPORTS
           </div>
           <div style={{
             width: 150,
             height: 2.5,
-            background: '#f3f4f6',
+            background: 'var(--bg-tertiary)',
             borderRadius: 1,
             marginTop: 22,
             position: 'relative',

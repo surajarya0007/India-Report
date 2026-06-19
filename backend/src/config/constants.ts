@@ -15,18 +15,14 @@ export const GEMINI_SEARCH_MIN_CHARS = 500;
 
 /** Gemini models tried in order; falls back to the next on 429 / quota errors */
 export const GEMINI_MODEL_CHAIN = [
-  'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
   'gemini-3.1-flash-lite',
 ] as const;
 
 /** Default delay between articles during ingestion (primary model ~5 RPM) */
-export const GEMINI_RPM_DELAY_MS = 12_000;
+export const GEMINI_RPM_DELAY_MS = 6_000;
 
 /** Per-model RPM pacing delay after a successful synthesis */
 export const GEMINI_RPM_DELAY_BY_MODEL: Record<string, number> = {
-  'gemini-2.5-flash': 12_000,
-  'gemini-2.5-flash-lite': 6_000,
   'gemini-3.1-flash-lite': 6_000,
 };
 

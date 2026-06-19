@@ -14,6 +14,8 @@ import {
   AlertCircle,
   Quote
 } from 'lucide-react';
+import Layout from '../../../components/Layout';
+import ShareDialog from '../../../components/ShareDialog';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -51,7 +53,7 @@ function SideCard({ article }: { article: Article }) {
     <div
       onClick={() => router.push(`/article/${article.id}`)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}
+      style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--border-secondary)', cursor: 'pointer' }}
     >
       <div style={{ 
         flexShrink: 0, 
@@ -61,12 +63,13 @@ function SideCard({ article }: { article: Article }) {
         background: `linear-gradient(135deg, ${bg}22, ${bg}11)`, 
         display: 'flex', 
         alignItems: 'center', 
-        justifyContent: 'center' 
+        justifyContent: 'center',
+        borderRadius: '8px'
       }}>
         {hasImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={article.imageUrl} alt={article.headline} onError={() => setImgError(true)}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '8px' }} />
         ) : (
           <span style={{ color: bg, fontSize: 16, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.3 }}>IR</span>
         )}
@@ -90,7 +93,7 @@ function SideCard({ article }: { article: Article }) {
           fontSize: 13, 
           fontWeight: 700, 
           lineHeight: 1.35, 
-          color: hov ? bg : '#111', 
+          color: hov ? bg : 'var(--color-ink)', 
           transition: 'color 0.15s',
           display: '-webkit-box', 
           WebkitLineClamp: 2, 
@@ -105,6 +108,101 @@ function SideCard({ article }: { article: Article }) {
   );
 }
 
+// ─── More Stories Card ────────────────────────────────────────────────────────
+
+function MoreStoriesCard({ article }: { article: Article }) {
+  const router = useRouter();
+  const [hov, setHov] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const cat = article.categories?.[0];
+  const bg = catColor(cat);
+  const hasImage = !!article.imageUrl && !imgError;
+  const summarySnippet = article.summary?.[0] || '';
+
+  return (
+    <div
+      onClick={() => router.push(`/article/${article.id}`)}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        cursor: 'pointer',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border-primary)',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        transition: 'transform 0.2s, box-shadow 0.2s',
+        transform: hov ? 'translateY(-2px)' : 'translateY(0)',
+        boxShadow: hov ? 'var(--shadow-md)' : 'none',
+      }}
+    >
+      <div style={{ height: 130, overflow: 'hidden', background: `linear-gradient(135deg, ${bg}22, ${bg}11)`, position: 'relative' }}>
+        {hasImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={article.imageUrl}
+            alt={article.headline}
+            onError={() => setImgError(true)}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.35s', transform: hov ? 'scale(1.05)' : 'scale(1)' }}
+          />
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <span style={{ color: bg, fontSize: 32, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.2 }}>IR</span>
+          </div>
+        )}
+      </div>
+      <div style={{ padding: 12, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {cat && (
+          <span style={{
+            fontSize: 9,
+            fontWeight: 800,
+            color: bg,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            display: 'block',
+            marginBottom: 4
+          }}>
+            {cat}
+          </span>
+        )}
+        <h4 style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          fontSize: 13,
+          fontWeight: 700,
+          lineHeight: 1.35,
+          color: hov ? 'var(--ir-crimson)' : 'var(--color-ink)',
+          transition: 'color 0.15s',
+          margin: '0 0 6px 0',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}>
+          {article.headline}
+        </h4>
+        <p style={{
+          fontSize: 11.5,
+          color: 'var(--color-ink-muted)',
+          lineHeight: 1.45,
+          margin: '0 0 8px 0',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          flex: 1,
+        }}>
+          {summarySnippet}
+        </p>
+        <div style={{ fontSize: 10, color: 'var(--color-ink-ghost)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 'auto' }}>
+          <Clock style={{ width: 10, height: 10 }} />
+          <span>{new Date(article.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Pull-Quote Callout ───────────────────────────────────────────────────────
 
 function PullQuote({ text, color }: { text: string; color: string }) {
@@ -113,8 +211,9 @@ function PullQuote({ text, color }: { text: string; color: string }) {
       margin: '36px 0',
       padding: '28px 32px',
       borderLeft: `5px solid ${color}`,
-      background: `${color}08`,
+      background: 'var(--bg-secondary)',
       position: 'relative',
+      borderRadius: '8px',
     }}>
       <Quote style={{ 
         width: 28, height: 28, color: color, opacity: 0.3,
@@ -126,7 +225,7 @@ function PullQuote({ text, color }: { text: string; color: string }) {
         fontStyle: 'italic',
         fontWeight: 600,
         lineHeight: 1.6,
-        color: '#1a1a2e',
+        color: 'var(--color-ink)',
         margin: 0,
       }}>
         {text}
@@ -142,7 +241,7 @@ function renderTextWithBold(text: string, isFirstParagraph?: boolean) {
   const nodes = parts.map((part, idx) => {
     // Odd indices are between **...**
     if (idx % 2 === 1) {
-      return <strong key={idx} style={{ color: '#111', fontWeight: 800 }}>{part}</strong>;
+      return <strong key={idx} style={{ color: 'var(--color-ink)', fontWeight: 800 }}>{part}</strong>;
     }
     return part;
   });
@@ -180,7 +279,7 @@ function ArticleBody({
   color: string;
 }) {
   if (!contentBlocks || contentBlocks.length === 0) {
-    return <p style={{ fontSize: 16, color: '#666' }}>No content available.</p>;
+    return <p style={{ fontSize: 16, color: 'var(--color-ink-muted)' }}>No content available.</p>;
   }
 
   // Section headings appear before paragraphs at index 1, 3, 5, 7
@@ -227,8 +326,9 @@ function ArticleBody({
         <div style={{ 
           marginTop: 40, 
           padding: '28px',
-          background: '#f8fafc',
+          background: 'var(--bg-secondary)',
           borderTop: `3px solid ${color}`,
+          borderRadius: '8px',
         }}>
           <h4 style={{
             fontFamily: "'Inter', sans-serif",
@@ -245,15 +345,16 @@ function ArticleBody({
             {highlightedFacts.slice(2).map((fact, idx) => (
               <div key={idx} style={{
                 padding: '16px',
-                background: '#fff',
-                border: `1px solid ${color}22`,
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border-primary)',
                 borderLeft: `3px solid ${color}`,
+                borderRadius: '8px',
               }}>
                 <p style={{
                   fontFamily: "'Source Serif 4', Georgia, serif",
                   fontSize: 14,
                   lineHeight: 1.6,
-                  color: '#2c3e50',
+                  color: 'var(--color-ink-secondary)',
                   margin: 0,
                   fontWeight: 500,
                 }}>
@@ -272,24 +373,19 @@ function ArticleBody({
 
 function PageSkeleton() {
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column', fontFamily: "'Inter', Arial, sans-serif" }}>
-      <header style={{ background: '#fff', borderBottom: '1px solid #e8e8e8' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', height: 56 }}>
-          <div style={{ width: 80, height: 24, background: '#f0f0f0' }} />
-        </div>
-      </header>
-      <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', padding: '32px 20px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '0 40px' }}>
+    <Layout showNav={false}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', padding: '32px 20px', display: 'grid', gridTemplateColumns: '1fr 340px', gap: '0 48px' }}>
         <div>
-          <div style={{ width: 120, height: 18, background: '#f0f0f0', marginBottom: 16 }} />
-          <div style={{ width: '90%', height: 38, background: '#f0f0f0', marginBottom: 24 }} />
-          <div style={{ width: '100%', height: 420, background: '#f0f0f0', marginBottom: 28 }} />
-          <div style={{ width: '100%', height: 200, background: '#f0f0f0' }} />
+          <div style={{ width: 120, height: 18, background: 'var(--bg-tertiary)', marginBottom: 16, borderRadius: 4 }} />
+          <div style={{ width: '90%', height: 38, background: 'var(--bg-tertiary)', marginBottom: 24, borderRadius: 4 }} />
+          <div style={{ width: '100%', height: 420, background: 'var(--bg-tertiary)', marginBottom: 28, borderRadius: 4 }} />
+          <div style={{ width: '100%', height: 200, background: 'var(--bg-tertiary)', borderRadius: 4 }} />
         </div>
         <div>
-          <div style={{ width: '100%', height: 200, background: '#f0f0f0', marginBottom: 20 }} />
+          <div style={{ width: '100%', height: 200, background: 'var(--bg-tertiary)', marginBottom: 20, borderRadius: 4 }} />
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
 
@@ -302,8 +398,9 @@ export default function ArticlePage() {
 
   const [article, setArticle] = useState<Article | null>(null);
   const [related, setRelated] = useState<Article[]>([]);
+  const [moreStories, setMoreStories] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
 
   // Reaction State
@@ -339,8 +436,30 @@ export default function ArticlePage() {
 
       if (art) {
         const cats = art.categories || [];
-        const rel = all.filter(a => a.id !== id && a.categories?.some(c => cats.includes(c))).slice(0, 5);
-        setRelated(rel.length > 0 ? rel : all.filter(a => a.id !== id).slice(0, 5));
+        
+        // All articles sharing at least one category with the current one
+        const categoryMatching = all.filter(a => a.id !== id && a.categories?.some(c => cats.includes(c)));
+        
+        // 1. Sidebar: Related Stories (up to 5)
+        const rel = categoryMatching.slice(0, 5);
+        const relatedArticles = rel.length > 0 ? rel : all.filter(a => a.id !== id).slice(0, 5);
+        setRelated(relatedArticles);
+
+        // 2. Bottom: More Stories (up to 4)
+        // Prefer matching category articles that are not already shown in the sidebar
+        const remainingCategoryMatching = categoryMatching.filter(a => !relatedArticles.some(r => r.id === a.id));
+        
+        // If we don't have enough remaining matching category articles, fill with other articles
+        let bottomStories = remainingCategoryMatching.slice(0, 4);
+        if (bottomStories.length < 4) {
+          const otherArticles = all.filter(a => 
+            a.id !== id && 
+            !relatedArticles.some(r => r.id === a.id) && 
+            !bottomStories.some(b => b.id === a.id)
+          );
+          bottomStories = [...bottomStories, ...otherArticles].slice(0, 4);
+        }
+        setMoreStories(bottomStories);
       }
     });
 
@@ -348,11 +467,7 @@ export default function ArticlePage() {
   }, [id]);
 
   const handleShare = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    }
+    setShareOpen(true);
   };
 
   const handlePrint = () => { if (typeof window !== 'undefined') window.print(); };
@@ -381,16 +496,16 @@ export default function ArticlePage() {
 
   if (!article) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <TopBar onBack={() => router.push('/')} />
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12 }}>
-          <p style={{ fontSize: 16, color: '#888', fontWeight: 600 }}>Article not found</p>
+      <Layout showNav={false}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: 12 }}>
+          <p style={{ fontSize: 16, color: 'var(--color-ink-muted)', fontWeight: 600 }}>Article not found</p>
           <button onClick={() => router.push('/')}
-            style={{ marginTop: 8, padding: '8px 20px', background: '#111', color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer', fontSize: 13 }}>
+            className="ir-btn-primary"
+            style={{ padding: '8px 20px', fontSize: 13 }}>
             Back to Home
           </button>
         </div>
-      </div>
+      </Layout>
     );
   }
 
@@ -399,12 +514,7 @@ export default function ArticlePage() {
   const readTime = Math.ceil(((article.contentBlocks?.join(' ') || '').split(' ').length) / 200);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', color: '#111', fontFamily: "'Inter', Arial, sans-serif" }}>
-      {/* Import Web Fonts */}
-      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,300..700;1,8..60,300..700&family=Inter:wght@300..900&display=swap" rel="stylesheet" />
-
-      <TopBar onBack={() => router.push('/')} />
-
+    <Layout showNav={false}>
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 20px' }}>
         {/* Breadcrumb / Category Tag */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
@@ -418,7 +528,7 @@ export default function ArticlePage() {
           >
             Home
           </span>
-          <span style={{ fontSize: 11, color: '#bbb' }}>/</span>
+          <span style={{ fontSize: 11, color: 'var(--color-ink-ghost)' }}>/</span>
           <span style={{ fontSize: 11, fontWeight: 800, color: categoryColorHex, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             {primaryCategory}
           </span>
@@ -430,7 +540,7 @@ export default function ArticlePage() {
           fontSize: 'clamp(28px, 4vw, 46px)',
           fontWeight: 800,
           lineHeight: 1.15,
-          color: '#111',
+          color: 'var(--color-ink)',
           marginBottom: 20,
           letterSpacing: '-0.02em',
           maxWidth: '90%'
@@ -439,26 +549,26 @@ export default function ArticlePage() {
         </h1>
 
         {/* Divider line in category color */}
-        <div style={{ width: 60, height: 4, background: categoryColorHex, marginBottom: 20 }} />
+        <div style={{ width: 60, height: 4, background: categoryColorHex, marginBottom: 20, borderRadius: '2px' }} />
 
         {/* Premium Meta Row */}
         <div style={{ 
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           flexWrap: 'wrap', gap: 16, paddingBottom: 18, 
-          borderBottom: '1px solid #eaeaea', marginBottom: 28
+          borderBottom: '1px solid var(--border-primary)', marginBottom: 28
         }}>
           {/* Author/Date Info */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ 
               width: 40, height: 40, borderRadius: '50%', 
-              background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--color-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0
             }}>
-              <span style={{ color: '#fff', fontSize: 13, fontWeight: 900, fontFamily: 'Georgia, serif' }}>IR</span>
+              <span style={{ color: 'var(--bg-primary)', fontSize: 13, fontWeight: 900, fontFamily: 'Georgia, serif' }}>IR</span>
             </div>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>India Reports Editorial Desk</div>
-              <div style={{ fontSize: 10, color: '#888', fontWeight: 500, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-ink)' }}>India Reports Editorial Desk</div>
+              <div style={{ fontSize: 10, color: 'var(--color-ink-muted)', fontWeight: 500, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Clock style={{ width: 10, height: 10 }} />
                 <span>{formatDate(article.createdAt)}</span>
                 <span>·</span>
@@ -483,7 +593,7 @@ export default function ArticlePage() {
             </button>
             <button className="action-pill active-pill" onClick={handleShare}>
               <Share2 style={{ width: 14, height: 14 }} />
-              <span>{copied ? 'COPIED!' : 'SHARE'}</span>
+              <span>SHARE</span>
             </button>
           </div>
         </div>
@@ -494,26 +604,27 @@ export default function ArticlePage() {
           {/* Left Main Content */}
           <div style={{ minWidth: 0 }}>
             {/* Hero Image */}
-            <div style={{ position: 'relative', marginBottom: 32 }}>
+            <div style={{ position: 'relative', marginBottom: 32, borderRadius: '8px', overflow: 'hidden' }}>
               {article.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img 
                   src={article.imageUrl} 
                   alt={article.headline}
-                  style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 520, objectFit: 'cover' }}
+                  style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 520, objectFit: 'cover', borderRadius: '8px' }}
                 />
               ) : (
                 <div style={{
                   width: '100%', height: 380,
                   background: `linear-gradient(135deg, ${categoryColorHex}0d 0%, ${categoryColorHex}1a 100%)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1px solid #f0f0f0'
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: '8px'
                 }}>
                   <span style={{ color: categoryColorHex, fontSize: 72, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.15 }}>IR</span>
                 </div>
               )}
               <div style={{ 
-                textAlign: 'right', fontSize: 10, color: '#999', 
+                textAlign: 'right', fontSize: 10, color: 'var(--color-ink-muted)', 
                 marginTop: 6, fontStyle: 'italic', letterSpacing: '0.04em' 
               }}>
                 IMAGE: INDIA REPORTS / GOOGLE NEWS INGEST
@@ -523,10 +634,11 @@ export default function ArticlePage() {
             {/* Summary Box (IR Summary Style) */}
             {article.summary && article.summary.length > 0 && (
               <div style={{
-                background: '#f8fafc',
+                background: 'var(--bg-secondary)',
                 borderLeft: `4px solid ${categoryColorHex}`,
                 padding: '24px 28px',
                 marginBottom: 36,
+                borderRadius: '8px',
               }}>
                 <h4 style={{ 
                   fontSize: 10, fontWeight: 900, letterSpacing: '0.15em',
@@ -537,7 +649,7 @@ export default function ArticlePage() {
                 <ul style={{ 
                   margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 12,
                   fontFamily: "'Source Serif 4', Georgia, serif",
-                  fontSize: '15.5px', lineHeight: 1.65, color: '#334155'
+                  fontSize: '15.5px', lineHeight: 1.65, color: 'var(--color-ink-secondary)'
                 }}>
                   {article.summary.map((bullet, idx) => (
                     <li key={idx} style={{ paddingLeft: 4 }}>
@@ -551,7 +663,7 @@ export default function ArticlePage() {
             {/* Content Header */}
             <div style={{ 
               display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24,
-              paddingBottom: 12, borderBottom: `2px solid ${categoryColorHex}20`
+              paddingBottom: 12, borderBottom: '2px solid var(--border-primary)'
             }}>
               <span style={{
                 fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: 900,
@@ -559,7 +671,7 @@ export default function ArticlePage() {
               }}>
                 IN-DEPTH ANALYSIS
               </span>
-              <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
+              <div style={{ flex: 1, height: 1, background: 'var(--border-primary)' }} />
               {article.categories?.map((cat, i) => (
                 <span key={i} style={{
                   fontSize: 9, fontWeight: 800, color: catColor(cat),
@@ -581,11 +693,11 @@ export default function ArticlePage() {
 
             {/* Reactions Block */}
             <div style={{ 
-              marginTop: 52, paddingTop: 28, borderTop: '2px solid #f0f0f0',
+              marginTop: 52, paddingTop: 28, borderTop: '2px solid var(--border-primary)',
               textAlign: 'center'
             }}>
               <span style={{ 
-                fontSize: 11, fontWeight: 800, color: '#555', letterSpacing: '0.1em',
+                fontSize: 11, fontWeight: 800, color: 'var(--color-ink-secondary)', letterSpacing: '0.1em',
                 textTransform: 'uppercase', display: 'block', marginBottom: 18
               }}>
                 How do you feel about this story?
@@ -622,8 +734,9 @@ export default function ArticlePage() {
               <div style={{
                 marginBottom: 24,
                 padding: '14px 20px',
-                background: article.sentiment === 'Positive' ? '#f0fdf4' : article.sentiment === 'Negative' ? '#fff1f2' : '#f8fafc',
-                border: `1px solid ${article.sentiment === 'Positive' ? '#bbf7d0' : article.sentiment === 'Negative' ? '#fecdd3' : '#e2e8f0'}`,
+                background: article.sentiment === 'Positive' ? 'rgba(22, 163, 74, 0.1)' : article.sentiment === 'Negative' ? 'rgba(225, 29, 72, 0.1)' : 'var(--bg-secondary)',
+                border: `1px solid ${article.sentiment === 'Positive' ? 'rgba(22, 163, 74, 0.2)' : article.sentiment === 'Negative' ? 'rgba(225, 29, 72, 0.2)' : 'var(--border-primary)'}`,
+                borderRadius: '8px',
                 display: 'flex', alignItems: 'center', gap: 10
               }}>
                 <TrendingUp style={{ 
@@ -631,10 +744,10 @@ export default function ArticlePage() {
                   color: article.sentiment === 'Positive' ? '#16a34a' : article.sentiment === 'Negative' ? '#e11d48' : '#64748b'
                 }} />
                 <div>
-                  <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#888', marginBottom: 2 }}>
+                  <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-ink-muted)', marginBottom: 2 }}>
                     SENTIMENT ANALYSIS
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ink)' }}>
                     {article.sentiment} Coverage
                   </div>
                 </div>
@@ -649,14 +762,14 @@ export default function ArticlePage() {
               }}>
                 <h3 style={{ 
                   fontFamily: "'Inter', sans-serif", fontSize: 11, fontWeight: 900,
-                  color: '#111', letterSpacing: '0.12em', margin: 0, textTransform: 'uppercase'
+                  color: 'var(--color-ink)', letterSpacing: '0.12em', margin: 0, textTransform: 'uppercase'
                 }}>
                   Related Stories
                 </h3>
               </div>
               
               {related.length === 0 && (
-                <p style={{ fontSize: 12, color: '#bbb' }}>No related stories found.</p>
+                <p style={{ fontSize: 12, color: 'var(--color-ink-ghost)' }}>No related stories found.</p>
               )}
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {related.map(a => <SideCard key={a.id} article={a} />)}
@@ -670,7 +783,8 @@ export default function ArticlePage() {
                   background: categoryColorHex, color: '#fff', border: 'none',
                   fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', cursor: 'pointer',
                   transition: 'opacity 0.2s', textTransform: 'uppercase',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  borderRadius: '8px'
                 }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}
@@ -680,147 +794,53 @@ export default function ArticlePage() {
             </div>
 
             {/* AI assisted notice */}
-            <div style={{ background: '#f8f8f8', padding: '20px', border: '1px solid #eaeaea' }}>
+            <div style={{ background: 'var(--bg-secondary)', padding: '20px', border: '1px solid var(--border-primary)', borderRadius: '8px' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
                 <AlertCircle style={{ width: 14, height: 14, color: categoryColorHex }} />
-                <span style={{ fontSize: 10, fontWeight: 900, color: '#111', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-ink)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                   AI Dossier Synthesis
                 </span>
               </div>
-              <p style={{ fontSize: 11.5, color: '#666', lineHeight: 1.6, margin: 0 }}>
+              <p style={{ fontSize: 11.5, color: 'var(--color-ink-muted)', lineHeight: 1.6, margin: 0 }}>
                 This report is compiled programmatically from multiple verified news publications. Raw articles are parsed via Firecrawl and structured analysis is synthesized dynamically using Gemini AI models.
               </p>
             </div>
           </aside>
         </div>
+
+        {/* More Stories Grid Section */}
+        <div style={{ marginTop: 56, paddingTop: 32, borderTop: '1px solid var(--border-primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 4, height: 18, background: 'var(--ir-crimson)', borderRadius: 2 }} />
+            <h3 style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: 18,
+              fontWeight: 900,
+              color: 'var(--color-ink)',
+              margin: 0
+            }}>
+              More Stories
+            </h3>
+          </div>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
+            gap: 24 
+          }}>
+            {moreStories.map((story) => (
+              <MoreStoriesCard key={story.id} article={story} />
+            ))}
+          </div>
+        </div>
       </main>
 
-      {/* Global CSS Styles */}
-      <style>{`
-        .action-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          border: 1px solid #e0e0e0;
-          background: #fff;
-          cursor: pointer;
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: 0.08em;
-          color: #555;
-          height: 32px;
-          padding: 0 14px;
-          transition: all 0.2s ease;
-          font-family: 'Inter', sans-serif;
-        }
-        .action-pill:hover {
-          background: #f8f8f8;
-          color: #111;
-          border-color: #adadad;
-        }
-        .active-pill {
-          background: #111;
-          color: #fff !important;
-          border-color: #111;
-        }
-        .active-pill:hover {
-          background: #222;
-          border-color: #222;
-        }
-        .article-paragraph {
-          font-family: 'Source Serif 4', Georgia, serif;
-          font-size: 18px;
-          line-height: 1.9;
-          color: #2c3e50;
-          margin-bottom: 28px;
-          letter-spacing: 0.01em;
-        }
-        .section-subheading {
-          font-family: 'Playfair Display', Georgia, serif;
-          font-size: 22px;
-          font-weight: 800;
-          color: #111;
-          margin-top: 44px;
-          margin-bottom: 18px;
-          padding-left: 14px;
-          letter-spacing: -0.01em;
-          line-height: 1.3;
-        }
-        .drop-cap {
-          float: left;
-          font-family: 'Playfair Display', Georgia, serif;
-          font-size: 68px;
-          line-height: 52px;
-          padding-top: 4px;
-          padding-right: 10px;
-          padding-left: 2px;
-          font-weight: 800;
-          color: #111;
-        }
-        .reaction-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 16px;
-          border: 1px solid #e0e0e0;
-          border-radius: 20px;
-          background: #fff;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-family: 'Inter', sans-serif;
-        }
-        .reaction-btn:hover {
-          background: #f5f7fb;
-          border-color: #bbb;
-          transform: translateY(-1px);
-        }
-        .reaction-active {
-          background: #eff6ff !important;
-          border-color: #3b82f6 !important;
-        }
-        .reaction-btn .count {
-          font-size: 12px;
-          font-weight: 700;
-          color: #555;
-        }
-        .reaction-active .count {
-          color: #2563eb !important;
-        }
-        @media (max-width: 768px) {
-          main > div[style*="grid-template-columns"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-// ─── Top Navigation Bar (non-sticky) ─────────────────────────────────────────
-
-function TopBar({ onBack }: { onBack: () => void }) {
-  return (
-    <header style={{ background: '#fff', borderBottom: '1px solid #e8e8e8' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 58 }}>
-        <button onClick={onBack}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#444', fontSize: 13, fontWeight: 600, padding: '6px 0', fontFamily: "'Inter', sans-serif" }}>
-          <ChevronLeft style={{ width: 18, height: 18 }} />
-          Back
-        </button>
-
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {['I', 'R'].map((l, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: '#111', color: '#fff', fontWeight: 900, fontSize: 15, fontFamily: 'Georgia, serif' }}>{l}</span>
-            ))}
-            <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 18, fontWeight: 900, letterSpacing: '-0.03em', color: '#111', marginLeft: 8 }}>
-              INDIA REPORTS
-            </span>
-          </div>
-        </button>
-
-        <div style={{ width: 80 }} /> {/* spacer to center logo */}
-      </div>
-    </header>
+      {/* Share Dialog */}
+      <ShareDialog
+        isOpen={shareOpen}
+        onClose={() => setShareOpen(false)}
+        url={typeof window !== 'undefined' ? window.location.href : ''}
+        title={article.headline}
+      />
+    </Layout>
   );
 }

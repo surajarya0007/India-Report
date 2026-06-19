@@ -347,7 +347,7 @@ export async function runIngestionPipeline(
       const feed = await parser.parseURL(url);
       if (!feed.items || feed.items.length === 0) continue;
 
-      const headlines = feed.items.slice(0, 20).map(item => item.title || '');
+      const headlines = feed.items.slice(0, 40).map(item => item.title || '');
       const trendingKeywords = await extractTrendingKeywords(cat, headlines);
       console.log(`[Ingestion] Category "${cat}" trending keywords:`, trendingKeywords);
 

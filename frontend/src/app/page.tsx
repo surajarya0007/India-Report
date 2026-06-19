@@ -4,7 +4,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNews } from '../hooks/useNews';
 import { Article } from '../lib/api';
-import { Search, Menu, X, Clock, RefreshCw, Cpu, ChevronRight } from 'lucide-react';
+import { Clock, RefreshCw, ChevronRight } from 'lucide-react';
+import Layout from '../components/Layout';
+import ShareDialog from '../components/ShareDialog';
+import ScrollReveal from '../components/ScrollReveal';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -76,7 +79,6 @@ function ImgBox({ article, height = 180, style = {} }: { article: Article; heigh
   );
 }
 
-
 // ─── Shared: Category tag ─────────────────────────────────────────────────────
 
 function CatTag({ cat }: { cat?: string }) {
@@ -115,14 +117,14 @@ function BreakingTicker({ articles }: { articles: Article[] }) {
     : ['India Reports: AI-Powered News Platform — Updated On Demand', 'Breaking coverage from India and the world, synthesized by Gemini 1.5 Flash', 'Live pipeline: Firecrawl extraction • Supabase storage • Upstash caching'];
 
   return (
-    <div style={{ display: 'flex', background: '#c62828', overflow: 'hidden', borderBottom: '1px solid #a81c1c' }}>
+    <div style={{ display: 'flex', background: 'var(--ticker-bg)', overflow: 'hidden', borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
       <div style={{
         flexShrink: 0, display: 'flex', alignItems: 'center', padding: '0 14px',
-        background: '#7f0000', color: '#fff', fontSize: 10, fontWeight: 800,
+        background: 'var(--ticker-label-bg)', color: '#fff', fontSize: 10, fontWeight: 800,
         letterSpacing: '0.15em', textTransform: 'uppercase', whiteSpace: 'nowrap',
-        borderRight: '2px solid #a81c1c', gap: 6, height: 36,
+        borderRight: '2px solid rgba(0,0,0,0.15)', gap: 6, height: 36,
       }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', display: 'inline-block' }} />
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', display: 'inline-block', animation: 'pulse 1.5s ease-in-out infinite' }} />
         BREAKING
       </div>
       <div style={{ overflow: 'hidden', flex: 1 }}>
@@ -141,7 +143,6 @@ function BreakingTicker({ articles }: { articles: Article[] }) {
 
 // ─── Article Cards ────────────────────────────────────────────────────────────
 
-/** Large feature card — image on top, big headline */
 function FeatureCard({ article, index = 0 }: { article: Article; index?: number }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
@@ -163,16 +164,16 @@ function FeatureCard({ article, index = 0 }: { article: Article; index?: number 
           {article.enrichmentStatus === 'pending' && <EnrichingBadge />}
         </div>
         <h2 style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
+          fontFamily: 'var(--font-serif)',
           fontSize: 22, fontWeight: 800, lineHeight: 1.25, marginTop: 8, marginBottom: 8,
-          color: hov ? '#c62828' : '#111', transition: 'color 0.2s',
+          color: hov ? 'var(--ir-crimson)' : 'var(--color-ink)', transition: 'color 0.2s',
         }}>
           {article.headline}
         </h2>
-        <p style={{ fontSize: 13, color: '#555', lineHeight: 1.65, marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <p style={{ fontSize: 13, color: 'var(--color-ink-muted)', lineHeight: 1.65, marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {firstSentence}
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#999' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-ink-faint)' }}>
           <Clock style={{ width: 11, height: 11 }} />
           <span>{timeAgo(article.createdAt)}</span>
         </div>
@@ -181,13 +182,12 @@ function FeatureCard({ article, index = 0 }: { article: Article; index?: number 
   );
 }
 
-/** Compact horizontal card — thumbnail left, text right */
 function CompactCard({ article, showDivider = true, index = 0 }: { article: Article; showDivider?: boolean; index?: number }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
   return (
     <>
-      {showDivider && <div style={{ height: 1, background: '#f0f0f0', margin: '0' }} />}
+      {showDivider && <div style={{ height: 1, background: 'var(--border-secondary)', margin: '0' }} />}
       <div
         onClick={() => router.push(`/article/${article.id}`)}
         onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
@@ -206,14 +206,14 @@ function CompactCard({ article, showDivider = true, index = 0 }: { article: Arti
             {article.enrichmentStatus === 'pending' && <EnrichingBadge />}
           </div>
           <h3 style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
+            fontFamily: 'var(--font-serif)',
             fontSize: 14, fontWeight: 700, lineHeight: 1.3, marginTop: 5,
-            color: hov ? '#c62828' : '#111', transition: 'color 0.2s',
+            color: hov ? 'var(--ir-crimson)' : 'var(--color-ink)', transition: 'color 0.2s',
             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>
             {article.headline}
           </h3>
-          <div style={{ fontSize: 11, color: '#bbb', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-ink-ghost)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
             <Clock style={{ width: 10, height: 10 }} />
             {timeAgo(article.createdAt)}
           </div>
@@ -223,7 +223,6 @@ function CompactCard({ article, showDivider = true, index = 0 }: { article: Arti
   );
 }
 
-/** Grid card for section rows */
 function GridCard({ article, index = 0 }: { article: Article; index?: number }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
@@ -235,10 +234,11 @@ function GridCard({ article, index = 0 }: { article: Article; index?: number }) 
       className="card-entrance"
       style={{
         cursor: 'pointer', borderRadius: 4, overflow: 'hidden',
-        border: '1px solid #ebebeb',
-        boxShadow: hov ? '0 4px 18px rgba(0,0,0,0.09)' : '0 1px 4px rgba(0,0,0,0.04)',
+        border: '1px solid var(--border-primary)',
+        boxShadow: hov ? 'var(--shadow-md)' : 'var(--shadow-sm)',
         transition: 'box-shadow 0.25s',
         animationDelay: `${index * 50}ms`,
+        background: 'var(--bg-elevated)',
       }}
     >
       <div style={{ overflow: 'hidden' }}>
@@ -250,17 +250,17 @@ function GridCard({ article, index = 0 }: { article: Article; index?: number }) 
           {article.enrichmentStatus === 'pending' && <EnrichingBadge />}
         </div>
         <h3 style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
+          fontFamily: 'var(--font-serif)',
           fontSize: 14, fontWeight: 700, lineHeight: 1.3, marginTop: 7, marginBottom: 5,
-          color: hov ? '#c62828' : '#111', transition: 'color 0.2s',
+          color: hov ? 'var(--ir-crimson)' : 'var(--color-ink)', transition: 'color 0.2s',
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
           {article.headline}
         </h3>
-        <p style={{ fontSize: 12, color: '#777', lineHeight: 1.5, marginBottom: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <p style={{ fontSize: 12, color: 'var(--color-ink-muted)', lineHeight: 1.5, marginBottom: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {firstSentence}
         </p>
-        <div style={{ fontSize: 11, color: '#bbb', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div style={{ fontSize: 11, color: 'var(--color-ink-ghost)', display: 'flex', alignItems: 'center', gap: 4 }}>
           <Clock style={{ width: 10, height: 10 }} />
           {timeAgo(article.createdAt)}
         </div>
@@ -269,7 +269,6 @@ function GridCard({ article, index = 0 }: { article: Article; index?: number }) 
   );
 }
 
-/** Sidebar list item */
 function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: number; index?: number }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
@@ -280,11 +279,11 @@ function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: num
       className="card-entrance"
       style={{
         display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 0',
-        borderBottom: '1px solid #f2f2f2', cursor: 'pointer',
+        borderBottom: '1px solid var(--border-faint)', cursor: 'pointer',
         animationDelay: `${index * 50}ms`,
       }}
     >
-      <span style={{ fontSize: 20, fontWeight: 900, color: '#e8e8e8', fontFamily: 'Georgia, serif', lineHeight: 1, flexShrink: 0, minWidth: 26, textAlign: 'right' }}>
+      <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--border-primary)', fontFamily: 'Georgia, serif', lineHeight: 1, flexShrink: 0, minWidth: 26, textAlign: 'right' }}>
         {String(rank).padStart(2, '0')}
       </span>
       <div style={{ minWidth: 0 }}>
@@ -293,14 +292,14 @@ function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: num
           {article.enrichmentStatus === 'pending' && <EnrichingBadge />}
         </div>
         <h4 style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
+          fontFamily: 'var(--font-serif)',
           fontSize: 13, fontWeight: 700, lineHeight: 1.35, marginTop: 5,
-          color: hov ? '#c62828' : '#111', transition: 'color 0.2s',
+          color: hov ? 'var(--ir-crimson)' : 'var(--color-ink)', transition: 'color 0.2s',
           display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
           {article.headline}
         </h4>
-        <div style={{ fontSize: 11, color: '#bbb', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+        <div style={{ fontSize: 11, color: 'var(--color-ink-ghost)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
           <Clock style={{ width: 10, height: 10 }} />
           {timeAgo(article.createdAt)}
         </div>
@@ -313,17 +312,13 @@ function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: num
 
 function SectionHead({ title }: { title: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid #111' }}>
-      <div style={{ width: 4, height: 20, background: '#c62828', borderRadius: 2, flexShrink: 0 }} />
-      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 900, color: '#111', letterSpacing: '-0.01em' }}>{title}</h2>
-      <div style={{ flex: 1, height: 1, background: '#ebebeb', marginLeft: 4 }} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--color-ink)' }}>
+      <div style={{ width: 4, height: 20, background: 'var(--ir-crimson)', borderRadius: 2, flexShrink: 0 }} />
+      <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 900, color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>{title}</h2>
+      <div style={{ flex: 1, height: 1, background: 'var(--border-primary)', marginLeft: 4 }} />
     </div>
   );
 }
-
-// ─── Navigation categories ────────────────────────────────────────────────────
-
-const NAV_ITEMS = ['Home', 'India', 'World', 'Business', 'Tech', 'Sports', 'Science', 'Finance', 'Health', 'Entertainment', 'Politics'];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -332,15 +327,7 @@ export default function Home() {
   const [activeSearch, setActiveSearch] = useState<string | undefined>(undefined);
   const { articles, loading, ingesting, hasPendingArticles, refresh, triggerIngest, searchNews } = useNews(activeNav, activeSearch);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [now, setNow] = useState(new Date());
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 30000);
-    return () => clearInterval(t);
-  }, []);
 
   const filtered = useMemo(() => {
     let list = articles;
@@ -357,9 +344,7 @@ export default function Home() {
     setTimeout(() => setToast(null), 5000);
   };
 
-  const handleSearch = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const q = searchQuery.trim();
+  const handleSearch = async (q: string) => {
     if (!q) return;
     setActiveNav('Home');
     setActiveSearch(q);
@@ -375,178 +360,72 @@ export default function Home() {
     setTimeout(() => setToast(null), 5000);
   };
 
-  const clearSearch = () => {
-    setSearchQuery('');
+  const handleNavChange = (nav: string) => {
+    setActiveNav(nav);
     setActiveSearch(undefined);
-    setSearchOpen(false);
+    setSearchQuery('');
   };
 
   // Layout slots
-  const centerHero = filtered[0];             // Center top: big hero (1 item)
-  const centerGrid = filtered.slice(1, 5);   // Center: 4-card grid below hero (4 items)
-  const leftFeed = filtered.slice(5, 9);     // Left sidebar: 4 compact items (4 items)
-  const rightFeed = filtered.slice(9, 15);   // Right sidebar: 6 latest items (6 items)
+  const centerHero = filtered[0];
+  const centerGrid = filtered.slice(1, 5);
+  const leftFeed = filtered.slice(5, 9);
+  const rightFeed = filtered.slice(9, 15);
 
   const sectionTitle = activeSearch ? `Results for "${activeSearch}"` : activeNav === 'Home' ? 'More Stories' : activeNav;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', color: '#111', fontFamily: "'Inter', Arial, sans-serif" }}>
-
+    <Layout
+      activeNav={activeNav}
+      onNavChange={handleNavChange}
+      onSearch={handleSearch}
+      onIngest={handleIngest}
+      ingesting={ingesting}
+      searchQuery={searchQuery}
+      onSearchQueryChange={setSearchQuery}
+      showNav={true}
+      showBreakingTicker={true}
+      breakingArticles={articles.slice(0, 6)}
+    >
       {/* Toast */}
       {toast && (
         <div style={{
           position: 'fixed', top: 16, right: 16, zIndex: 9999,
           background: toast.ok ? '#14532d' : '#7f1d1d',
           color: '#fff', padding: '10px 18px', borderRadius: 6, fontSize: 13, fontWeight: 600,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.2)', animation: 'fadeIn 0.2s ease',
+          boxShadow: 'var(--shadow-lg)', animation: 'fadeIn 0.2s ease',
         }}>
           {toast.msg}
         </div>
       )}
 
-      {/* ── BBC-style Top Bar ─────────────────────────────────────────────────── */}
-      <header style={{ background: '#fff', borderBottom: '1px solid #e8e8e8' }}>
-        {/* Top strip: hamburger | logo center | actions right */}
-        <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
+      {/* ── Main Content ─────────────────────────────────────────────────────── */}
+      <main className="ir-container" style={{ padding: '24px 20px' }}>
 
-          {/* Left: hamburger + search */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 3, display: 'flex', alignItems: 'center', gap: 6, color: '#111' }}
-              title="Menu"
-            >
-              {menuOpen ? <X style={{ width: 20, height: 20 }} /> : <Menu style={{ width: 20, height: 20 }} />}
-            </button>
-            <button
-              onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) clearSearch(); }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 3, color: '#111', display: 'flex' }}
-              title="Search"
-            >
-              {searchOpen ? <X style={{ width: 18, height: 18 }} /> : <Search style={{ width: 18, height: 18 }} />}
-            </button>
-            {searchOpen && (
-              <form onSubmit={handleSearch} style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 4 }}>
-                <input
-                  autoFocus
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search Google News..."
-                  style={{ border: '1px solid #ddd', borderRadius: 3, padding: '5px 12px', fontSize: 13, width: 220, outline: 'none' }}
-                />
-                <button
-                  type="submit"
-                  disabled={ingesting || !searchQuery.trim()}
-                  style={{
-                    border: '1px solid #111', background: '#111', color: '#fff',
-                    borderRadius: 3, padding: '5px 10px', fontSize: 11, fontWeight: 700,
-                    cursor: ingesting || !searchQuery.trim() ? 'not-allowed' : 'pointer',
-                    opacity: ingesting || !searchQuery.trim() ? 0.5 : 1,
-                  }}
-                >
-                  Go
-                </button>
-              </form>
-            )}
-          </div>
-
-          {/* Center: Logo */}
-          <a href="/" style={{ textDecoration: 'none', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              {['I', 'R'].map((l, i) => (
-                <span key={i} style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 32, height: 32, background: '#111', color: '#fff',
-                  fontWeight: 900, fontSize: 18, fontFamily: 'Georgia, serif',
-                  letterSpacing: '-0.02em',
-                }}>{l}</span>
-              ))}
-              <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 22, fontWeight: 900, letterSpacing: '-0.03em', color: '#111', marginLeft: 8 }}>
-                INDIA REPORTS
-              </span>
-            </div>
-          </a>
-
-          {/* Right: date + feed button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 11, color: '#999', display: 'none' }} className="date-hide">
-              {now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-            </span>
-            <button
-              onClick={handleIngest} disabled={ingesting}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, border: '2px solid #111',
-                background: ingesting ? '#f5f5f5' : '#111', color: ingesting ? '#999' : '#fff',
-                borderRadius: 3, padding: '6px 14px', fontSize: 11, fontWeight: 700,
-                cursor: ingesting ? 'not-allowed' : 'pointer', letterSpacing: '0.04em',
-                transition: 'all 0.2s', whiteSpace: 'nowrap',
-              }}
-            >
-              <Cpu style={{ width: 11, height: 11 }} />
-              {ingesting ? 'Updating…' : 'Update Feed'}
-            </button>
-            <button onClick={refresh} disabled={loading} title="Refresh"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#777', display: 'flex', padding: 4 }}>
-              <RefreshCw style={{ width: 14, height: 14 }} className={loading ? 'animate-spin' : ''} />
-            </button>
-          </div>
-        </div>
-
-        {/* Nav bar — centered */}
-        <div style={{ borderTop: '1px solid #f0f0f0' }}>
-          <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 0 }}>
-            {NAV_ITEMS.map(item => {
-              const active = item === activeNav;
-              return (
-                <button key={item} onClick={() => { setActiveNav(item); setActiveSearch(undefined); setSearchQuery(''); setSearchOpen(false); }}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    padding: '10px 14px', fontSize: 13, fontWeight: active ? 700 : 500,
-                    color: active ? '#111' : '#444',
-                    borderBottom: active ? '2.5px solid #111' : '2.5px solid transparent',
-                    whiteSpace: 'nowrap', transition: 'all 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#111'; }}
-                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.color = '#444'; }}
-                >
-                  {item}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </header>
-
-      {/* Breaking Ticker */}
-      <BreakingTicker articles={articles.slice(0, 6)} />
-
-      {/* ── Main 3-column layout ───────────────────────────────────────────────── */}
-      <main style={{ maxWidth: 1260, margin: '0 auto', padding: '24px 20px' }}>
-
-        {/* Full-page loader — only on initial DB fetch, not during background ingest */}
+        {/* Full-page loader */}
         {loading && filtered.length === 0 && (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0', gap: 12 }}>
-            <div style={{ width: 36, height: 36, border: '3px solid #c62828', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            <span style={{ fontSize: 14, color: '#888' }}>
+            <div style={{ width: 36, height: 36, border: '3px solid var(--ir-crimson)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <span style={{ fontSize: 14, color: 'var(--color-ink-faint)' }}>
               {`Looking for "${searchQuery || activeSearch || 'your topic'}" in database…`}
             </span>
           </div>
         )}
 
-        {/* Ingest started on empty feed — stubs arrive in seconds */}
+        {/* Ingest loading */}
         {ingesting && !loading && filtered.length === 0 && (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0', gap: 12 }}>
-            <div style={{ width: 36, height: 36, border: '3px solid #c62828', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            <span style={{ fontSize: 14, color: '#888' }}>Pulling latest stories from Google News…</span>
+            <div style={{ width: 36, height: 36, border: '3px solid var(--ir-crimson)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+            <span style={{ fontSize: 14, color: 'var(--color-ink-faint)' }}>Pulling latest stories from Google News…</span>
           </div>
         )}
 
-        {/* Background refresh banner when articles are already visible */}
+        {/* Background refresh banner */}
         {(ingesting || hasPendingArticles) && filtered.length > 0 && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             padding: '10px 16px', marginBottom: 16, borderRadius: 4,
-            background: '#f5f5f5', border: '1px solid #e8e8e8', fontSize: 13, color: '#666',
+            background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', fontSize: 13, color: 'var(--color-ink-muted)',
           }}>
             <RefreshCw style={{ width: 14, height: 14, animation: 'spin 0.8s linear infinite' }} />
             {activeSearch
@@ -560,139 +439,73 @@ export default function Home() {
         {/* No articles */}
         {!loading && !ingesting && filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <p style={{ fontSize: 16, color: '#888', fontWeight: 600 }}>No stories found</p>
-            <p style={{ fontSize: 13, color: '#bbb', marginTop: 6 }}>{activeSearch ? `No results for "${activeSearch}". Try a different topic.` : 'Try another category or click Update Feed.'}</p>
+            <p style={{ fontSize: 16, color: 'var(--color-ink-faint)', fontWeight: 600 }}>No stories found</p>
+            <p style={{ fontSize: 13, color: 'var(--color-ink-ghost)', marginTop: 6 }}>{activeSearch ? `No results for "${activeSearch}". Try a different topic.` : 'Try another category or click Update Feed.'}</p>
           </div>
         )}
 
         {filtered.length > 0 && (
           <>
-            {/* 3-column grid: LEFT (240px) | CENTER (flex) | RIGHT (240px) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: '0 24px', marginBottom: 36 }}>
+            {/* 3-column grid */}
+            <div className="ir-home-grid" style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: '0 24px', marginBottom: 36 }}>
 
-              {/* ── LEFT COLUMN ────────────────────────────────────────────── */}
-              <aside style={{ borderRight: '1px solid #ebebeb', paddingRight: 24 }}>
-                <div style={{ borderBottom: '2px solid #111', paddingBottom: 8, marginBottom: 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#111' }}>Top Stories</span>
+              {/* LEFT COLUMN */}
+              <aside style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
+                <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink)' }}>Top Stories</span>
                 </div>
                 {leftFeed.map((a, i) => <CompactCard key={a.id} article={a} showDivider={i > 0} index={i} />)}
               </aside>
 
-              {/* ── CENTER COLUMN ──────────────────────────────────────────── */}
-              <div style={{ borderRight: '1px solid #ebebeb', paddingRight: 24 }}>
-                {/* Hero */}
+              {/* CENTER COLUMN */}
+              <div style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
                 {centerHero && (
-                  <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid #ebebeb' }}>
+                  <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid var(--border-secondary)' }}>
                     <FeatureCard article={centerHero} index={0} />
                   </div>
                 )}
-                {/* 2×2 card grid */}
                 {centerGrid.length > 0 && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div className="ir-center-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     {centerGrid.map((a, i) => <GridCard key={a.id} article={a} index={i + 1} />)}
                   </div>
                 )}
               </div>
 
-              {/* ── RIGHT COLUMN ───────────────────────────────────────────── */}
+              {/* RIGHT COLUMN */}
               <aside style={{ paddingLeft: 0 }}>
-                <div style={{ borderBottom: '2px solid #111', paddingBottom: 8, marginBottom: 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#111' }}>Latest News</span>
+                <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink)' }}>Latest News</span>
                 </div>
                 {rightFeed.map((a, i) => <SidebarItem key={a.id} article={a} rank={i + 1} index={i} />)}
               </aside>
             </div>
 
-            {/* ── Section row: more stories ─────────────────────────────────── */}
+            {/* Section row: more stories */}
             {filtered.slice(11).length > 0 && (
-              <section style={{ marginBottom: 36 }}>
-                <SectionHead title={sectionTitle} />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-                  {filtered.slice(11, 15).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
-                </div>
-              </section>
+              <ScrollReveal>
+                <section style={{ marginBottom: 36 }}>
+                  <SectionHead title={sectionTitle} />
+                  <div className="ir-more-stories-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                    {filtered.slice(11, 15).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
+                  </div>
+                </section>
+              </ScrollReveal>
             )}
 
-            {/* ── Extra stories ─────────────────────────────────────────────── */}
+            {/* Extra stories */}
             {filtered.slice(15).length > 0 && (
-              <section style={{ marginBottom: 36 }}>
-                <SectionHead title="All Reports" />
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-                  {filtered.slice(15).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
-                </div>
-              </section>
+              <ScrollReveal>
+                <section style={{ marginBottom: 36 }}>
+                  <SectionHead title="All Reports" />
+                  <div className="ir-more-stories-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                    {filtered.slice(15).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
+                  </div>
+                </section>
+              </ScrollReveal>
             )}
           </>
         )}
       </main>
-
-      {/* ── Footer ────────────────────────────────────────────────────────────── */}
-      <footer style={{ background: '#111', color: '#ccc', marginTop: 20, borderTop: '3px solid #c62828' }}>
-        <div style={{ maxWidth: 1260, margin: '0 auto', padding: '40px 20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 40, marginBottom: 32 }}>
-            <div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: '#fff', marginBottom: 12, letterSpacing: '-0.02em' }}>
-                INDIA REPORTS
-              </div>
-              <p style={{ fontSize: 13, lineHeight: 1.75, color: '#777', maxWidth: 340 }}>
-                An autonomous AI-powered news platform. Click Update Feed to pull the latest stories — our pipeline extracts full text via Firecrawl and synthesizes structured summaries using Gemini 1.5 Flash.
-              </p>
-            </div>
-            <div>
-              <h4 style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#fff', marginBottom: 16 }}>Sections</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {NAV_ITEMS.filter(n => n !== 'Home').map(n => (
-                  <button key={n} onClick={() => { setActiveNav(n); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                    style={{ background: 'none', border: 'none', color: '#888', fontSize: 13, cursor: 'pointer', textAlign: 'left', padding: 0 }}
-                    onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-                    onMouseLeave={e => (e.currentTarget.style.color = '#888')}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <h4 style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#fff', marginBottom: 16 }}>Powered By</h4>
-              {['Gemini 1.5 Flash · AI', 'Firecrawl · Scraping', 'Supabase · Database', 'Upstash Redis · Cache', 'Currents API · News', 'Next.js · Frontend'].map(t => (
-                <div key={t} style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>{t}</div>
-              ))}
-            </div>
-          </div>
-          <div style={{ borderTop: '1px solid #222', paddingTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, color: '#555' }}>
-            <span>© 2026 India Reports. All Rights Reserved.</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-              Pipeline Active — Manual updates via Update Feed
-            </span>
-          </div>
-        </div>
-      </footer>
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes cardEntrance {
-          from {
-            opacity: 0;
-            transform: translateY(15px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .card-entrance {
-          animation: cardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-        @keyframes imageFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .img-fade-in {
-          animation: imageFadeIn 0.5s ease-out forwards;
-        }
-      `}</style>
-    </div>
+    </Layout>
   );
 }
