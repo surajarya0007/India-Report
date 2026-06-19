@@ -1,17 +1,14 @@
 import React from 'react';
 import { Article } from '../lib/api';
-import { ExternalLink, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { BookOpen, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import Link from 'next/link';
 
 interface ArticleCardProps {
   article: Article;
 }
 
 export function ArticleCard({ article }: ArticleCardProps) {
-  // Split the 3-sentence summary by sentence boundaries (periods followed by space)
-  const sentences = article.summary
-    .split(/(?<=\.)\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+  const sentences = article.summary || [];
 
   // Sentiment styling configurations
   const sentimentConfig = {
@@ -66,10 +63,8 @@ export function ArticleCard({ article }: ArticleCardProps) {
           {article.headline}
         </h3>
 
-        {/* Source & Date */}
+        {/* Date */}
         <div className="flex items-center gap-2 text-[11px] text-zinc-500 mb-4">
-          <span className="font-semibold text-zinc-400">{article.sourceName}</span>
-          <span>•</span>
           <span>{formattedDate}</span>
         </div>
 
@@ -89,15 +84,13 @@ export function ArticleCard({ article }: ArticleCardProps) {
 
       {/* Action Footer */}
       <div className="pt-4 border-t border-zinc-800/80 flex justify-end">
-        <a
-          href={article.sourceUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href={`/article/${article.id}`}
           className="flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors group/link"
         >
-          Read Source
-          <ExternalLink className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
-        </a>
+          Read Dossier
+          <BookOpen className="w-3.5 h-3.5 transition-transform group-hover/link:translate-x-0.5" />
+        </Link>
       </div>
     </div>
   );

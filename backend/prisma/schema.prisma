@@ -9,19 +9,20 @@ generator client {
 
 model Article {
   id                String   @id @default(uuid())
-  sourceUrl         String   @unique
+  keyword           String   // Added for deduplication of topics
   headline          String
-  summary           String   @db.Text
-  content           String?  @db.Text
-  rawContent        String?  @db.Text
+  summary           String[] // 5 bullet points
+  contentBlocks     String[] // Array of 8 paragraphs for the frontend
+  sectionHeadings   String[] // 4 editorial section headings
+  highlightedFacts  String[] // 4 pull-quote worthy key facts
   sentiment         String   // "Positive" | "Negative" | "Neutral"
   categories        String[] // ["Tech", "Business", "Science", "Health", "Entertainment", "Finance"]
-  sourceName        String
   imageUrl          String?  // og:image extracted from the article page
+  imageUrls         String[] // All scraped image URLs from the articles
   enrichmentStatus  String   @default("complete") // "pending" | "complete"
   createdAt         DateTime @default(now())
 
-  @@index([sourceUrl])
+  @@index([keyword])
   @@index([createdAt])
   @@index([categories])
 }

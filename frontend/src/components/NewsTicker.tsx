@@ -35,7 +35,6 @@ export function NewsTicker({ articles }: NewsTickerProps) {
               <div key={`${article.id}-${index}`} className="flex items-center gap-2 font-medium shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
                 <span className="hover:text-red-400 transition-colors cursor-pointer">{article.headline}</span>
-                <span className="text-zinc-500 text-xs">({article.sourceName})</span>
               </div>
             ))}
           </div>

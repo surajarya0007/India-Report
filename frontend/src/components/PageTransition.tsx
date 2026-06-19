@@ -13,8 +13,7 @@ function PageTransitionTrigger({ children }: { children: React.ReactNode }) {
     setIsTransitioning(true);
     setShouldRender(true);
 
-    const isArticlePage = pathname.startsWith('/article/');
-    const duration = isArticlePage ? 1800 : 500;
+    const duration = 1000;
 
     const timer = setTimeout(() => {
       setIsTransitioning(false);

@@ -1,13 +1,16 @@
 import { Router } from 'express';
-import { getRecentNews, getArticleById, enrichArticleOnDemand } from '../controllers/newsController';
+import { getRecentNews, getArticleById } from '../controllers/newsController';
 import { triggerIngestion, getIngestionStatusHandler } from '../controllers/ingestionController';
 
 const router = Router();
 
+// Ingestion endpoints
 router.get('/ingest/status', getIngestionStatusHandler);
 router.post('/ingest', triggerIngestion);
+
+// Fetch endpoints
 router.get('/', getRecentNews);
 router.get('/:id', getArticleById);
-router.post('/:id/enrich', enrichArticleOnDemand);
 
 export default router;
+

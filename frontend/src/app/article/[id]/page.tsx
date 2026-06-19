@@ -2,134 +2,40 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { fetchArticleById, fetchNews, Article, enrichArticleById } from '../../../lib/api';
-import { Clock, ChevronLeft, Share2, ExternalLink, BookOpen, TrendingUp } from 'lucide-react';
+import { fetchArticleById, fetchNews, Article } from '../../../lib/api';
+import { 
+  Clock, 
+  ChevronLeft, 
+  Share2, 
+  TrendingUp, 
+  Volume2, 
+  Bookmark, 
+  Printer, 
+  AlertCircle,
+  Quote
+} from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-IN', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
-}
-
-function timeAgo(dateStr: string) {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const d = new Date(dateStr);
+  const dateFormatted = d.toLocaleDateString('en-IN', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  }).toUpperCase();
+  const timeFormatted = d.toLocaleTimeString('en-IN', {
+    hour: '2-digit', minute: '2-digit', hour12: true
+  }).toUpperCase();
+  return `${dateFormatted} AT ${timeFormatted}`;
 }
 
 const CAT_COLORS: Record<string, string> = {
   Tech: '#1565c0', Business: '#2e7d32', Finance: '#6a1b9a',
   Science: '#00695c', Health: '#ad1457', Entertainment: '#e65100',
-  Politics: '#b71c1c', India: '#c62828', World: '#37474f', Default: '#455a64',
+  Politics: '#b71c1c', India: '#c62828', World: '#37474f', Sports: '#0277bd', Default: '#455a64',
 };
-function catColor(cat?: string) { return CAT_COLORS[cat || ''] || CAT_COLORS.Default; }
 
-// ─── Hero image placeholder ───────────────────────────────────────────────────
-
-function ArticleHero({ article }: { article: Article }) {
-  const cat = article.categories?.[0];
-  const bg = catColor(cat);
-  const [imgError, setImgError] = useState(false);
-  const hasImage = !!article.imageUrl && !imgError;
-
-  return (
-    <div style={{
-      width: '100%', height: 420,
-      background: `linear-gradient(145deg, ${bg}ee 0%, ${bg}55 100%)`,
-      position: 'relative', borderRadius: 4, overflow: 'hidden',
-    }}>
-      {hasImage ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={article.imageUrl}
-          alt={article.headline}
-          onError={() => setImgError(true)}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        />
-      ) : (
-        <>
-          {/* Pattern overlay */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.06) 0%, transparent 60%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.04) 0%, transparent 50%)',
-          }} />
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'rgba(255,255,255,0.12)', fontSize: 120, fontWeight: 900, lineHeight: 1, fontFamily: 'Georgia, serif', userSelect: 'none' }}>IR</span>
-          </div>
-        </>
-      )}
-      {/* Category tags overlay at bottom */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 32px', background: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)' }}>
-        {article.categories?.map(c => (
-          <span key={c} style={{
-            display: 'inline-block', background: catColor(c), color: '#fff',
-            fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase',
-            padding: '3px 10px', borderRadius: 2, marginRight: 6,
-          }}>{c}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Sentiment indicator ──────────────────────────────────────────────────────
-
-function SentimentBadge({ s }: { s: string }) {
-  const cfg = s === 'Positive' ? { bg: '#dcfce7', color: '#166534', dot: '#22c55e' }
-    : s === 'Negative' ? { bg: '#fee2e2', color: '#991b1b', dot: '#ef4444' }
-    : { bg: '#f3f4f6', color: '#374151', dot: '#9ca3af' };
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: cfg.bg, color: cfg.color, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 12 }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.dot, display: 'inline-block' }} />
-      {s} Tone
-    </span>
-  );
-}
-
-function AISummaryLoader() {
-  return (
-    <div style={{
-      padding: '24px 28px',
-      background: 'linear-gradient(135deg, #fbfbfb 0%, #f7f7f7 100%)',
-      borderRadius: 8,
-      border: '1px solid #ebebeb',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
-      position: 'relative',
-      overflow: 'hidden',
-      margin: '10px 0 30px',
-    }}>
-      <div style={{
-        position: 'absolute',
-        top: 0, left: 0, right: 0, height: 2,
-        background: 'linear-gradient(90deg, #c62828 0%, #1565c0 50%, #c62828 100%)',
-        backgroundSize: '200% auto',
-        animation: 'shimmer 1.8s linear infinite',
-      }} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: '#c62828' }}>
-            <path d="M12 2L14.85 9.15L22 12L14.85 14.85L12 22L9.15 14.85L2 12L9.15 9.15L12 2Z" fill="currentColor" />
-          </svg>
-        </div>
-        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#c62828' }}>
-          AI Enrichment in Progress
-        </span>
-      </div>
-      <p style={{ fontSize: 14, color: '#444', lineHeight: 1.6, margin: 0, fontWeight: 500, fontFamily: 'inherit' }}>
-        Gemini is scraping the source text and synthesizing a structured journalistic report. The full article content will appear here in a few seconds...
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 18 }}>
-        <div className="pulse-line" style={{ height: 12, background: '#e0e0e0', borderRadius: 4, width: '100%' }} />
-        <div className="pulse-line" style={{ height: 12, background: '#e0e0e0', borderRadius: 4, width: '92%' }} />
-        <div className="pulse-line" style={{ height: 12, background: '#e0e0e0', borderRadius: 4, width: '75%' }} />
-      </div>
-    </div>
-  );
+function catColor(cat?: string) { 
+  return CAT_COLORS[cat || ''] || CAT_COLORS.Default; 
 }
 
 // ─── Sidebar article card ─────────────────────────────────────────────────────
@@ -145,117 +51,242 @@ function SideCard({ article }: { article: Article }) {
     <div
       onClick={() => router.push(`/article/${article.id}`)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display: 'flex', gap: 10, padding: '12px 0', borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}
+      style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid #f2f2f2', cursor: 'pointer' }}
     >
-      <div style={{ flexShrink: 0, width: 72, height: 54, borderRadius: 3, overflow: 'hidden', background: `linear-gradient(135deg, ${bg}cc, ${bg}66)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ 
+        flexShrink: 0, 
+        width: 80, 
+        height: 60, 
+        overflow: 'hidden', 
+        background: `linear-gradient(135deg, ${bg}22, ${bg}11)`, 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
         {hasImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={article.imageUrl} alt={article.headline} onError={() => setImgError(true)}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         ) : (
-          <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 22, fontWeight: 900, fontFamily: 'Georgia, serif' }}>IR</span>
+          <span style={{ color: bg, fontSize: 16, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.3 }}>IR</span>
         )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        {cat && <span style={{ fontSize: 9, fontWeight: 800, color: bg, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{cat}</span>}
+        {cat && (
+          <span style={{ 
+            fontSize: 9, 
+            fontWeight: 800, 
+            color: bg, 
+            letterSpacing: '0.08em', 
+            textTransform: 'uppercase', 
+            display: 'block',
+            marginBottom: 4 
+          }}>
+            {cat} ↗
+          </span>
+        )}
         <p style={{
-          fontFamily: "'Playfair Display', serif",
-          fontSize: 13, fontWeight: 700, lineHeight: 1.35, marginTop: 3,
-          color: hov ? '#c62828' : '#111', transition: 'color 0.15s',
-          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          fontFamily: "'Playfair Display', Georgia, serif",
+          fontSize: 13, 
+          fontWeight: 700, 
+          lineHeight: 1.35, 
+          color: hov ? bg : '#111', 
+          transition: 'color 0.15s',
+          display: '-webkit-box', 
+          WebkitLineClamp: 2, 
+          WebkitBoxOrient: 'vertical', 
+          overflow: 'hidden',
+          margin: 0
         }}>
           {article.headline}
         </p>
-        <div style={{ fontSize: 11, color: '#bbb', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
-          <Clock style={{ width: 10, height: 10 }} />
-          {timeAgo(article.createdAt)}
-        </div>
       </div>
     </div>
   );
 }
 
-// ─── Article body renderer ────────────────────────────────────────────────────
+// ─── Pull-Quote Callout ───────────────────────────────────────────────────────
 
-function ArticleBody({ text }: { text: string }) {
-  const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+function PullQuote({ text, color }: { text: string; color: string }) {
+  return (
+    <div style={{
+      margin: '36px 0',
+      padding: '28px 32px',
+      borderLeft: `5px solid ${color}`,
+      background: `${color}08`,
+      position: 'relative',
+    }}>
+      <Quote style={{ 
+        width: 28, height: 28, color: color, opacity: 0.3,
+        position: 'absolute', top: 16, right: 20
+      }} />
+      <p style={{
+        fontFamily: "'Playfair Display', Georgia, serif",
+        fontSize: '19px',
+        fontStyle: 'italic',
+        fontWeight: 600,
+        lineHeight: 1.6,
+        color: '#1a1a2e',
+        margin: 0,
+      }}>
+        {text}
+      </p>
+    </div>
+  );
+}
 
-  if (paragraphs.length <= 1) {
-    // Fallback: split summary by 3-sentence chunks
-    const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
-    const paras: string[][] = [];
-    for (let i = 0; i < sentences.length; i += 3) {
-      paras.push(sentences.slice(i, i + 3));
+// ─── Inline Markdown Bold Parser ──────────────────────────────────────────────
+
+function renderTextWithBold(text: string, isFirstParagraph?: boolean) {
+  const parts = text.split('**');
+  const nodes = parts.map((part, idx) => {
+    // Odd indices are between **...**
+    if (idx % 2 === 1) {
+      return <strong key={idx} style={{ color: '#111', fontWeight: 800 }}>{part}</strong>;
     }
-    return (
-      <div>
-        {paras.map((para, i) => (
-          <p key={i} style={{
-            fontSize: 17, lineHeight: 1.85, color: '#222',
-            marginBottom: 22,
-            fontFamily: "'Source Serif 4', Georgia, serif",
-          }}>
-            {para.join(' ')}
-          </p>
-        ))}
-      </div>
-    );
+    return part;
+  });
+
+  if (isFirstParagraph && nodes.length > 0) {
+    // If the first element is a string, extract the drop cap from it
+    if (typeof nodes[0] === 'string' && nodes[0].length > 0) {
+      const firstStr = nodes[0];
+      const firstLetter = firstStr[0];
+      const remainingText = firstStr.slice(1);
+      nodes[0] = remainingText;
+      return (
+        <>
+          <span className="drop-cap">{firstLetter}</span>
+          {nodes}
+        </>
+      );
+    }
   }
+
+  return nodes;
+}
+
+// ─── Article body renderer with Section Headings + Pull Quotes ────────────────
+
+function ArticleBody({ 
+  contentBlocks, 
+  sectionHeadings, 
+  highlightedFacts,
+  color
+}: { 
+  contentBlocks?: string[];
+  sectionHeadings?: string[];
+  highlightedFacts?: string[];
+  color: string;
+}) {
+  if (!contentBlocks || contentBlocks.length === 0) {
+    return <p style={{ fontSize: 16, color: '#666' }}>No content available.</p>;
+  }
+
+  // Section headings appear before paragraphs at index 1, 3, 5, 7
+  const headingIndices = [1, 3, 5, 7];
+  // Pull quotes appear after paragraphs at index 2, 5
+  const pullQuoteAfter = [2, 5];
 
   return (
     <div>
-      {paragraphs.map((para, i) => (
-        <p key={i} style={{
-          fontSize: 17, lineHeight: 1.85, color: '#222',
-          marginBottom: 22,
-          fontFamily: "'Source Serif 4', Georgia, serif",
+      {contentBlocks.map((para, i) => {
+        const isFirst = i === 0;
+        const pContent = renderTextWithBold(para, isFirst);
+
+        // Determine which section heading to show (based on position in headingIndices)
+        const headingSlot = headingIndices.indexOf(i);
+        const heading = headingSlot >= 0 ? (sectionHeadings?.[headingSlot] || null) : null;
+
+        // Determine which pull quote to show after this paragraph
+        const pullQuoteSlot = pullQuoteAfter.indexOf(i);
+        const pullQuote = pullQuoteSlot >= 0 ? (highlightedFacts?.[pullQuoteSlot] || null) : null;
+
+        return (
+          <React.Fragment key={i}>
+            {/* Section Heading */}
+            {heading && (
+              <h3 className="section-subheading" style={{ borderLeft: `4px solid ${color}` }}>
+                {heading}
+              </h3>
+            )}
+
+            {/* Paragraph */}
+            <p className="article-paragraph">
+              {pContent}
+            </p>
+
+            {/* Pull Quote Callout */}
+            {pullQuote && <PullQuote text={pullQuote} color={color} />}
+          </React.Fragment>
+        );
+      })}
+
+      {/* Remaining highlighted facts as a callout grid at the end */}
+      {highlightedFacts && highlightedFacts.length > 2 && (
+        <div style={{ 
+          marginTop: 40, 
+          padding: '28px',
+          background: '#f8fafc',
+          borderTop: `3px solid ${color}`,
         }}>
-          {para}
-        </p>
-      ))}
+          <h4 style={{
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 10,
+            fontWeight: 900,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: color,
+            margin: '0 0 16px 0'
+          }}>
+            KEY TAKEAWAYS
+          </h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            {highlightedFacts.slice(2).map((fact, idx) => (
+              <div key={idx} style={{
+                padding: '16px',
+                background: '#fff',
+                border: `1px solid ${color}22`,
+                borderLeft: `3px solid ${color}`,
+              }}>
+                <p style={{
+                  fontFamily: "'Source Serif 4', Georgia, serif",
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  color: '#2c3e50',
+                  margin: 0,
+                  fontWeight: 500,
+                }}>
+                  {fact}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Article Detail Page ──────────────────────────────────────────────────────
-
-// ─── Skeleton Loaders ──────────────────────────────────────────────────────────
-
-function ArticleSkeleton() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', padding: '10px 0' }}>
-      <div className="skeleton-line" style={{ width: '100%', height: 16 }} />
-      <div className="skeleton-line" style={{ width: '98%', height: 16 }} />
-      <div className="skeleton-line" style={{ width: '95%', height: 16 }} />
-      <div className="skeleton-line" style={{ width: '92%', height: 16 }} />
-      <div className="skeleton-line" style={{ width: '89%', height: 16, marginBottom: 12 }} />
-      
-      <div className="skeleton-line" style={{ width: '100%', height: 16 }} />
-      <div className="skeleton-line" style={{ width: '96%', height: 16 }} />
-      <div className="skeleton-line" style={{ width: '94%', height: 16 }} />
-      <div className="skeleton-line" style={{ width: '70%', height: 16 }} />
-    </div>
-  );
-}
+// ─── Page skeletons ──────────────────────────────────────────────────────────
 
 function PageSkeleton() {
   return (
     <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', flexDirection: 'column', fontFamily: "'Inter', Arial, sans-serif" }}>
-      <header style={{ background: '#fff', borderBottom: '1px solid #e8e8e8', position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', height: 56 }}>
-          <div className="skeleton-line" style={{ width: 80, height: 24 }} />
+      <header style={{ background: '#fff', borderBottom: '1px solid #e8e8e8' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', height: 56 }}>
+          <div style={{ width: 80, height: 24, background: '#f0f0f0' }} />
         </div>
       </header>
-      <div style={{ maxWidth: 1260, margin: '0 auto', width: '100%', padding: '32px 20px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '0 40px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', padding: '32px 20px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '0 40px' }}>
         <div>
-          <div className="skeleton-line" style={{ width: 120, height: 18, marginBottom: 16 }} />
-          <div className="skeleton-line" style={{ width: '90%', height: 38, marginBottom: 24 }} />
-          <div className="skeleton-line" style={{ width: '100%', height: 420, borderRadius: 4, marginBottom: 28 }} />
-          <ArticleSkeleton />
+          <div style={{ width: 120, height: 18, background: '#f0f0f0', marginBottom: 16 }} />
+          <div style={{ width: '90%', height: 38, background: '#f0f0f0', marginBottom: 24 }} />
+          <div style={{ width: '100%', height: 420, background: '#f0f0f0', marginBottom: 28 }} />
+          <div style={{ width: '100%', height: 200, background: '#f0f0f0' }} />
         </div>
         <div>
-          <div className="skeleton-line" style={{ width: '100%', height: 200, borderRadius: 4, marginBottom: 20 }} />
-          <div className="skeleton-line" style={{ width: '100%', height: 150, borderRadius: 4 }} />
+          <div style={{ width: '100%', height: 200, background: '#f0f0f0', marginBottom: 20 }} />
         </div>
       </div>
     </div>
@@ -273,8 +304,28 @@ export default function ArticlePage() {
   const [related, setRelated] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [showMoreClicked, setShowMoreClicked] = useState(false);
-  const [enrichedData, setEnrichedData] = useState<Article | null>(null);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+
+  // Reaction State
+  const [reactions, setReactions] = useState<Record<string, number>>({
+    like: 24, love: 15, laugh: 4, wow: 9, sad: 1, angry: 0
+  });
+  const [selectedReaction, setSelectedReaction] = useState<string | null>(null);
+
+  const handleReactionClick = (key: string) => {
+    if (selectedReaction === key) {
+      setReactions(prev => ({ ...prev, [key]: prev[key] - 1 }));
+      setSelectedReaction(null);
+    } else {
+      setReactions(prev => {
+        const next = { ...prev };
+        if (selectedReaction) next[selectedReaction] = next[selectedReaction] - 1;
+        next[key] = next[key] + 1;
+        return next;
+      });
+      setSelectedReaction(key);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -288,25 +339,12 @@ export default function ArticlePage() {
 
       if (art) {
         const cats = art.categories || [];
-        const rel = all.filter(a => a.id !== id && a.categories?.some(c => cats.includes(c))).slice(0, 6);
-        setRelated(rel.length > 0 ? rel : all.filter(a => a.id !== id).slice(0, 6));
-
-        // Prefetch/start enrichment in background immediately if pending
-        if (art.enrichmentStatus === 'pending') {
-          enrichArticleById(id).then((enriched) => {
-            if (!active) return;
-            if (enriched) {
-              setArticle(enriched);
-              setEnrichedData(enriched);
-            }
-          });
-        }
+        const rel = all.filter(a => a.id !== id && a.categories?.some(c => cats.includes(c))).slice(0, 5);
+        setRelated(rel.length > 0 ? rel : all.filter(a => a.id !== id).slice(0, 5));
       }
     });
 
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [id]);
 
   const handleShare = () => {
@@ -317,16 +355,35 @@ export default function ArticlePage() {
     }
   };
 
-  if (loading) {
-    return <PageSkeleton />;
-  }
+  const handlePrint = () => { if (typeof window !== 'undefined') window.print(); };
+
+  const toggleAudio = () => {
+    if ('speechSynthesis' in window && article) {
+      if (audioPlaying) {
+        window.speechSynthesis.cancel();
+        setAudioPlaying(false);
+      } else {
+        const textToSpeak = `${article.headline}. Key takeaways: ${article.summary.join('. ')}. ${article.contentBlocks?.join('. ')}`;
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.onend = () => setAudioPlaying(false);
+        utterance.onerror = () => setAudioPlaying(false);
+        setAudioPlaying(true);
+        window.speechSynthesis.speak(utterance);
+      }
+    }
+  };
+
+  useEffect(() => {
+    return () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); };
+  }, []);
+
+  if (loading) return <PageSkeleton />;
 
   if (!article) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <TopBar onBack={() => router.push('/')} />
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12 }}>
-          <BookOpen style={{ width: 40, height: 40, color: '#ddd' }} />
           <p style={{ fontSize: 16, color: '#888', fontWeight: 600 }}>Article not found</p>
           <button onClick={() => router.push('/')}
             style={{ marginTop: 8, padding: '8px 20px', background: '#111', color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer', fontSize: 13 }}>
@@ -337,255 +394,421 @@ export default function ArticlePage() {
     );
   }
 
+  const primaryCategory = article.categories?.[0] || 'News';
+  const categoryColorHex = catColor(primaryCategory);
+  const readTime = Math.ceil(((article.contentBlocks?.join(' ') || '').split(' ').length) / 200);
+
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', fontFamily: "'Inter', Arial, sans-serif" }} className="page-slide-up">
+    <div style={{ minHeight: '100vh', background: '#fff', color: '#111', fontFamily: "'Inter', Arial, sans-serif" }}>
+      {/* Import Web Fonts */}
+      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,300..700;1,8..60,300..700&family=Inter:wght@300..900&display=swap" rel="stylesheet" />
+
       <TopBar onBack={() => router.push('/')} />
 
-      {/* Breadcrumb */}
-      <div style={{ background: '#f8f8f8', borderBottom: '1px solid #ebebeb' }}>
-        <div style={{ maxWidth: 1260, margin: '0 auto', padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#888' }}>
-          <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', padding: 0 }}>News</button>
-          <span>›</span>
-          {article.categories?.[0] && (
-            <>
-              <button onClick={() => router.push('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', padding: 0 }}>{article.categories[0]}</button>
-              <span>›</span>
-            </>
-          )}
-          <span style={{ color: '#444', fontWeight: 500 }} className="truncate">{article.headline.slice(0, 60)}…</span>
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 20px' }}>
+        {/* Breadcrumb / Category Tag */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+          <span 
+            onClick={() => router.push('/')}
+            style={{ 
+              fontSize: 11, fontWeight: 800, color: categoryColorHex, 
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4
+            }}
+          >
+            Home
+          </span>
+          <span style={{ fontSize: 11, color: '#bbb' }}>/</span>
+          <span style={{ fontSize: 11, fontWeight: 800, color: categoryColorHex, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            {primaryCategory}
+          </span>
         </div>
-      </div>
 
-      {/* Main layout: article body (left+center) + sidebar (right) */}
-      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '32px 20px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '0 40px', alignItems: 'start' }}>
+        {/* Headline */}
+        <h1 style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          fontSize: 'clamp(28px, 4vw, 46px)',
+          fontWeight: 800,
+          lineHeight: 1.15,
+          color: '#111',
+          marginBottom: 20,
+          letterSpacing: '-0.02em',
+          maxWidth: '90%'
+        }}>
+          {article.headline}
+        </h1>
 
-        {/* ── Article column ───────────────────────────────────────────────── */}
-        <article>
-          {/* Categories */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-            {article.categories?.map(c => (
-              <span key={c} style={{ display: 'inline-block', background: catColor(c), color: '#fff', fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 2 }}>{c}</span>
-            ))}
-          </div>
+        {/* Divider line in category color */}
+        <div style={{ width: 60, height: 4, background: categoryColorHex, marginBottom: 20 }} />
 
-          {/* Headline */}
-          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 36, fontWeight: 900, lineHeight: 1.2, color: '#111', marginBottom: 16 }}>
-            {article.headline}
-          </h1>
-
-          {/* Meta row */}
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #ebebeb' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>IR</span>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#222' }}>India Reports</div>
-                <div style={{ fontSize: 11, color: '#999' }}>{article.sourceName}</div>
-              </div>
+        {/* Premium Meta Row */}
+        <div style={{ 
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap', gap: 16, paddingBottom: 18, 
+          borderBottom: '1px solid #eaeaea', marginBottom: 28
+        }}>
+          {/* Author/Date Info */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ 
+              width: 40, height: 40, borderRadius: '50%', 
+              background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <span style={{ color: '#fff', fontSize: 13, fontWeight: 900, fontFamily: 'Georgia, serif' }}>IR</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#888' }}>
-              <Clock style={{ width: 12, height: 12 }} />
-              <span>{formatDate(article.createdAt)}</span>
-            </div>
-            <SentimentBadge s={article.sentiment} />
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-              <button
-                onClick={handleShare}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', border: '1px solid #ddd', borderRadius: 3, background: '#fff', cursor: 'pointer', fontSize: 12, color: '#444', transition: 'all 0.2s' }}
-              >
-                <Share2 style={{ width: 13, height: 13 }} />
-                {copied ? 'Copied!' : 'Share'}
-              </button>
-              <a
-                href={article.sourceUrl} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', border: '1px solid #111', borderRadius: 3, background: '#111', color: '#fff', fontSize: 12, textDecoration: 'none' }}
-              >
-                <ExternalLink style={{ width: 13, height: 13 }} />
-                Source
-              </a>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>India Reports Editorial Desk</div>
+              <div style={{ fontSize: 10, color: '#888', fontWeight: 500, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Clock style={{ width: 10, height: 10 }} />
+                <span>{formatDate(article.createdAt)}</span>
+                <span>·</span>
+                <span>{readTime} MIN READ</span>
+              </div>
             </div>
           </div>
 
-          {/* Hero image */}
-          <div style={{ marginBottom: 28 }}>
-            <ArticleHero article={article} />
+          {/* Action Pills */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button className="action-pill" onClick={toggleAudio}>
+              <Volume2 style={{ width: 14, height: 14 }} />
+              <span>{audioPlaying ? 'STOP' : 'LISTEN'}</span>
+            </button>
+            <button className="action-pill">
+              <Bookmark style={{ width: 14, height: 14 }} />
+              <span>SAVE</span>
+            </button>
+            <button className="action-pill" onClick={handlePrint}>
+              <Printer style={{ width: 14, height: 14 }} />
+              <span>PRINT</span>
+            </button>
+            <button className="action-pill active-pill" onClick={handleShare}>
+              <Share2 style={{ width: 14, height: 14 }} />
+              <span>{copied ? 'COPIED!' : 'SHARE'}</span>
+            </button>
           </div>
+        </div>
 
-          {/* Article body */}
-          <div style={{ maxWidth: 720 }}>
-            {article.enrichmentStatus === 'complete' ? (
-              <div className="fade-in">
-                <ArticleBody text={article.content || article.summary} />
+        {/* ── Page Grid ───────────────────────────────────────────────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '0 48px', alignItems: 'start' }}>
+          
+          {/* Left Main Content */}
+          <div style={{ minWidth: 0 }}>
+            {/* Hero Image */}
+            <div style={{ position: 'relative', marginBottom: 32 }}>
+              {article.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img 
+                  src={article.imageUrl} 
+                  alt={article.headline}
+                  style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 520, objectFit: 'cover' }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%', height: 380,
+                  background: `linear-gradient(135deg, ${categoryColorHex}0d 0%, ${categoryColorHex}1a 100%)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '1px solid #f0f0f0'
+                }}>
+                  <span style={{ color: categoryColorHex, fontSize: 72, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.15 }}>IR</span>
+                </div>
+              )}
+              <div style={{ 
+                textAlign: 'right', fontSize: 10, color: '#999', 
+                marginTop: 6, fontStyle: 'italic', letterSpacing: '0.04em' 
+              }}>
+                IMAGE: INDIA REPORTS / GOOGLE NEWS INGEST
               </div>
-            ) : (
-              <div>
-                <p style={{ fontSize: 17, lineHeight: 1.85, color: '#222', marginBottom: 22, fontFamily: "'Source Serif 4', Georgia, serif" }}>
-                  {article.summary}
-                </p>
+            </div>
 
-                {showMoreClicked ? (
-                  enrichedData ? (
-                    <div className="fade-in">
-                      <ArticleBody text={enrichedData.content || enrichedData.summary} />
-                    </div>
-                  ) : (
-                    <div className="fade-in">
-                      <ArticleSkeleton />
-                    </div>
-                  )
-                ) : (
-                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 30, marginBottom: 20 }}>
-                    <button
-                      onClick={() => setShowMoreClicked(true)}
-                      style={{
-                        padding: '12px 32px',
-                        background: 'linear-gradient(135deg, #111 0%, #333 100%)',
-                        color: '#fff',
-                        fontWeight: 600,
-                        fontSize: 14,
-                        border: 'none',
-                        borderRadius: 30,
-                        cursor: 'pointer',
-                        boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        transition: 'transform 0.2s, box-shadow 0.2s',
-                      }}
-                      className="show-more-btn"
-                    >
-                      <BookOpen style={{ width: 16, height: 16 }} />
-                      Read Full Article
-                    </button>
-                  </div>
-                )}
+            {/* Summary Box (IR Summary Style) */}
+            {article.summary && article.summary.length > 0 && (
+              <div style={{
+                background: '#f8fafc',
+                borderLeft: `4px solid ${categoryColorHex}`,
+                padding: '24px 28px',
+                marginBottom: 36,
+              }}>
+                <h4 style={{ 
+                  fontSize: 10, fontWeight: 900, letterSpacing: '0.15em',
+                  textTransform: 'uppercase', margin: '0 0 14px 0', color: categoryColorHex 
+                }}>
+                  IR SUMMARY — KEY POINTS
+                </h4>
+                <ul style={{ 
+                  margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 12,
+                  fontFamily: "'Source Serif 4', Georgia, serif",
+                  fontSize: '15.5px', lineHeight: 1.65, color: '#334155'
+                }}>
+                  {article.summary.map((bullet, idx) => (
+                    <li key={idx} style={{ paddingLeft: 4 }}>
+                      {bullet}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 
-            {/* Source attribution */}
-            <div style={{ marginTop: 28, padding: '14px 18px', background: '#f8f8f8', borderLeft: '3px solid #c62828', borderRadius: '0 3px 3px 0' }}>
-              <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Original source</div>
-              <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: 13, color: '#1565c0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-                {article.sourceName}
-                <ExternalLink style={{ width: 12, height: 12 }} />
-              </a>
-              <div style={{ fontSize: 11, color: '#bbb', marginTop: 2 }}>{article.sourceUrl}</div>
+            {/* Content Header */}
+            <div style={{ 
+              display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24,
+              paddingBottom: 12, borderBottom: `2px solid ${categoryColorHex}20`
+            }}>
+              <span style={{
+                fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: 900,
+                color: categoryColorHex, letterSpacing: '0.15em', textTransform: 'uppercase'
+              }}>
+                IN-DEPTH ANALYSIS
+              </span>
+              <div style={{ flex: 1, height: 1, background: '#f0f0f0' }} />
+              {article.categories?.map((cat, i) => (
+                <span key={i} style={{
+                  fontSize: 9, fontWeight: 800, color: catColor(cat),
+                  background: `${catColor(cat)}15`, padding: '3px 8px',
+                  letterSpacing: '0.08em', textTransform: 'uppercase'
+                }}>
+                  {cat}
+                </span>
+              ))}
+            </div>
+
+            {/* Article Body */}
+            <ArticleBody 
+              contentBlocks={article.contentBlocks}
+              sectionHeadings={article.sectionHeadings}
+              highlightedFacts={article.highlightedFacts}
+              color={categoryColorHex}
+            />
+
+            {/* Reactions Block */}
+            <div style={{ 
+              marginTop: 52, paddingTop: 28, borderTop: '2px solid #f0f0f0',
+              textAlign: 'center'
+            }}>
+              <span style={{ 
+                fontSize: 11, fontWeight: 800, color: '#555', letterSpacing: '0.1em',
+                textTransform: 'uppercase', display: 'block', marginBottom: 18
+              }}>
+                How do you feel about this story?
+              </span>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+                {[
+                  { key: 'like', emoji: '👍', label: 'Like' },
+                  { key: 'love', emoji: '❤️', label: 'Love' },
+                  { key: 'laugh', emoji: '😂', label: 'Laugh' },
+                  { key: 'wow', emoji: '😮', label: 'Wow' },
+                  { key: 'sad', emoji: '😢', label: 'Sad' },
+                  { key: 'angry', emoji: '😡', label: 'Angry' },
+                ].map((item) => {
+                  const isActive = selectedReaction === item.key;
+                  return (
+                    <button 
+                      key={item.key} 
+                      onClick={() => handleReactionClick(item.key)}
+                      className={`reaction-btn ${isActive ? 'reaction-active' : ''}`}
+                    >
+                      <span style={{ fontSize: 18 }}>{item.emoji}</span>
+                      <span className="count">{reactions[item.key]}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </article>
 
-        {/* ── Right Sidebar ────────────────────────────────────────────────── */}
-        <aside style={{ position: 'sticky', top: 20 }}>
-          {/* Related news */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid #111' }}>
-              <TrendingUp style={{ width: 16, height: 16, color: '#c62828' }} />
-              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, fontWeight: 800, color: '#111' }}>Related News</h3>
+          {/* Right Sidebar */}
+          <aside>
+            {/* Sentiment Tag */}
+            {article.sentiment && (
+              <div style={{
+                marginBottom: 24,
+                padding: '14px 20px',
+                background: article.sentiment === 'Positive' ? '#f0fdf4' : article.sentiment === 'Negative' ? '#fff1f2' : '#f8fafc',
+                border: `1px solid ${article.sentiment === 'Positive' ? '#bbf7d0' : article.sentiment === 'Negative' ? '#fecdd3' : '#e2e8f0'}`,
+                display: 'flex', alignItems: 'center', gap: 10
+              }}>
+                <TrendingUp style={{ 
+                  width: 16, height: 16, 
+                  color: article.sentiment === 'Positive' ? '#16a34a' : article.sentiment === 'Negative' ? '#e11d48' : '#64748b'
+                }} />
+                <div>
+                  <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#888', marginBottom: 2 }}>
+                    SENTIMENT ANALYSIS
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#111' }}>
+                    {article.sentiment} Coverage
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Related News List */}
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ 
+                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
+                paddingBottom: 10, borderBottom: `2.5px solid ${categoryColorHex}` 
+              }}>
+                <h3 style={{ 
+                  fontFamily: "'Inter', sans-serif", fontSize: 11, fontWeight: 900,
+                  color: '#111', letterSpacing: '0.12em', margin: 0, textTransform: 'uppercase'
+                }}>
+                  Related Stories
+                </h3>
+              </div>
+              
+              {related.length === 0 && (
+                <p style={{ fontSize: 12, color: '#bbb' }}>No related stories found.</p>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {related.map(a => <SideCard key={a.id} article={a} />)}
+              </div>
+
+              {/* Back to Home Button */}
+              <button 
+                onClick={() => router.push('/')}
+                style={{
+                  width: '100%', marginTop: 20, padding: '12px',
+                  background: categoryColorHex, color: '#fff', border: 'none',
+                  fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', cursor: 'pointer',
+                  transition: 'opacity 0.2s', textTransform: 'uppercase',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                ◀ BACK TO HOME
+              </button>
             </div>
-            {related.length === 0 && <p style={{ fontSize: 12, color: '#bbb' }}>No related stories found.</p>}
-            {related.map(a => <SideCard key={a.id} article={a} />)}
-          </div>
 
-          {/* AI notice */}
-          <div style={{ background: '#f8f8f8', borderRadius: 4, padding: '14px 16px', border: '1px solid #ebebeb' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>AI Synthesized</div>
-            <p style={{ fontSize: 12, color: '#777', lineHeight: 1.6 }}>
-              This summary was generated by Gemini 1.5 Flash from the original article. Read the full story at the source.
-            </p>
-            <div style={{ marginTop: 10, display: 'flex', gap: 4 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block', marginTop: 2 }} />
-              <span style={{ fontSize: 11, color: '#999' }}>Pipeline active · Updated every 15 min</span>
+            {/* AI assisted notice */}
+            <div style={{ background: '#f8f8f8', padding: '20px', border: '1px solid #eaeaea' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                <AlertCircle style={{ width: 14, height: 14, color: categoryColorHex }} />
+                <span style={{ fontSize: 10, fontWeight: 900, color: '#111', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  AI Dossier Synthesis
+                </span>
+              </div>
+              <p style={{ fontSize: 11.5, color: '#666', lineHeight: 1.6, margin: 0 }}>
+                This report is compiled programmatically from multiple verified news publications. Raw articles are parsed via Firecrawl and structured analysis is synthesized dynamically using Gemini AI models.
+              </p>
             </div>
-          </div>
-        </aside>
-      </div>
+          </aside>
+        </div>
+      </main>
 
+      {/* Global CSS Styles */}
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
+        .action-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border: 1px solid #e0e0e0;
+          background: #fff;
+          cursor: pointer;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          color: #555;
+          height: 32px;
+          padding: 0 14px;
+          transition: all 0.2s ease;
+          font-family: 'Inter', sans-serif;
         }
-        .skeleton-line {
-          background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.6s infinite linear;
-          border-radius: 4px;
+        .action-pill:hover {
+          background: #f8f8f8;
+          color: #111;
+          border-color: #adadad;
         }
-        .fade-in {
-          animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        .active-pill {
+          background: #111;
+          color: #fff !important;
+          border-color: #111;
         }
-        .page-slide-up {
-          animation: slideUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        .active-pill:hover {
+          background: #222;
+          border-color: #222;
         }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to { opacity: 1; transform: translateY(0); }
+        .article-paragraph {
+          font-family: 'Source Serif 4', Georgia, serif;
+          font-size: 18px;
+          line-height: 1.9;
+          color: #2c3e50;
+          margin-bottom: 28px;
+          letter-spacing: 0.01em;
         }
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
+        .section-subheading {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: 22px;
+          font-weight: 800;
+          color: #111;
+          margin-top: 44px;
+          margin-bottom: 18px;
+          padding-left: 14px;
+          letter-spacing: -0.01em;
+          line-height: 1.3;
         }
-        .show-more-btn {
-          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s;
+        .drop-cap {
+          float: left;
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: 68px;
+          line-height: 52px;
+          padding-top: 4px;
+          padding-right: 10px;
+          padding-left: 2px;
+          font-weight: 800;
+          color: #111;
         }
-        .show-more-btn:hover {
-          transform: translateY(-2px);
-          background: linear-gradient(135deg, #222 0%, #444 100%) !important;
-          box-shadow: 0 6px 20px rgba(0,0,0,0.15) !important;
+        .reaction-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 16px;
+          border: 1px solid #e0e0e0;
+          border-radius: 20px;
+          background: #fff;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-family: 'Inter', sans-serif;
         }
-        .show-more-btn:active {
-          transform: translateY(0);
+        .reaction-btn:hover {
+          background: #f5f7fb;
+          border-color: #bbb;
+          transform: translateY(-1px);
         }
-        .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
-
-        /* Loading Overlay Animations */
-        @keyframes overlayFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+        .reaction-active {
+          background: #eff6ff !important;
+          border-color: #3b82f6 !important;
         }
-        @keyframes textPulse {
-          0%, 100% { opacity: 0.6; }
-          50% { opacity: 1; }
+        .reaction-btn .count {
+          font-size: 12px;
+          font-weight: 700;
+          color: #555;
         }
-        @keyframes shimmerBar {
-          0% { left: -50%; }
-          100% { left: 100%; }
+        .reaction-active .count {
+          color: #2563eb !important;
         }
-        .animate-logo-i {
-          animation: bounceInLogoI 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-        .animate-logo-r {
-          animation: bounceInLogoR 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.15s forwards;
-        }
-        @keyframes bounceInLogoI {
-          from { opacity: 0; transform: scale(0.3) rotate(-15deg); }
-          to { opacity: 1; transform: scale(1) rotate(0); }
-        }
-        @keyframes bounceInLogoR {
-          from { opacity: 0; transform: scale(0.3) rotate(15deg); }
-          to { opacity: 1; transform: scale(1) rotate(0); }
+        @media (max-width: 768px) {
+          main > div[style*="grid-template-columns"] {
+            grid-template-columns: 1fr !important;
+          }
         }
       `}</style>
     </div>
   );
 }
 
-// ─── Top Navigation Bar (shared) ─────────────────────────────────────────────
+// ─── Top Navigation Bar (non-sticky) ─────────────────────────────────────────
 
 function TopBar({ onBack }: { onBack: () => void }) {
   return (
-    <header style={{ background: '#fff', borderBottom: '1px solid #e8e8e8', position: 'sticky', top: 0, zIndex: 100 }}>
-      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
+    <header style={{ background: '#fff', borderBottom: '1px solid #e8e8e8' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 58 }}>
         <button onClick={onBack}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#444', fontSize: 13, fontWeight: 500, padding: '6px 0' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#444', fontSize: 13, fontWeight: 600, padding: '6px 0', fontFamily: "'Inter', sans-serif" }}>
           <ChevronLeft style={{ width: 18, height: 18 }} />
           Back
         </button>
 
-        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'none' }}>
+        <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
             {['I', 'R'].map((l, i) => (
               <span key={i} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: '#111', color: '#fff', fontWeight: 900, fontSize: 15, fontFamily: 'Georgia, serif' }}>{l}</span>

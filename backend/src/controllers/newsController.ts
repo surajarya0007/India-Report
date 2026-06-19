@@ -1,28 +1,26 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import redis from '../config/redis';
-import { sanitizeArticleImage, sanitizeImageUrl } from '../utils/imageUtils';
-import { DISPLAY_LIMIT, GEMINI_INPUT_MAX_CHARS } from '../config/constants';
-import { scrapeArticle } from '../services/scraperService';
-import { synthesizeArticle } from '../services/aiService';
+import { sanitizeArticleImage } from '../utils/imageUtils';
+import { DISPLAY_LIMIT } from '../config/constants';
 
 const CACHE_TTL = 3600;
 
 const LIST_SELECT = {
   id: true,
-  sourceUrl: true,
+  keyword: true,
   headline: true,
   summary: true,
   imageUrl: true,
+  imageUrls: true,
   categories: true,
   sentiment: true,
-  sourceName: true,
   enrichmentStatus: true,
   createdAt: true,
 } as const;
 
 /**
- * GET /api/news — list endpoint (no full content field).
+ * GET /api/news — list endpoint.
  */
 export async function getRecentNews(req: Request, res: Response) {
   const category = req.query.category as string;
@@ -62,7 +60,6 @@ export async function getRecentNews(req: Request, res: Response) {
         OR: [
           { categories: { has: search } },
           { headline: { contains: search, mode: 'insensitive' } },
-          { summary: { contains: search, mode: 'insensitive' } },
         ],
       };
     } else if (category && category !== 'Home' && category !== 'undefined') {
@@ -107,7 +104,7 @@ export async function getRecentNews(req: Request, res: Response) {
 }
 
 /**
- * GET /api/news/:id — full article including content.
+ * GET /api/news/:id — full article details.
  */
 export async function getArticleById(req: Request, res: Response) {
   const { id } = req.params;
@@ -121,120 +118,5 @@ export async function getArticleById(req: Request, res: Response) {
     return res.status(200).json({ success: true, data: sanitizeArticleImage(article) });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });
-  }
-}
-
-/**
- * POST /api/news/:id/enrich — Scrapes and enriches a single article stub on-demand.
- */
-const activeEnrichments = new Map<string, Promise<any>>();
-
-/**
- * POST /api/news/:id/enrich — Scrapes and enriches a single article stub on-demand.
- */
-export async function enrichArticleOnDemand(req: Request, res: Response) {
-  const { id } = req.params;
-
-  if (activeEnrichments.has(id)) {
-    console.log(`[On-Demand Ingest] Duplicate request detected for article ${id}. Awaiting existing enrichment...`);
-    try {
-      const result = await activeEnrichments.get(id);
-      return res.status(200).json({ success: true, data: result });
-    } catch (err: any) {
-      return res.status(500).json({ success: false, message: err.message });
-    }
-  }
-
-  const performEnrichment = async () => {
-    const article = await prisma.article.findUnique({ where: { id } });
-
-    if (!article) {
-      throw new Error('Article not found.');
-    }
-
-    if (article.enrichmentStatus === 'complete') {
-      return sanitizeArticleImage(article);
-    }
-
-    let rawContent = '';
-    let articleImageUrl: string | undefined;
-
-    if (article.rawContent) {
-      console.log(`[On-Demand Ingest] Using pre-scraped content for: "${article.headline}"`);
-      rawContent = article.rawContent;
-      articleImageUrl = article.imageUrl || undefined;
-    } else {
-      console.log(`[On-Demand Ingest] No pre-scraped content. Scraping on-the-fly for: "${article.headline}"`);
-      const scrapeUrl = article.sourceUrl;
-      try {
-        const scrapeResult = await scrapeArticle(scrapeUrl, article.headline);
-        rawContent = scrapeResult.markdown;
-        articleImageUrl = scrapeResult.imageUrl;
-      } catch (scrapeError) {
-        console.warn(`[On-Demand Ingest] Scraper failed for ${scrapeUrl}. Falling back to description:`, scrapeError);
-        rawContent = article.summary || article.headline;
-      }
-    }
-
-    const trimmedContent = rawContent.slice(0, GEMINI_INPUT_MAX_CHARS);
-
-    let synthesis;
-    try {
-      synthesis = await synthesizeArticle(article.headline, trimmedContent);
-    } catch (geminiError) {
-      console.warn(`[On-Demand Ingest] Gemini synthesis failed for "${article.headline}". Falling back to raw metadata:`, geminiError);
-      synthesis = {
-        headline: article.headline,
-        summary: article.summary,
-        content: rawContent || article.summary,
-        sentiment: 'Neutral' as const,
-        categories: article.categories.length > 0 ? article.categories : ['Tech'],
-      };
-    }
-
-    const cleanedImageUrl = sanitizeImageUrl(articleImageUrl) || article.imageUrl;
-
-    const updatedArticle = await prisma.article.update({
-      where: { id },
-      data: {
-        headline: synthesis.headline,
-        summary: synthesis.summary,
-        content: synthesis.content,
-        sentiment: synthesis.sentiment,
-        categories: synthesis.categories,
-        imageUrl: cleanedImageUrl,
-        enrichmentStatus: 'complete',
-      },
-    });
-
-    if (redis) {
-      try {
-        const keysToDelete = ['homepage:news:all'];
-        if (updatedArticle.categories) {
-          updatedArticle.categories.forEach(cat => {
-            keysToDelete.push(`homepage:news:${cat}`);
-          });
-        }
-        console.log(`[On-Demand Ingest] Invalidating Redis caches: ${keysToDelete.join(', ')}`);
-        await redis.del(...keysToDelete);
-      } catch (redisErr) {
-        console.error('[On-Demand Ingest] Redis delete error:', redisErr);
-      }
-    }
-
-    return sanitizeArticleImage(updatedArticle);
-  };
-
-  const promise = performEnrichment();
-  activeEnrichments.set(id, promise);
-
-  try {
-    const result = await promise;
-    return res.status(200).json({ success: true, data: result });
-  } catch (error: any) {
-    console.error('[On-Demand Ingest] Critical error during on-demand enrichment:', error);
-    return res.status(500).json({ success: false, message: error.message });
-  } finally {
-    activeEnrichments.delete(id);
   }
 }

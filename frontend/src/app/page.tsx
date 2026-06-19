@@ -145,7 +145,7 @@ function BreakingTicker({ articles }: { articles: Article[] }) {
 function FeatureCard({ article, index = 0 }: { article: Article; index?: number }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
-  const firstSentence = article.summary?.split(/(?<=[.!?])\s+/)?.[0] ?? article.summary;
+  const firstSentence = article.summary?.[0] ?? '';
 
   return (
     <div
@@ -173,8 +173,6 @@ function FeatureCard({ article, index = 0 }: { article: Article; index?: number 
           {firstSentence}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#999' }}>
-          <span style={{ fontWeight: 600, color: '#666' }}>{article.sourceName}</span>
-          <span>·</span>
           <Clock style={{ width: 11, height: 11 }} />
           <span>{timeAgo(article.createdAt)}</span>
         </div>
@@ -229,7 +227,7 @@ function CompactCard({ article, showDivider = true, index = 0 }: { article: Arti
 function GridCard({ article, index = 0 }: { article: Article; index?: number }) {
   const router = useRouter();
   const [hov, setHov] = useState(false);
-  const firstSentence = article.summary?.split(/(?<=[.!?])\s+/)?.[0] ?? article.summary;
+  const firstSentence = article.summary?.[0] ?? '';
   return (
     <div
       onClick={() => router.push(`/article/${article.id}`)}
@@ -263,8 +261,6 @@ function GridCard({ article, index = 0 }: { article: Article; index?: number }) 
           {firstSentence}
         </p>
         <div style={{ fontSize: 11, color: '#bbb', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontWeight: 600, color: '#999' }}>{article.sourceName}</span>
-          <span>·</span>
           <Clock style={{ width: 10, height: 10 }} />
           {timeAgo(article.createdAt)}
         </div>

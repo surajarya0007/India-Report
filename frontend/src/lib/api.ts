@@ -2,14 +2,16 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export interface Article {
   id: string;
-  sourceUrl: string;
+  keyword: string;
   headline: string;
-  summary: string;
-  content?: string;
+  summary: string[];
+  contentBlocks?: string[];
+  sectionHeadings?: string[];
+  highlightedFacts?: string[];
   sentiment: 'Positive' | 'Negative' | 'Neutral';
   categories: string[];
-  sourceName: string;
   imageUrl?: string;
+  imageUrls?: string[];
   enrichmentStatus?: 'pending' | 'complete';
   createdAt: string;
 }

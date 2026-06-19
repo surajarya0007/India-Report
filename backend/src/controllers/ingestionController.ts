@@ -1,295 +1,423 @@
 import { Request, Response } from 'express';
+import Parser from 'rss-parser';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import prisma from '../config/db';
 import redis from '../config/redis';
-import { fetchLatestNews } from '../services/newsService';
 import { scrapeArticle } from '../services/scraperService';
-import { synthesizeArticle } from '../services/aiService';
-import { sanitizeImageUrl, extractOgImageFromUrl } from '../utils/imageUtils';
-import {
-  GEMINI_INPUT_MAX_CHARS,
-  GEMINI_RPM_DELAY_BY_MODEL,
-  GEMINI_RPM_DELAY_MS,
-  SCRAPE_CONCURRENCY,
-} from '../config/constants';
+import { sanitizeImageUrl } from '../utils/imageUtils';
 import {
   getIngestionStatus,
   isIngestionRunning,
   markIngestionComplete,
   markIngestionError,
   markIngestionStarted,
-  markIngestionScraping,
 } from '../services/ingestionStatus';
 
-interface PipelineContext {
-  targetCategory?: string;
-  targetCountry?: string;
-  targetSearch?: string;
+const parser = new Parser({
+  customFields: {
+    item: [['source', 'source', { keepArray: false }]],
+  },
+});
+
+const CATEGORY_FEEDS: Record<string, string> = {
+  'Tech': 'https://news.google.com/news/rss/headlines/section/topic/TECHNOLOGY?hl=en-IN&gl=IN&ceid=IN:en',
+  'Business': 'https://news.google.com/news/rss/headlines/section/topic/BUSINESS?hl=en-IN&gl=IN&ceid=IN:en',
+  'Science': 'https://news.google.com/news/rss/headlines/section/topic/SCIENCE?hl=en-IN&gl=IN&ceid=IN:en',
+  'Health': 'https://news.google.com/news/rss/headlines/section/topic/HEALTH?hl=en-IN&gl=IN&ceid=IN:en',
+  'Entertainment': 'https://news.google.com/news/rss/headlines/section/topic/ENTERTAINMENT?hl=en-IN&gl=IN&ceid=IN:en',
+  'Sports': 'https://news.google.com/news/rss/headlines/section/topic/SPORTS?hl=en-IN&gl=IN&ceid=IN:en',
+  'World': 'https://news.google.com/news/rss/headlines/section/topic/WORLD?hl=en-IN&gl=IN&ceid=IN:en',
+  'India': 'https://news.google.com/news/rss/headlines/section/topic/NATION?hl=en-IN&gl=IN&ceid=IN:en'
+};
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+interface SynthesisOutput {
+  headline: string;
+  summary: string[];
+  contentBlocks: string[];
+  sectionHeadings: string[];
+  highlightedFacts: string[];
+  sentiment: 'Positive' | 'Negative' | 'Neutral';
+  categories: string[];
 }
 
-function buildStubCategories(raw: { category?: string[] }, ctx: PipelineContext): string[] {
-  const categories: string[] = [];
-
-  if (raw.category?.length) {
-    raw.category.forEach((c) => {
-      const lower = c.toLowerCase();
-      if (lower.includes('tech') || lower.includes('science')) categories.push('Tech');
-      if (lower.includes('business') || lower.includes('economy')) categories.push('Business');
-      if (lower.includes('finance')) categories.push('Finance');
-      if (lower.includes('politics') || lower.includes('government')) categories.push('Politics');
-      if (lower.includes('entertainment') || lower.includes('art') || lower.includes('culture')) categories.push('Entertainment');
-      if (lower.includes('sport')) categories.push('Sports');
-      if (lower.includes('world') || lower.includes('regional')) categories.push('World');
-      if (lower.includes('health') || lower.includes('medical')) categories.push('Health');
-    });
-  }
-
-  if (categories.length === 0 && ctx.targetCategory) {
-    const capitalized = ctx.targetCategory.charAt(0).toUpperCase() + ctx.targetCategory.slice(1);
-    const mapped = capitalized === 'Technology' ? 'Tech' : capitalized === 'Sports' ? 'Sports' : capitalized;
-    categories.push(mapped);
-  }
-
-  if (categories.length === 0) {
-    categories.push('Tech');
-  }
-
-  return applyFilterCategories(categories, ctx);
+function isGoogleNewsUrl(url: string): boolean {
+  return url.includes('news.google.com');
 }
 
-function applyFilterCategories(categories: string[], ctx: PipelineContext): string[] {
-  const finalCategories = [...categories];
+function extractRealUrl(item: any): string | undefined {
+  if (item.link && !isGoogleNewsUrl(item.link)) {
+    return item.link;
+  }
+  return undefined;
+}
 
-  if (ctx.targetCountry === 'IN' && !finalCategories.includes('India')) {
-    finalCategories.push('India');
+import { GEMINI_MODEL_CHAIN } from '../config/constants';
+
+/**
+ * Uses Gemini (with model fallback) to extract 5 trending keywords/topics from a list of headlines.
+ */
+async function extractTrendingKeywords(category: string, headlines: string[]): Promise<string[]> {
+  if (!GEMINI_API_KEY) {
+    console.warn('[Ingestion] No Gemini API key. Skipping trend extraction.');
+    return headlines.slice(0, 3);
   }
-  if (ctx.targetCategory === 'world' && !finalCategories.includes('World')) {
-    finalCategories.push('World');
-  }
-  if (ctx.targetCategory === 'politics' && !finalCategories.includes('Politics')) {
-    finalCategories.push('Politics');
-  }
-  if (ctx.targetCategory === 'sports' && !finalCategories.includes('Sports')) {
-    finalCategories.push('Sports');
-  }
-  if (ctx.targetCategory) {
-    const capitalized = ctx.targetCategory.charAt(0).toUpperCase() + ctx.targetCategory.slice(1);
-    const mappedCat = capitalized === 'Technology' ? 'Tech' : capitalized === 'Sports' ? 'Sports' : capitalized;
-    const allowed = ['Tech', 'Business', 'Science', 'Health', 'Entertainment', 'Finance', 'Politics', 'World', 'India', 'Sports'];
-    if (allowed.includes(mappedCat) && !finalCategories.includes(mappedCat)) {
-      finalCategories.push(mappedCat);
+
+  const prompt = `You are a trend-discovery engine. Below is a list of recent headlines in the category "${category}". Identify the top 5 distinct trending topics, keywords, or entities that are dominating the news based on these headlines. Return a JSON array of strings.
+Headlines:
+${headlines.map((h, i) => `${i + 1}. ${h}`).join('\n')}`;
+
+  let lastError: any;
+  for (const modelName of GEMINI_MODEL_CHAIN) {
+    try {
+      console.log(`[Ingestion] Extracting trends using model: ${modelName}`);
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Top 5 distinct trending topics/keywords/entities dominating the headlines.'
+          } as any
+        }
+      });
+
+      const result = await model.generateContent(prompt);
+      return JSON.parse(result.response.text().trim());
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`[Ingestion] Trend extraction failed with model ${modelName}. Trying next model. Error:`, error.message || error);
     }
   }
-  if (ctx.targetSearch && !finalCategories.includes(ctx.targetSearch)) {
-    finalCategories.push(ctx.targetSearch);
-  }
 
-  return finalCategories;
-}
-
-function mapCategoryToCacheKey(category?: string): string | undefined {
-  if (!category) return undefined;
-  const lower = category.toLowerCase();
-  if (lower === 'technology') return 'Tech';
-  if (lower === 'world') return 'World';
-  if (lower === 'sports') return 'Sports';
-  const capitalized = category.charAt(0).toUpperCase() + category.slice(1);
-  return capitalized === 'Technology' ? 'Tech' : capitalized;
+  console.error(`[Ingestion] All models in fallback chain failed for trend extraction.`, lastError);
+  return headlines.slice(0, 3); // Fallback to raw titles
 }
 
 /**
- * Invalidate only the Redis keys affected by this ingest run.
+ * Uses Gemini (with model fallback) to synthesize scraped content into a single professional, objective article dossier.
  */
-async function invalidateIngestionCache(
-  ctx: PipelineContext,
-  hadIngest: boolean,
-  additionalCategories?: string[]
-): Promise<void> {
-  if (!hadIngest || !redis) return;
+async function synthesizeTrendDossier(topic: string, sources: { headline: string; content: string; imageUrl?: string | null }[]): Promise<SynthesisOutput> {
+  const sourcesText = sources.map((s, i) => `Source ${i + 1}: ${s.headline}\nContent:\n${s.content.slice(0, 2500)}`).join('\n\n---\n\n');
 
-  const keysToDelete = new Set<string>(['homepage:news:all']);
+  const prompt = `You are a senior journalist at a premium news publication writing a comprehensive editorial dossier for "India Reports".
+Your article must match the depth, structure, and length of high-quality publications like BBC, The Hindu, or Reuters.
 
-  if (ctx.targetCountry === 'IN') {
-    keysToDelete.add('homepage:news:India');
-  }
+Topic: "${topic}"
 
-  const cacheCategory = mapCategoryToCacheKey(ctx.targetCategory);
-  if (cacheCategory) {
-    keysToDelete.add(`homepage:news:${cacheCategory}`);
-  }
+Write a detailed, professional, multi-section article. Your output MUST follow these strict rules:
+1. SUMMARY: Write exactly 5 distinct, factual bullet points. Each bullet must be a full, complete sentence (minimum 20 words). Cover different angles: what happened, who is involved, what the impact is, what experts/officials say, and what happens next. Do NOT use markdown in summary.
+2. CONTENT BLOCKS: Write exactly 8 complete paragraphs in English. Each paragraph must be at least 80 words. The first paragraph is the lead paragraph.
+   * Use double-asterisk markdown (e.g. **Google** or **7,000mAh**) to bold ONLY the most critical entities, key figures, or statistics. Cap it to a maximum of 2-3 short key terms per paragraph. Do not over-bold or bold common words, as it looks cluttered.
+3. SECTION HEADINGS: Write exactly 4 section headings (short, bold editorial titles, 3-6 words each) that will appear before paragraphs 2, 4, 6, and 8 respectively. Do NOT use markdown formatting here.
+4. HIGHLIGHTED FACTS: Extract exactly 4 standalone key statistics, quotes, or notable facts that can be displayed as pull-quotes or callout boxes. Each must be a single compelling sentence. Do NOT use markdown.
+5. SENTIMENT: Choose the overall tone: Positive, Negative, or Neutral.
+6. CATEGORIES: Tag with 1-3 relevant categories.
 
-  if (ctx.targetSearch) {
-    keysToDelete.add(`homepage:news:search:${ctx.targetSearch.toLowerCase()}`);
-  }
+Do NOT use any markdown tags, headings, links, or lists inside the content blocks other than double asterisks (**) for bold text.
 
-  if (additionalCategories) {
-    additionalCategories.forEach((cat) => {
-      keysToDelete.add(`homepage:news:${cat}`);
-    });
-  }
+Sources:
+${sourcesText}`;
 
-  const keys = [...keysToDelete];
-  console.log(`[Pipeline] Invalidating Redis cache keys: ${keys.join(', ')}`);
-  await redis.del(...keys);
-}
+  let lastError: any;
+  for (const modelName of GEMINI_MODEL_CHAIN) {
+    try {
+      console.log(`[Ingestion] Synthesizing dossier using model: ${modelName}`);
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'object',
+            properties: {
+              headline: { type: 'string', description: 'A compelling, objective editorial headline under 15 words.' },
+              summary: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Exactly 5 distinct bullet points, each a complete sentence of minimum 20 words covering different story angles.'
+              },
+              contentBlocks: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Exactly 8 full prose paragraphs, each at least 80 words. Use double-asterisks (**) selectively to bold a maximum of 2-3 key entities or figures per paragraph.'
+              },
+              sectionHeadings: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Exactly 4 editorial section headings (3-6 words each) for paragraphs 2, 4, 6, and 8.'
+              },
+              highlightedFacts: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Exactly 4 pull-quote worthy facts, statistics, or notable statements as single compelling sentences.'
+              },
+              sentiment: { type: 'string', enum: ['Positive', 'Negative', 'Neutral'] },
+              categories: {
+                type: 'array',
+                items: {
+                  type: 'string',
+                  enum: ['Tech', 'Business', 'Science', 'Health', 'Entertainment', 'Finance', 'Politics', 'World', 'India', 'Sports']
+                }
+              }
+            },
+            required: ['headline', 'summary', 'contentBlocks', 'sectionHeadings', 'highlightedFacts', 'sentiment', 'categories']
+          } as any
+        }
+      });
 
-function buildFallbackSynthesis(
-  raw: { title: string; description: string; category?: string[] },
-  rawContent: string,
-  ctx: PipelineContext
-) {
-  return {
-    headline: raw.title.substring(0, 100),
-    summary: raw.description || 'Details are available at the source link.',
-    content: rawContent || raw.description || 'Full factual content could not be synthesized. Please read the full story at the source link.',
-    sentiment: 'Neutral' as const,
-    categories: (() => {
-      const cats = buildStubCategories(raw, ctx).filter((c) =>
-        ['Tech', 'Business', 'Science', 'Health', 'Entertainment', 'Finance'].includes(c)
-      );
-      return cats.length > 0 ? cats : ['Tech'];
-    })(),
-    modelUsed: undefined as string | undefined,
-  };
-}
-
-async function runWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  fn: (item: T, index: number) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let nextIndex = 0;
-
-  async function worker(): Promise<void> {
-    while (nextIndex < items.length) {
-      const index = nextIndex++;
-      results[index] = await fn(items[index], index);
+      const result = await model.generateContent(prompt);
+      return JSON.parse(result.response.text().trim());
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`[Ingestion] Synthesis failed with model ${modelName}. Trying next model. Error:`, error.message || error);
     }
   }
 
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
+  throw lastError || new Error('All models in fallback chain failed for synthesis.');
+}
+
+/**
+ * Searches Google News for articles matching a query/keyword.
+ */
+async function fetchArticlesForKeyword(keyword: string): Promise<{ title: string; url: string; description: string }[]> {
+  try {
+    const hl = 'en-IN';
+    const gl = 'IN';
+    const ceid = 'IN:en';
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=${hl}&gl=${gl}&ceid=${ceid}`;
+    const feed = await parser.parseURL(url);
+    if (!feed.items) return [];
+
+    return feed.items.slice(0, 10).map((item) => ({
+      title: item.title || 'Untitled',
+      url: extractRealUrl(item) || item.link || '',
+      description: item.contentSnippet || item.content || ''
+    }));
+  } catch (error) {
+    console.error(`[Ingestion] Error searching Google News for "${keyword}":`, error);
+    return [];
+  }
+}
+
+/**
+ * Invalidate Redis Cache
+ */
+async function invalidateCache(categories: string[]) {
+  if (!redis) return;
+  try {
+    const keys = ['homepage:news:all', ...categories.map(c => `homepage:news:${c}`)];
+    console.log(`[Ingestion] Invalidating Redis caches: ${keys.join(', ')}`);
+    await redis.del(...keys);
+  } catch (err) {
+    console.error('[Ingestion] Redis cache invalidation error:', err);
+  }
+}
+
+/**
+ * Runs parallel crawling of URLs with concurrency.
+ */
+async function crawlSources(sources: { title: string; url: string; description: string }[]): Promise<{ headline: string; content: string; imageUrl?: string | null }[]> {
+  const results: { headline: string; content: string; imageUrl?: string | null }[] = [];
+  const concurrency = 3;
+  let index = 0;
+
+  async function worker() {
+    while (index < sources.length) {
+      const currentIdx = index++;
+      const source = sources[currentIdx];
+      if (!source.url) {
+        results.push({ headline: source.title, content: source.description, imageUrl: null });
+        continue;
+      }
+
+      try {
+        console.log(`[Ingestion] Scraping: ${source.url}`);
+        const scrapeResult = await scrapeArticle(source.url, source.title);
+        results.push({
+          headline: source.title,
+          content: scrapeResult.markdown || source.description,
+          imageUrl: scrapeResult.imageUrl || null
+        });
+      } catch (err) {
+        console.warn(`[Ingestion] Scrape failed for ${source.url}, falling back to description:`, err);
+        results.push({ headline: source.title, content: source.description, imageUrl: null });
+      }
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, sources.length) }, () => worker());
   await Promise.all(workers);
   return results;
 }
 
 /**
- * Executes the ingestion pipeline:
- * 1. Fetch RSS articles (up to INGEST_LIMIT)
- * 2. Batch dedup + save stubs immediately (enrichmentStatus: pending)
- * 3. Scrape (parallel) → Gemini (sequential) → update rows (enrichmentStatus: complete)
+ * Ingestion runner
  */
 export async function runIngestionPipeline(
   category?: string,
   country?: string,
   search?: string
-): Promise<{
-  ingestedCount: number;
-  skippedCount: number;
-  errorsCount: number;
-  createdArticles?: any[];
-}> {
+): Promise<{ ingestedCount: number; skippedCount: number; errorsCount: number }> {
   let ingestedCount = 0;
   let skippedCount = 0;
   let errorsCount = 0;
 
-  const ctx: PipelineContext = {
-    targetCategory: category,
-    targetCountry: country,
-    targetSearch: search?.trim() || undefined,
-  };
+  // Case 1: Search-based Ingestion (On demand search query)
+  if (search && search.trim()) {
+    const keyword = search.trim();
+    console.log(`[Ingestion] Starting search-based ingestion for: "${keyword}"`);
 
-  try {
-    console.log(
-      `[Pipeline] Ingestion pipeline started. Target category: ${ctx.targetCategory || 'none'}, Target country: ${ctx.targetCountry || 'none'}, Search: ${ctx.targetSearch || 'none'}`
-    );
-
-    const rawArticles = await fetchLatestNews(ctx.targetCategory, ctx.targetCountry, ctx.targetSearch);
-    console.log(`[Pipeline] Found ${rawArticles.length} raw articles to process.`);
-
-    if (rawArticles.length === 0) {
-      return { ingestedCount, skippedCount, errorsCount };
-    }
-
-    const urls = rawArticles.map((a) => a.url).filter(Boolean);
-    const existingRows = await prisma.article.findMany({
-      where: { sourceUrl: { in: urls } },
-      select: { sourceUrl: true },
-    });
-    const existingUrls = new Set(existingRows.map((r) => r.sourceUrl));
-
-    const newArticles = rawArticles.filter((raw) => {
-      if (existingUrls.has(raw.url)) {
-        skippedCount++;
-        return false;
+    // Check deduplication
+    const existing = await prisma.article.findFirst({
+      where: {
+        keyword: { equals: keyword, mode: 'insensitive' },
+        createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
       }
-      return true;
     });
 
-    if (newArticles.length === 0) {
-      console.log('[Pipeline] All articles already exist. Nothing to ingest.');
-      return { ingestedCount, skippedCount, errorsCount };
+    if (existing) {
+      console.log(`[Ingestion] Keyword "${keyword}" already ingested today. Skipping.`);
+      return { ingestedCount: 0, skippedCount: 1, errorsCount: 0 };
     }
 
-    // Phase 1: save RSS stubs immediately (scraper happens in background later)
-    const stubRecords = [];
-    for (const raw of newArticles) {
-      const created = await prisma.article.create({
-        data: {
-          sourceUrl: raw.realUrl || raw.url,
-          headline: raw.title.substring(0, 100),
-          summary: raw.description || raw.title,
-          content: null,
-          rawContent: null,
-          sentiment: 'Neutral',
-          categories: buildStubCategories(raw, ctx),
-          sourceName: raw.source,
-          imageUrl: null,
-          enrichmentStatus: 'pending',
-        },
-      });
-      stubRecords.push(created);
+    const items = await fetchArticlesForKeyword(keyword);
+    if (items.length === 0) {
+      console.warn(`[Ingestion] No sources found for "${keyword}"`);
+      return { ingestedCount: 0, skippedCount: 0, errorsCount: 1 };
     }
 
-    ingestedCount = stubRecords.length;
-    console.log(`[Pipeline] Saved ${stubRecords.length} stub articles (pending enrichment).`);
-    await invalidateIngestionCache(ctx, true);
-    return { ingestedCount, skippedCount, errorsCount, createdArticles: stubRecords };
-  } catch (error) {
-    console.error('[Pipeline] Critical error during ingestion pipeline execution:', error);
-    throw error;
-  }
-}
-
-/**
- * Scrapes saved articles in the background and populates their rawContent and imageUrl fields.
- */
-async function scrapeArticlesInBackground(articles: any[], ctx: PipelineContext) {
-  console.log(`[Pipeline Background] Starting background scraping for ${articles.length} articles...`);
-
-  await runWithConcurrency(articles, SCRAPE_CONCURRENCY, async (article) => {
     try {
-      console.log(`[Pipeline Background] Crawling article: "${article.headline}"`);
-      const scrapeResult = await scrapeArticle(article.sourceUrl, article.headline);
-      const cleanedImageUrl = sanitizeImageUrl(scrapeResult.imageUrl) || null;
+      const crawled = await crawlSources(items);
+      const synthesis = await synthesizeTrendDossier(keyword, crawled);
+      
+      // Pull all successfully scraped image URLs from sources
+      const imageUrls = crawled
+        .map(c => c.imageUrl)
+        .filter((url): url is string => !!url)
+        .map(url => sanitizeImageUrl(url))
+        .filter((url): url is string => !!url);
+      
+      // Remove duplicates
+      const uniqueImageUrls = Array.from(new Set(imageUrls));
+      const imageUrl = uniqueImageUrls[0] || null;
 
-      const updatedArticle = await prisma.article.update({
-        where: { id: article.id },
+      await prisma.article.create({
         data: {
-          rawContent: scrapeResult.markdown,
-          imageUrl: cleanedImageUrl,
-        },
+          keyword,
+          headline: synthesis.headline,
+          summary: synthesis.summary,
+          contentBlocks: synthesis.contentBlocks,
+          sectionHeadings: synthesis.sectionHeadings || [],
+          highlightedFacts: synthesis.highlightedFacts || [],
+          sentiment: synthesis.sentiment,
+          categories: synthesis.categories,
+          imageUrl,
+          imageUrls: uniqueImageUrls,
+          enrichmentStatus: 'complete'
+        }
       });
 
-      console.log(`[Pipeline Background] Scraped & saved background details for: "${article.headline}"`);
-      // Invalidate cache immediately for this article's categories
-      await invalidateIngestionCache(ctx, true, updatedArticle.categories);
+      ingestedCount++;
+      await invalidateCache(synthesis.categories);
     } catch (err) {
-      console.error(`[Pipeline Background] Failed to scrape background details for ${article.sourceUrl}:`, err);
+      console.error(`[Ingestion] Synthesis/save failed for search topic "${keyword}":`, err);
+      errorsCount++;
     }
-  });
 
-  console.log(`[Pipeline Background] Completed background scraping. Invalidating caches.`);
-  await invalidateIngestionCache(ctx, true);
+    return { ingestedCount, skippedCount, errorsCount };
+  }
+
+  // Case 2: General Trending Topics Ingestion
+  let categoriesToIngest = Object.keys(CATEGORY_FEEDS);
+  if (category) {
+    const matchedKey = Object.keys(CATEGORY_FEEDS).find(k => k.toLowerCase() === category.toLowerCase());
+    categoriesToIngest = matchedKey ? [matchedKey] : [];
+  }
+  console.log(`[Ingestion] Starting general trending ingestion for categories: ${categoriesToIngest.join(', ')}`);
+
+  for (const cat of categoriesToIngest) {
+    const url = CATEGORY_FEEDS[cat];
+    if (!url) continue;
+
+    try {
+      console.log(`[Ingestion] Fetching feed for category: ${cat}`);
+      const feed = await parser.parseURL(url);
+      if (!feed.items || feed.items.length === 0) continue;
+
+      const headlines = feed.items.slice(0, 20).map(item => item.title || '');
+      const trendingKeywords = await extractTrendingKeywords(cat, headlines);
+      console.log(`[Ingestion] Category "${cat}" trending keywords:`, trendingKeywords);
+
+      for (const keyword of trendingKeywords) {
+        // Deduplication: check if keyword exists today
+        const existing = await prisma.article.findFirst({
+          where: {
+            keyword: { equals: keyword, mode: 'insensitive' },
+            createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+          }
+        });
+
+        if (existing) {
+          console.log(`[Ingestion] Topic "${keyword}" already ingested today. Skipping.`);
+          skippedCount++;
+          continue;
+        }
+
+        console.log(`[Ingestion] Processing trending topic: "${keyword}"`);
+        const searchItems = await fetchArticlesForKeyword(keyword);
+        if (searchItems.length === 0) {
+          skippedCount++;
+          continue;
+        }
+
+        try {
+          const crawled = await crawlSources(searchItems);
+          const synthesis = await synthesizeTrendDossier(keyword, crawled);
+          
+          // Pull all successfully scraped image URLs from sources
+          const imageUrls = crawled
+            .map(c => c.imageUrl)
+            .filter((url): url is string => !!url)
+            .map(url => sanitizeImageUrl(url))
+            .filter((url): url is string => !!url);
+          
+          // Remove duplicates
+          const uniqueImageUrls = Array.from(new Set(imageUrls));
+          const imageUrl = uniqueImageUrls[0] || null;
+          
+          await prisma.article.create({
+            data: {
+              keyword,
+              headline: synthesis.headline,
+              summary: synthesis.summary,
+              contentBlocks: synthesis.contentBlocks,
+              sectionHeadings: synthesis.sectionHeadings || [],
+              highlightedFacts: synthesis.highlightedFacts || [],
+              sentiment: synthesis.sentiment,
+              categories: synthesis.categories,
+              imageUrl,
+              imageUrls: uniqueImageUrls,
+              enrichmentStatus: 'complete'
+            }
+          });
+
+          ingestedCount++;
+          await invalidateCache(synthesis.categories);
+        } catch (keywordErr) {
+          console.error(`[Ingestion] Failed synthesis for topic "${keyword}":`, keywordErr);
+          errorsCount++;
+        }
+      }
+    } catch (catErr) {
+      console.error(`[Ingestion] Failed category processing for ${cat}:`, catErr);
+      errorsCount++;
+    }
+  }
+
+  return { ingestedCount, skippedCount, errorsCount };
 }
 
 /**
@@ -327,38 +455,11 @@ export async function triggerIngestion(req: Request, res: Response) {
 
   void runIngestionPipeline(category, country, search)
     .then((result) => {
-      if (result.createdArticles && result.createdArticles.length > 0) {
-        markIngestionScraping(); // transition to scraping status in background
-
-        const ctx: PipelineContext = {
-          targetCategory: category,
-          targetCountry: country,
-          targetSearch: search?.trim() || undefined,
-        };
-        
-        scrapeArticlesInBackground(result.createdArticles, ctx)
-          .then(() => {
-            markIngestionComplete({
-              ingestedCount: result.ingestedCount,
-              skippedCount: result.skippedCount,
-              errorsCount: result.errorsCount,
-            });
-          })
-          .catch((err) => {
-            console.error('[Pipeline Background] Scrape error:', err);
-            markIngestionComplete({
-              ingestedCount: result.ingestedCount,
-              skippedCount: result.skippedCount,
-              errorsCount: result.errorsCount,
-            });
-          });
-      } else {
-        markIngestionComplete({
-          ingestedCount: result.ingestedCount,
-          skippedCount: result.skippedCount,
-          errorsCount: result.errorsCount,
-        });
-      }
+      markIngestionComplete({
+        ingestedCount: result.ingestedCount,
+        skippedCount: result.skippedCount,
+        errorsCount: result.errorsCount,
+      });
     })
     .catch((error: Error) => {
       markIngestionError(error.message || 'Unknown error');
