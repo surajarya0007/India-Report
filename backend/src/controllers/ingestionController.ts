@@ -59,13 +59,21 @@ import { GEMINI_MODEL_CHAIN } from '../config/constants';
 /**
  * Uses Gemini (with model fallback) to extract 5 trending keywords/topics from a list of headlines.
  */
-async function extractTrendingKeywords(category: string, headlines: string[]): Promise<string[]> {
+async function extractTrendingKeywords(category: string, headlines: string[], excludedKeywords: string[] = []): Promise<string[]> {
   if (!GEMINI_API_KEY) {
     console.warn('[Ingestion] No Gemini API key. Skipping trend extraction.');
     return headlines.slice(0, 3);
   }
 
-  const prompt = `You are a trend-discovery engine. Below is a list of recent headlines in the category "${category}". Identify the top 5 distinct trending topics, keywords, or entities that are dominating the news based on these headlines. Return a JSON array of strings.
+  const exclusionText = excludedKeywords.length > 0
+    ? `\n\nCRITICAL RULE: Do NOT identify or return any stories, topics, or events that are identical or highly similar/semantically overlapping with the following recently covered topics/queries:\n${excludedKeywords.map(k => `- ${k}`).join('\n')}\nFocus on finding other emerging, secondary, or new stories from the headlines.`
+    : '';
+
+  const prompt = `You are a trend-discovery engine. Below is a list of recent headlines in the category "${category}". Identify the top 5 distinct trending stories, events, or specific news developments that are dominating the news based on these headlines.
+
+CRITICAL INSTRUCTION: Do NOT return broad or generic keywords/categories (e.g. do NOT return "Cybersecurity threats", "AI", "Cricket", "World Cup"). Instead, return highly specific, descriptive, event-driven queries representing the actual news story (e.g. "Google DeepMind cybersecurity insider threat AI roadmap", "NEET exam paper leak supreme court hearing controversy", "India vs Afghanistan T20 World Cup super eight match"). Each query should be descriptive and optimized to search Google News for articles covering that specific event.
+
+Return a JSON array of strings.${exclusionText}
 Headlines:
 ${headlines.map((h, i) => `${i + 1}. ${h}`).join('\n')}`;
 
@@ -80,7 +88,7 @@ ${headlines.map((h, i) => `${i + 1}. ${h}`).join('\n')}`;
           responseSchema: {
             type: 'array',
             items: { type: 'string' },
-            description: 'Top 5 distinct trending topics/keywords/entities dominating the headlines.'
+            description: 'Top 5 distinct, descriptive, event-driven queries representing specific news stories dominating the headlines.'
           } as any
         }
       });
@@ -109,13 +117,14 @@ Your article must match the depth, structure, and length of high-quality publica
 Topic: "${topic}"
 
 Write a detailed, professional, multi-section article. Your output MUST follow these strict rules:
-1. SUMMARY: Write exactly 5 distinct, factual bullet points. Each bullet must be a full, complete sentence (minimum 20 words). Cover different angles: what happened, who is involved, what the impact is, what experts/officials say, and what happens next. Do NOT use markdown in summary.
-2. CONTENT BLOCKS: Write exactly 8 complete paragraphs in English. Each paragraph must be at least 80 words. The first paragraph is the lead paragraph.
+1. HEADLINE: Write a highly catchy, engaging, and professional headline. It must be active, punchy, and directly reflect the overall sentiment of the story (e.g., dramatic/urgent for Negative stories, inspiring/breakthrough-focused for Positive stories, and intriguing/authoritative for Neutral stories). Avoid dry, purely descriptive, or passive headlines.
+2. SUMMARY: Write exactly 5 distinct, factual bullet points. Each bullet must be a full, complete sentence (minimum 20 words). Cover different angles: what happened, who is involved, what the impact is, what experts/officials say, and what happens next. Do NOT use markdown in summary.
+3. CONTENT BLOCKS: Write exactly 8 complete paragraphs in English. Each paragraph must be at least 80 words. The first paragraph is the lead paragraph.
    * Use double-asterisk markdown (e.g. **Google** or **7,000mAh**) to bold ONLY the most critical entities, key figures, or statistics. Cap it to a maximum of 2-3 short key terms per paragraph. Do not over-bold or bold common words, as it looks cluttered.
-3. SECTION HEADINGS: Write exactly 4 section headings (short, bold editorial titles, 3-6 words each) that will appear before paragraphs 2, 4, 6, and 8 respectively. Do NOT use markdown formatting here.
-4. HIGHLIGHTED FACTS: Extract exactly 4 standalone key statistics, quotes, or notable facts that can be displayed as pull-quotes or callout boxes. Each must be a single compelling sentence. Do NOT use markdown.
-5. SENTIMENT: Choose the overall tone: Positive, Negative, or Neutral.
-6. CATEGORIES: Tag with 1-3 relevant categories.
+4. SECTION HEADINGS: Write exactly 4 section headings (short, bold editorial titles, 3-6 words each) that will appear before paragraphs 2, 4, 6, and 8 respectively. Do NOT use markdown formatting here.
+5. HIGHLIGHTED FACTS: Extract exactly 4 standalone key statistics, quotes, or notable facts that can be displayed as pull-quotes or callout boxes. Each must be a single compelling sentence. Do NOT use markdown.
+6. SENTIMENT: Choose the overall tone: Positive, Negative, or Neutral.
+7. CATEGORIES: Tag with 1-3 relevant categories.
 
 Do NOT use any markdown tags, headings, links, or lists inside the content blocks other than double asterisks (**) for bold text.
 
@@ -133,7 +142,7 @@ ${sourcesText}`;
           responseSchema: {
             type: 'object',
             properties: {
-              headline: { type: 'string', description: 'A compelling, objective editorial headline under 15 words.' },
+              headline: { type: 'string', description: 'A highly catchy, journalistic headline (under 15 words) tailored to reflect the article\'s overall sentiment (Positive, Negative, or Neutral).' },
               summary: {
                 type: 'array',
                 items: { type: 'string' },
@@ -338,6 +347,21 @@ export async function runIngestionPipeline(
   }
   console.log(`[Ingestion] Starting general trending ingestion for categories: ${categoriesToIngest.join(', ')}`);
 
+  // Get keywords ingested in the last 24 hours to exclude them from trend extraction
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recentArticles = await prisma.article.findMany({
+    where: {
+      createdAt: { gte: twentyFourHoursAgo },
+    },
+    select: {
+      keyword: true,
+    },
+  });
+  const excludedKeywords = Array.from(new Set(recentArticles.map(a => a.keyword).filter(Boolean)));
+  console.log(`[Ingestion] Excluded keywords from the last 24 hours:`, excludedKeywords);
+
+  const runningExcludedKeywords = [...excludedKeywords];
+
   for (const cat of categoriesToIngest) {
     const url = CATEGORY_FEEDS[cat];
     if (!url) continue;
@@ -348,7 +372,7 @@ export async function runIngestionPipeline(
       if (!feed.items || feed.items.length === 0) continue;
 
       const headlines = feed.items.slice(0, 40).map(item => item.title || '');
-      const trendingKeywords = await extractTrendingKeywords(cat, headlines);
+      const trendingKeywords = await extractTrendingKeywords(cat, headlines, runningExcludedKeywords);
       console.log(`[Ingestion] Category "${cat}" trending keywords:`, trendingKeywords);
 
       for (const keyword of trendingKeywords) {
@@ -405,6 +429,7 @@ export async function runIngestionPipeline(
           });
 
           ingestedCount++;
+          runningExcludedKeywords.push(keyword);
           await invalidateCache(synthesis.categories);
         } catch (keywordErr) {
           console.error(`[Ingestion] Failed synthesis for topic "${keyword}":`, keywordErr);
