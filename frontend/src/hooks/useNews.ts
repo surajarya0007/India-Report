@@ -61,14 +61,16 @@ export function useNews(category?: string, search?: string) {
   );
 
   const runBackgroundIngest = useCallback(
-    async (refreshFn: () => Promise<Article[] | void>): Promise<IngestResult> => {
+    async (refreshFn: () => Promise<Article[] | void>, overrideSearch?: string): Promise<IngestResult> => {
       setIngesting(true);
 
       let queryCategory: string | undefined;
       let queryCountry: string | undefined;
       let querySearch: string | undefined;
 
-      if (search) {
+      if (overrideSearch) {
+        querySearch = overrideSearch;
+      } else if (search) {
         querySearch = search;
       } else if (category === 'India') {
         queryCountry = 'IN';
@@ -106,7 +108,7 @@ export function useNews(category?: string, search?: string) {
 
   const runManualIngest = useCallback(async () => {
     const refreshFn = () => (search ? loadSearchResults(search, false) : loadNews(false));
-    return runBackgroundIngest(refreshFn);
+    return runBackgroundIngest(refreshFn, search);
   }, [search, loadNews, loadSearchResults, runBackgroundIngest]);
 
   const runSearch = useCallback(
@@ -120,7 +122,7 @@ export function useNews(category?: string, search?: string) {
         const existing = await loadSearchResults(query, true);
         const hadCachedResults = existing.length > 0;
 
-        const res = await runBackgroundIngest(() => loadSearchResults(query, false));
+        const res = await runBackgroundIngest(() => loadSearchResults(query, false), query);
 
         return { ...res, hadCachedResults, cachedCount: existing.length };
       } catch (err: any) {
