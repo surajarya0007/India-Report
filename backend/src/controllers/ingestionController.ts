@@ -320,16 +320,17 @@ export async function runIngestionPipeline(
     const keyword = search.trim();
     console.log(`[Ingestion] Starting search-based ingestion for: "${keyword}"`);
 
-    // Check deduplication
+    // Check deduplication (last 4 hours)
+    const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
     const existing = await prisma.article.findFirst({
       where: {
         keyword: { equals: keyword, mode: 'insensitive' },
-        createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+        createdAt: { gte: fourHoursAgo }
       }
     });
 
     if (existing) {
-      console.log(`[Ingestion] Keyword "${keyword}" already ingested today. Skipping.`);
+      console.log(`[Ingestion] Keyword "${keyword}" already ingested in the last 4 hours. Skipping.`);
       return { ingestedCount: 0, skippedCount: 1, errorsCount: 0 };
     }
 
@@ -343,16 +344,7 @@ export async function runIngestionPipeline(
       const crawled = await crawlSources(items);
       const synthesis = await synthesizeTrendDossier(keyword, crawled);
       
-      const imageResult = await getCopyrightFreeImage(
-        synthesis.imageSearchQuery,
-        synthesis.categories[0] || 'News',
-        synthesis.aiImagePrompt,
-        synthesis.imageSearchQueryFallbacks,
-        synthesis.headline,
-        synthesis.imageSearchSubject
-      );
-
-      await prisma.article.create({
+      const createdArticle = await prisma.article.create({
         data: {
           keyword,
           headline: synthesis.headline,
@@ -362,14 +354,52 @@ export async function runIngestionPipeline(
           highlightedFacts: synthesis.highlightedFacts || [],
           sentiment: synthesis.sentiment,
           categories: synthesis.categories,
-          imageUrl: imageResult.imageUrl,
-          imageUrls: imageResult.imageUrls,
-          enrichmentStatus: 'complete'
+          imageUrl: null,
+          imageUrls: [],
+          enrichmentStatus: 'pending'
         }
       });
 
       ingestedCount++;
       await invalidateCache(synthesis.categories, keyword);
+
+      // Run image enrichment in the background to avoid blocking the frontend
+      void getCopyrightFreeImage(
+        synthesis.imageSearchQuery,
+        synthesis.categories[0] || 'News',
+        synthesis.aiImagePrompt,
+        synthesis.imageSearchQueryFallbacks,
+        synthesis.headline,
+        synthesis.imageSearchSubject
+      ).then(async (imageResult) => {
+        try {
+          await prisma.article.update({
+            where: { id: createdArticle.id },
+            data: {
+              imageUrl: imageResult.imageUrl,
+              imageUrls: imageResult.imageUrls,
+              enrichmentStatus: 'complete'
+            }
+          });
+          console.log(`[Ingestion] Background image search complete for "${keyword}". Article "${createdArticle.id}" updated.`);
+          await invalidateCache(synthesis.categories, keyword);
+        } catch (updateErr) {
+          console.error(`[Ingestion] Background image update failed for article "${createdArticle.id}":`, updateErr);
+        }
+      }).catch(async (imageErr) => {
+        console.error(`[Ingestion] Background image search failed for keyword "${keyword}":`, imageErr);
+        try {
+          await prisma.article.update({
+            where: { id: createdArticle.id },
+            data: {
+              enrichmentStatus: 'complete'
+            }
+          });
+          await invalidateCache(synthesis.categories, keyword);
+        } catch (dbErr) {
+          console.error(`[Ingestion] Failed to mark failed image search article as complete:`, dbErr);
+        }
+      });
     } catch (err) {
       console.error(`[Ingestion] Synthesis/save failed for search topic "${keyword}":`, err);
       errorsCount++;

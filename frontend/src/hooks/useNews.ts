@@ -122,6 +122,24 @@ export function useNews(category?: string, search?: string) {
         const existing = await loadSearchResults(query, true);
         const hadCachedResults = existing.length > 0;
 
+        // Skip ingestion if there is an article created in the last 4 hours
+        const fourHoursInMs = 4 * 60 * 60 * 1000;
+        const hasRecentArticle = existing.some(
+          (art) => Date.now() - new Date(art.createdAt).getTime() < fourHoursInMs
+        );
+
+        if (hasRecentArticle) {
+          return {
+            success: true,
+            message: 'Showing recent articles from database.',
+            ingestedCount: 0,
+            skippedCount: 0,
+            errorsCount: 0,
+            hadCachedResults,
+            cachedCount: existing.length,
+          };
+        }
+
         const res = await runBackgroundIngest(() => loadSearchResults(query, false), query);
 
         return { ...res, hadCachedResults, cachedCount: existing.length };
@@ -177,6 +195,19 @@ export function useNews(category?: string, search?: string) {
     () => articles.some((a) => a.enrichmentStatus === 'pending'),
     [articles]
   );
+
+  useEffect(() => {
+    if (hasPendingArticles) {
+      const interval = setInterval(() => {
+        if (search) {
+          void loadSearchResults(search, false);
+        } else {
+          void loadNews(false);
+        }
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [hasPendingArticles, search, loadSearchResults, loadNews]);
 
   return {
     articles,

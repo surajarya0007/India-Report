@@ -39,6 +39,24 @@ function ImgBox({ article, height = 180, style = {} }: { article: Article; heigh
   const [imgError, setImgError] = useState(false);
   const hasImage = !!article.imageUrl && !imgError;
 
+  if (article.enrichmentStatus === 'pending') {
+    return (
+      <div 
+        className="skeleton-pulse"
+        style={{
+          height,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          overflow: 'hidden', flexShrink: 0,
+          border: '1px solid var(--border-primary)',
+          ...style,
+        }}
+      >
+        <span style={{ color: 'var(--color-ink-faint)', fontSize: 13, fontWeight: 600, opacity: 0.7 }}>Loading Image...</span>
+      </div>
+    );
+  }
+
   if (hasImage) {
     return (
       <div style={{
@@ -332,6 +350,33 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
+  const [progress, setProgress] = useState(0);
+  const isLoadingOrIngesting = loading || ingesting;
+
+  useEffect(() => {
+    let timer: any;
+    if (isLoadingOrIngesting) {
+      setProgress(5);
+      timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 95) return prev;
+          // Smooth increments
+          const diff = prev < 40 ? 10 : prev < 70 ? 5 : prev < 85 ? 2 : 1;
+          return prev + diff;
+        });
+      }, 600);
+    } else {
+      setProgress(100);
+      timer = setTimeout(() => {
+        setProgress(0);
+      }, 800);
+    }
+    return () => {
+      clearInterval(timer);
+      clearTimeout(timer);
+    };
+  }, [isLoadingOrIngesting]);
+
   const filtered = useMemo(() => {
     let list = articles;
     if (!activeSearch) {
@@ -419,37 +464,56 @@ export default function Home() {
       {/* ── Main Content ─────────────────────────────────────────────────────── */}
       <main className="ir-container" style={{ padding: '24px 20px' }}>
 
-        {/* Full-page loader */}
-        {loading && filtered.length === 0 && (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0', gap: 12 }}>
-            <div style={{ width: 36, height: 36, border: '3px solid var(--ir-crimson)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            <span style={{ fontSize: 14, color: 'var(--color-ink-faint)' }}>
-              {`Looking for "${searchQuery || activeSearch || 'your topic'}" in database…`}
-            </span>
-          </div>
-        )}
-
-        {/* Ingest loading */}
-        {ingesting && !loading && filtered.length === 0 && (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '80px 0', gap: 12 }}>
-            <div style={{ width: 36, height: 36, border: '3px solid var(--ir-crimson)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-            <span style={{ fontSize: 14, color: 'var(--color-ink-faint)' }}>Pulling latest stories from Google News…</span>
+        {/* Unified full-page loader with progress bar block */}
+        {isLoadingOrIngesting && filtered.length === 0 && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 20px', width: '100%' }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '12px 16px', borderRadius: 4,
+              border: '1px solid var(--border-primary)',
+              background: ingesting
+                ? `linear-gradient(to right, var(--ir-crimson-bg) ${progress}%, var(--bg-tertiary) ${progress}%)`
+                : 'var(--bg-tertiary)',
+              fontSize: 13,
+              color: 'var(--color-ink-muted)',
+              transition: 'background 0.1s ease',
+              width: '100%',
+              maxWidth: 600
+            }}>
+              <RefreshCw style={{ width: 14, height: 14, animation: 'spin 0.8s linear infinite', color: 'var(--ir-crimson)' }} />
+              <span style={{ fontWeight: 500 }}>
+                {activeSearch
+                  ? `Fetching latest stories for "${activeSearch}"${ingesting ? ` (${Math.round(progress)}%)` : ''}…`
+                  : ingesting
+                    ? `Updating feed${ingesting ? ` (${Math.round(progress)}%)` : ''}…`
+                    : 'AI is enriching summaries in the background…'}
+              </span>
+            </div>
           </div>
         )}
 
         {/* Background refresh banner */}
-        {(ingesting || hasPendingArticles) && filtered.length > 0 && (
+        {(activeSearch ? ingesting : (ingesting || hasPendingArticles)) && filtered.length > 0 && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '10px 16px', marginBottom: 16, borderRadius: 4,
-            background: 'var(--bg-tertiary)', border: '1px solid var(--border-primary)', fontSize: 13, color: 'var(--color-ink-muted)',
+            padding: '12px 16px', marginBottom: 16, borderRadius: 4,
+            border: '1px solid var(--border-primary)',
+            background: ingesting
+              ? `linear-gradient(to right, var(--ir-crimson-bg) ${progress}%, var(--bg-tertiary) ${progress}%)`
+              : 'var(--bg-tertiary)',
+            fontSize: 13,
+            color: 'var(--color-ink-muted)',
+            transition: 'background 0.1s ease',
+            width: '100%'
           }}>
-            <RefreshCw style={{ width: 14, height: 14, animation: 'spin 0.8s linear infinite' }} />
-            {activeSearch
-              ? `Fetching latest stories for "${activeSearch}"…`
-              : ingesting
-                ? 'Updating feed — new stories appear below while AI enriches summaries…'
-                : 'AI is enriching summaries in the background…'}
+            <RefreshCw style={{ width: 14, height: 14, animation: 'spin 0.8s linear infinite', color: 'var(--ir-crimson)' }} />
+            <span style={{ fontWeight: 500 }}>
+              {activeSearch
+                ? `Fetching latest stories for "${activeSearch}"${ingesting ? ` (${Math.round(progress)}%)` : ''}…`
+                : ingesting
+                  ? `Updating feed${ingesting ? ` (${Math.round(progress)}%)` : ''}…`
+                  : 'AI is enriching summaries in the background…'}
+            </span>
           </div>
         )}
 

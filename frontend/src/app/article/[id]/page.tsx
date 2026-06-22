@@ -624,14 +624,21 @@ export default function ArticlePage() {
                   <ImageSourceBadge imageUrl={article.imageUrl} />
                 </div>
               ) : (
-                <div style={{
-                  width: '100%', height: 380,
-                  background: `linear-gradient(135deg, ${categoryColorHex}0d 0%, ${categoryColorHex}1a 100%)`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1px solid var(--border-primary)',
-                  borderRadius: '8px'
-                }}>
-                  <span style={{ color: categoryColorHex, fontSize: 72, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.15 }}>IR</span>
+                <div 
+                  className={article.enrichmentStatus === 'pending' ? 'skeleton-pulse' : ''}
+                  style={{
+                    width: '100%', height: 380,
+                    background: article.enrichmentStatus === 'pending' ? 'var(--bg-tertiary)' : `linear-gradient(135deg, ${categoryColorHex}0d 0%, ${categoryColorHex}1a 100%)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: '8px'
+                  }}
+                >
+                  {article.enrichmentStatus === 'pending' ? (
+                    <span style={{ color: 'var(--color-ink-faint)', fontSize: 16, fontWeight: 600, opacity: 0.7 }}>Loading Editorial Image...</span>
+                  ) : (
+                    <span style={{ color: categoryColorHex, fontSize: 72, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.15 }}>IR</span>
+                  )}
                 </div>
               )}
               <div style={{ 
