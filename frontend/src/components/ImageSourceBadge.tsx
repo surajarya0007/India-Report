@@ -49,7 +49,7 @@ export default function ImageSourceBadge({ imageUrl, style = {} }: ImageSourceBa
         position: 'absolute',
         bottom: '8px',
         right: '8px',
-        background: 'rgba(15, 23, 42, 0.8)', // Premium Slate-900 transparent background
+        background: 'rgba(15, 23, 42, 0.45)', // Sleek modern semi-transparent slate
         color: '#ffffff',
         padding: '3px 8px',
         borderRadius: '5px',
@@ -57,12 +57,12 @@ export default function ImageSourceBadge({ imageUrl, style = {} }: ImageSourceBa
         fontWeight: 600,
         letterSpacing: '0.03em',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        backdropFilter: 'blur(4px)',
-        WebkitBackdropFilter: 'blur(4px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
         zIndex: 10,
         pointerEvents: 'none', // clicks pass through to parent containers
-        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.3)',
+        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
         ...style,
       }}
     >
