@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import prisma from '../config/db';
 import redis from '../config/redis';
 import { scrapeArticle } from '../services/scraperService';
-import { sanitizeImageUrl } from '../utils/imageUtils';
+import { getCopyrightFreeImage } from '../services/imageService';
 import {
   getIngestionStatus,
   isIngestionRunning,
@@ -41,6 +41,10 @@ interface SynthesisOutput {
   highlightedFacts: string[];
   sentiment: 'Positive' | 'Negative' | 'Neutral';
   categories: string[];
+  imageSearchQuery: string;
+  aiImagePrompt: string;
+  imageSearchQueryFallbacks: string[];
+  imageSearchSubject: string;
 }
 
 function isGoogleNewsUrl(url: string): boolean {
@@ -70,7 +74,7 @@ async function extractTrendingKeywords(category: string, headlines: string[], ex
     : '';
 
   const prompt = `You are a trend-discovery engine. Below is a list of recent headlines in the category "${category}". Identify the top 5 distinct trending stories, events, or specific news developments that are dominating the news based on these headlines.
-
+ 
 CRITICAL INSTRUCTION: Do NOT return broad or generic keywords/categories (e.g. do NOT return "Cybersecurity threats", "AI", "Cricket", "World Cup"). Instead, return highly specific, descriptive, event-driven queries representing the actual news story (e.g. "Google DeepMind cybersecurity insider threat AI roadmap", "NEET exam paper leak supreme court hearing controversy", "India vs Afghanistan T20 World Cup super eight match"). Each query should be descriptive and optimized to search Google News for articles covering that specific event.
 
 Return a JSON array of strings.${exclusionText}
@@ -108,7 +112,7 @@ ${headlines.map((h, i) => `${i + 1}. ${h}`).join('\n')}`;
 /**
  * Uses Gemini (with model fallback) to synthesize scraped content into a single professional, objective article dossier.
  */
-async function synthesizeTrendDossier(topic: string, sources: { headline: string; content: string; imageUrl?: string | null }[]): Promise<SynthesisOutput> {
+async function synthesizeTrendDossier(topic: string, sources: { headline: string; content: string }[]): Promise<SynthesisOutput> {
   const sourcesText = sources.map((s, i) => `Source ${i + 1}: ${s.headline}\nContent:\n${s.content.slice(0, 2500)}`).join('\n\n---\n\n');
 
   const prompt = `You are a senior journalist at a premium news publication writing a comprehensive editorial dossier for "India Reports".
@@ -124,7 +128,11 @@ Write a detailed, professional, multi-section article. Your output MUST follow t
 4. SECTION HEADINGS: Write exactly 4 section headings (short, bold editorial titles, 3-6 words each) that will appear before paragraphs 2, 4, 6, and 8 respectively. Do NOT use markdown formatting here.
 5. HIGHLIGHTED FACTS: Extract exactly 4 standalone key statistics, quotes, or notable facts that can be displayed as pull-quotes or callout boxes. Each must be a single compelling sentence. Do NOT use markdown.
 6. SENTIMENT: Choose the overall tone: Positive, Negative, or Neutral.
-7. CATEGORIES: Tag with 1-3 relevant categories.
+7. CATEGORIES: Select exactly 1 primary main category as the first element of the array, and 0-2 optional sub/related categories that are also relevant to the article as subsequent elements.
+8. IMAGE SEARCH QUERY: Provide a concise, high-relevance search query (2-4 words) targeting public-domain news photos or stock images for this topic (e.g., "OnePlus phone", "Hyundai Creta", "Narendra Modi"). Focus strictly on the physical core noun/entity. Do NOT include generic location names (like "India", "Sri Lanka") or generic temporal words (like "monsoon", "rains") in the search query unless the location itself is the primary topic of the photo. Keep it simple, using only nouns and simple adjectives without punctuation.
+9. AI IMAGE PROMPT: Provide a detailed, descriptive, photorealistic prompt suitable for an AI image generator. It MUST be highly specific to the article's main subject, including the exact brand, model, features, design, and color. For example: "A premium professional product photograph of a OnePlus Nord CE4 Lite smartphone in a vibrant blue color, clean minimalist background, studio lighting, high resolution, 8k". Focus on style, lighting, setting, composition, and professional aesthetics to match the article point.
+10. IMAGE SEARCH QUERY FALLBACKS: Provide a list of 2-3 simpler fallback search terms (strings) representing the key people, entities, agencies, or main nouns in the article (e.g., ["AR Rahman", "Asha Bhosle"] or ["Joe Root"]). Do not include generic filler words.
+11. IMAGE SEARCH SUBJECT: Provide the absolute core keyword or entity name of the article (e.g., "dengue", "OnePlus", "Pankaj Tripathi", "Narendra Modi"). This is a single specific word or name that MUST be matched in image search results to prevent completely irrelevant image matches (like generic landscapes/streets).
 
 Do NOT use any markdown tags, headings, links, or lists inside the content blocks other than double asterisks (**) for bold text.
 
@@ -166,13 +174,44 @@ ${sourcesText}`;
               sentiment: { type: 'string', enum: ['Positive', 'Negative', 'Neutral'] },
               categories: {
                 type: 'array',
+                minItems: 1,
+                maxItems: 3,
                 items: {
                   type: 'string',
                   enum: ['Tech', 'Business', 'Science', 'Health', 'Entertainment', 'Finance', 'Politics', 'World', 'India', 'Sports']
                 }
+              },
+              imageSearchQuery: {
+                type: 'string',
+                description: 'A simple 2-4 word search query focusing strictly on the physical core noun/entity. Do NOT include generic locations (e.g., "India", "Sri Lanka") or generic temporal words (e.g., "monsoon", "rains") unless the location is the actual core subject of the photo.'
+              },
+              aiImagePrompt: {
+                type: 'string',
+                description: 'A highly detailed and specific photorealistic prompt depicting the exact brand, model, device, person, or event featured in the article (e.g. "A premium professional product photograph of a OnePlus Nord CE4 Lite...").'
+              },
+              imageSearchQueryFallbacks: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'A list of 2-3 fallback search keywords representing the key persons, agencies, or main nouns in the article (e.g. ["AR Rahman", "Asha Bhosle"]).'
+              },
+              imageSearchSubject: {
+                type: 'string',
+                description: 'The absolute core entity name, brand, person, or disease (e.g., "dengue", "OnePlus", "Pankaj Tripathi") to filter/validate search results.'
               }
             },
-            required: ['headline', 'summary', 'contentBlocks', 'sectionHeadings', 'highlightedFacts', 'sentiment', 'categories']
+            required: [
+              'headline',
+              'summary',
+              'contentBlocks',
+              'sectionHeadings',
+              'highlightedFacts',
+              'sentiment',
+              'categories',
+              'imageSearchQuery',
+              'aiImagePrompt',
+              'imageSearchQueryFallbacks',
+              'imageSearchSubject'
+            ]
           } as any
         }
       });
@@ -228,8 +267,8 @@ async function invalidateCache(categories: string[]) {
 /**
  * Runs parallel crawling of URLs with concurrency.
  */
-async function crawlSources(sources: { title: string; url: string; description: string }[]): Promise<{ headline: string; content: string; imageUrl?: string | null }[]> {
-  const results: { headline: string; content: string; imageUrl?: string | null }[] = [];
+async function crawlSources(sources: { title: string; url: string; description: string }[]): Promise<{ headline: string; content: string }[]> {
+  const results: { headline: string; content: string }[] = [];
   const concurrency = 3;
   let index = 0;
 
@@ -238,7 +277,7 @@ async function crawlSources(sources: { title: string; url: string; description: 
       const currentIdx = index++;
       const source = sources[currentIdx];
       if (!source.url) {
-        results.push({ headline: source.title, content: source.description, imageUrl: null });
+        results.push({ headline: source.title, content: source.description });
         continue;
       }
 
@@ -247,12 +286,11 @@ async function crawlSources(sources: { title: string; url: string; description: 
         const scrapeResult = await scrapeArticle(source.url, source.title);
         results.push({
           headline: source.title,
-          content: scrapeResult.markdown || source.description,
-          imageUrl: scrapeResult.imageUrl || null
+          content: scrapeResult.markdown || source.description
         });
       } catch (err) {
         console.warn(`[Ingestion] Scrape failed for ${source.url}, falling back to description:`, err);
-        results.push({ headline: source.title, content: source.description, imageUrl: null });
+        results.push({ headline: source.title, content: source.description });
       }
     }
   }
@@ -302,16 +340,14 @@ export async function runIngestionPipeline(
       const crawled = await crawlSources(items);
       const synthesis = await synthesizeTrendDossier(keyword, crawled);
       
-      // Pull all successfully scraped image URLs from sources
-      const imageUrls = crawled
-        .map(c => c.imageUrl)
-        .filter((url): url is string => !!url)
-        .map(url => sanitizeImageUrl(url))
-        .filter((url): url is string => !!url);
-      
-      // Remove duplicates
-      const uniqueImageUrls = Array.from(new Set(imageUrls));
-      const imageUrl = uniqueImageUrls[0] || null;
+      const imageResult = await getCopyrightFreeImage(
+        synthesis.imageSearchQuery,
+        synthesis.categories[0] || 'News',
+        synthesis.aiImagePrompt,
+        synthesis.imageSearchQueryFallbacks,
+        synthesis.headline,
+        synthesis.imageSearchSubject
+      );
 
       await prisma.article.create({
         data: {
@@ -323,8 +359,8 @@ export async function runIngestionPipeline(
           highlightedFacts: synthesis.highlightedFacts || [],
           sentiment: synthesis.sentiment,
           categories: synthesis.categories,
-          imageUrl,
-          imageUrls: uniqueImageUrls,
+          imageUrl: imageResult.imageUrl,
+          imageUrls: imageResult.imageUrls,
           enrichmentStatus: 'complete'
         }
       });
@@ -401,16 +437,18 @@ export async function runIngestionPipeline(
           const crawled = await crawlSources(searchItems);
           const synthesis = await synthesizeTrendDossier(keyword, crawled);
           
-          // Pull all successfully scraped image URLs from sources
-          const imageUrls = crawled
-            .map(c => c.imageUrl)
-            .filter((url): url is string => !!url)
-            .map(url => sanitizeImageUrl(url))
-            .filter((url): url is string => !!url);
+          const imageResult = await getCopyrightFreeImage(
+            synthesis.imageSearchQuery,
+            cat || synthesis.categories[0] || 'News',
+            synthesis.aiImagePrompt,
+            synthesis.imageSearchQueryFallbacks,
+            synthesis.headline,
+            synthesis.imageSearchSubject
+          );
           
-          // Remove duplicates
-          const uniqueImageUrls = Array.from(new Set(imageUrls));
-          const imageUrl = uniqueImageUrls[0] || null;
+          const articleCats = cat 
+            ? [cat, ...synthesis.categories.filter((c: string) => c !== cat)]
+            : synthesis.categories;
           
           await prisma.article.create({
             data: {
@@ -421,16 +459,16 @@ export async function runIngestionPipeline(
               sectionHeadings: synthesis.sectionHeadings || [],
               highlightedFacts: synthesis.highlightedFacts || [],
               sentiment: synthesis.sentiment,
-              categories: synthesis.categories,
-              imageUrl,
-              imageUrls: uniqueImageUrls,
+              categories: articleCats,
+              imageUrl: imageResult.imageUrl,
+              imageUrls: imageResult.imageUrls,
               enrichmentStatus: 'complete'
             }
           });
 
           ingestedCount++;
           runningExcludedKeywords.push(keyword);
-          await invalidateCache(synthesis.categories);
+          await invalidateCache(articleCats);
         } catch (keywordErr) {
           console.error(`[Ingestion] Failed synthesis for topic "${keyword}":`, keywordErr);
           errorsCount++;

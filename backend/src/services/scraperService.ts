@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import { sanitizeImageUrl } from '../utils/imageUtils';
 
 dotenv.config();
 
@@ -11,11 +10,10 @@ const isRealApiConfigured = (): boolean => {
 
 export interface ScrapeResult {
   markdown: string;
-  imageUrl?: string;
 }
 
 /**
- * Scrapes the clean text content (markdown) and og:image using a fast, native Node fetch.
+ * Scrapes the clean text content (markdown) using a fast, native Node fetch.
  * Returns null if the page fails to fetch or returns too little content.
  */
 async function fetchAndExtractRawText(url: string): Promise<ScrapeResult | null> {
@@ -35,13 +33,6 @@ async function fetchAndExtractRawText(url: string): Promise<ScrapeResult | null>
 
     if (!res.ok) return null;
     const html = await res.text();
-
-    const ogImageRegex = /<meta[^>]*?(?:property|name)=["'](?:og:image|twitter:image|ogImage)["'][^>]*?content=["']([^"']+)["']/i;
-    let imageUrl: string | undefined;
-    const imgMatch = html.match(ogImageRegex);
-    if (imgMatch && imgMatch[1]) {
-      imageUrl = sanitizeImageUrl(imgMatch[1]) ?? undefined;
-    }
 
     let cleanHtml = html
       .replace(/<script[^>]*?>[\s\S]*?<\/script>/gi, '')
@@ -76,13 +67,13 @@ async function fetchAndExtractRawText(url: string): Promise<ScrapeResult | null>
           .replace(/\s+/g, ' ')
           .trim();
         if (bodyText.length > 200) {
-          return { markdown: bodyText, imageUrl };
+          return { markdown: bodyText };
         }
       }
       return null;
     }
 
-    return { markdown, imageUrl };
+    return { markdown };
   } catch (err) {
     return null;
   }
@@ -137,8 +128,8 @@ async function resolveGoogleNewsUrl(googleRssUrl: string): Promise<string> {
 }
 
 /**
- * Scrape the clean text content (markdown) and og:image of a given URL.
- * Returns both the markdown body and the primary image URL when available.
+ * Scrape the clean text content (markdown) of a given URL.
+ * Returns the markdown body.
  */
 export async function scrapeArticle(url: string, title: string): Promise<ScrapeResult> {
   const targetUrl = await resolveGoogleNewsUrl(url);
@@ -176,49 +167,7 @@ export async function scrapeArticle(url: string, title: string): Promise<ScrapeR
     const data: any = await response.json();
     if (data.success && data.data) {
       const markdown = typeof data.data.markdown === 'string' ? data.data.markdown : '';
-
-      // Extract image from Firecrawl metadata
-      const meta = data.data.metadata || {};
-
-      let imageUrl: string | undefined =
-        sanitizeImageUrl(
-          meta['og:image'] ||
-          meta['ogImage'] ||
-          meta['twitter:image'] ||
-          meta['twitterImage'] ||
-          meta['og:image:url']
-        ) ?? undefined;
-
-      if (!imageUrl) {
-        for (const key of Object.keys(meta)) {
-          if (key.toLowerCase().includes('image')) {
-            const val = meta[key];
-            const candidate = typeof val === 'string' ? val : (Array.isArray(val) ? val[0] : undefined);
-            const sanitized = sanitizeImageUrl(candidate);
-            if (sanitized) {
-              imageUrl = sanitized;
-              break;
-            }
-          }
-        }
-      }
-
-      imageUrl = sanitizeImageUrl(imageUrl) ?? undefined;
-
-      if (imageUrl) {
-        console.log(`[ScraperService] Found image for "${title}": ${imageUrl}`);
-      } else if (
-        meta['og:image'] ||
-        meta['ogImage'] ||
-        meta['twitter:image'] ||
-        meta['twitterImage']
-      ) {
-        console.log(`[ScraperService] Rejected Google News placeholder image for "${title}"`);
-      } else {
-        console.log(`[ScraperService] No image found for "${title}".`);
-      }
-
-      return { markdown, imageUrl };
+      return { markdown };
     } else {
       console.warn('[ScraperService] Firecrawl returned success=false or missing data. Data:', data);
       throw new Error('Firecrawl parsing failed or returned empty content');

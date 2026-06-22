@@ -9,6 +9,8 @@ import Layout from '../components/Layout';
 import ShareDialog from '../components/ShareDialog';
 import ScrollReveal from '../components/ScrollReveal';
 
+import ImageSourceBadge from '../components/ImageSourceBadge';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function timeAgo(dateStr: string): string {
@@ -60,6 +62,7 @@ function ImgBox({ article, height = 180, style = {} }: { article: Article; heigh
           }}
           className="img-fade-in"
         />
+        <ImageSourceBadge imageUrl={article.imageUrl} />
       </div>
     );
   }
@@ -367,12 +370,26 @@ export default function Home() {
   };
 
   // Layout slots
-  const centerHero = filtered[0];
-  const centerGrid = filtered.slice(1, 5);
-  const leftFeed = filtered.slice(5, 9);
-  const rightFeed = filtered.slice(9, 15);
+  const isCategoryView = activeNav !== 'Home' && !activeSearch;
+  
+  const topStories = isCategoryView
+    ? filtered.filter(a => a.categories?.[0] === activeNav)
+    : filtered;
 
-  const sectionTitle = activeSearch ? `Results for "${activeSearch}"` : activeNav === 'Home' ? 'More Stories' : activeNav;
+  const bottomStories = isCategoryView
+    ? filtered.filter(a => a.categories?.includes(activeNav) && a.categories?.[0] !== activeNav)
+    : filtered.slice(11);
+
+  const centerHero = topStories[0];
+  const centerGrid = topStories.slice(1, 5);
+  const leftFeed = topStories.slice(5, 9);
+  const rightFeed = topStories.slice(9, 15);
+
+  const sectionTitle = activeSearch 
+    ? `Results for "${activeSearch}"` 
+    : activeNav === 'Home' 
+      ? 'More Stories' 
+      : `Related ${activeNav} Stories`;
 
   return (
     <Layout
@@ -444,61 +461,63 @@ export default function Home() {
           </div>
         )}
 
-        {filtered.length > 0 && (
+        {(topStories.length > 0 || bottomStories.length > 0) && (
           <>
             {/* 3-column grid */}
-            <div className="ir-home-grid" style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: '0 24px', marginBottom: 36 }}>
+            {topStories.length > 0 && (
+              <div className="ir-home-grid" style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: '0 24px', marginBottom: 36 }}>
 
-              {/* LEFT COLUMN */}
-              <aside style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
-                <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink)' }}>Top Stories</span>
+                {/* LEFT COLUMN */}
+                <aside style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
+                  <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink)' }}>Top Stories</span>
+                  </div>
+                  {leftFeed.map((a, i) => <CompactCard key={a.id} article={a} showDivider={i > 0} index={i} />)}
+                </aside>
+
+                {/* CENTER COLUMN */}
+                <div style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
+                  {centerHero && (
+                    <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid var(--border-secondary)' }}>
+                      <FeatureCard article={centerHero} index={0} />
+                    </div>
+                  )}
+                  {centerGrid.length > 0 && (
+                    <div className="ir-center-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                      {centerGrid.map((a, i) => <GridCard key={a.id} article={a} index={i + 1} />)}
+                    </div>
+                  )}
                 </div>
-                {leftFeed.map((a, i) => <CompactCard key={a.id} article={a} showDivider={i > 0} index={i} />)}
-              </aside>
 
-              {/* CENTER COLUMN */}
-              <div style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
-                {centerHero && (
-                  <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid var(--border-secondary)' }}>
-                    <FeatureCard article={centerHero} index={0} />
+                {/* RIGHT COLUMN */}
+                <aside style={{ paddingLeft: 0 }}>
+                  <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink)' }}>Latest News</span>
                   </div>
-                )}
-                {centerGrid.length > 0 && (
-                  <div className="ir-center-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    {centerGrid.map((a, i) => <GridCard key={a.id} article={a} index={i + 1} />)}
-                  </div>
-                )}
+                  {rightFeed.map((a, i) => <SidebarItem key={a.id} article={a} rank={i + 1} index={i} />)}
+                </aside>
               </div>
-
-              {/* RIGHT COLUMN */}
-              <aside style={{ paddingLeft: 0 }}>
-                <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 0 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink)' }}>Latest News</span>
-                </div>
-                {rightFeed.map((a, i) => <SidebarItem key={a.id} article={a} rank={i + 1} index={i} />)}
-              </aside>
-            </div>
+            )}
 
             {/* Section row: more stories */}
-            {filtered.slice(11).length > 0 && (
+            {bottomStories.length > 0 && (
               <ScrollReveal>
                 <section style={{ marginBottom: 36 }}>
                   <SectionHead title={sectionTitle} />
                   <div className="ir-more-stories-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-                    {filtered.slice(11, 15).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
+                    {bottomStories.slice(0, 4).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
                   </div>
                 </section>
               </ScrollReveal>
             )}
 
             {/* Extra stories */}
-            {filtered.slice(15).length > 0 && (
+            {bottomStories.slice(4).length > 0 && (
               <ScrollReveal>
                 <section style={{ marginBottom: 36 }}>
-                  <SectionHead title="All Reports" />
+                  <SectionHead title={isCategoryView ? "Other Related Reports" : "All Reports"} />
                   <div className="ir-more-stories-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-                    {filtered.slice(15).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
+                    {bottomStories.slice(4).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
                   </div>
                 </section>
               </ScrollReveal>

@@ -120,3 +120,39 @@ export async function getArticleById(req: Request, res: Response) {
     return res.status(500).json({ success: false, message: error.message });
   }
 }
+
+/**
+ * PATCH /api/news/:id/image — update the active cover image.
+ */
+export async function updateArticleImage(req: Request, res: Response) {
+  const { id } = req.params;
+  const { imageUrl } = req.body;
+
+  if (!imageUrl) {
+    return res.status(400).json({ success: false, message: 'imageUrl is required.' });
+  }
+
+  try {
+    const article = await prisma.article.update({
+      where: { id },
+      data: { imageUrl }
+    });
+
+    if (redis) {
+      try {
+        const cacheKeys = ['homepage:news:all', ...article.categories.map(c => `homepage:news:${c}`)];
+        for (const key of cacheKeys) {
+          await redis.del(key);
+        }
+        console.log(`[NewsController] Invalidated Redis cache for article "${id}" update.`);
+      } catch (redisError) {
+        console.error('[NewsController] Redis deletion error:', redisError);
+      }
+    }
+
+    return res.status(200).json({ success: true, data: sanitizeArticleImage(article) });
+  } catch (error: any) {
+    console.error('[NewsController] Error updating article image:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}

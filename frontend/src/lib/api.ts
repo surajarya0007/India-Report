@@ -215,3 +215,22 @@ export async function enrichArticleById(id: string): Promise<Article | null> {
     return null;
   }
 }
+
+/**
+ * Update the active cover image of an article.
+ */
+export async function updateArticleImage(id: string, imageUrl: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_URL}/api/news/${id}/image`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrl }),
+    });
+    if (!response.ok) return false;
+    const res = await response.json();
+    return res.success;
+  } catch (error) {
+    console.error('[API] updateArticleImage error:', error);
+    return false;
+  }
+}

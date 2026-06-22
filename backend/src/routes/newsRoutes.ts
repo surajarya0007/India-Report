@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getRecentNews, getArticleById } from '../controllers/newsController';
+import { getRecentNews, getArticleById, updateArticleImage } from '../controllers/newsController';
 import { triggerIngestion, getIngestionStatusHandler } from '../controllers/ingestionController';
 
 const router = Router();
@@ -11,6 +11,7 @@ router.post('/ingest', triggerIngestion);
 // Fetch endpoints
 router.get('/', getRecentNews);
 router.get('/:id', getArticleById);
+router.patch('/:id/image', updateArticleImage);
 
 export default router;
 

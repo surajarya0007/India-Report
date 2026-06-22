@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { fetchArticleById, fetchNews, Article } from '../../../lib/api';
+import { fetchArticleById, fetchNews, updateArticleImage, Article } from '../../../lib/api';
 import { 
   Clock, 
   ChevronLeft, 
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Layout from '../../../components/Layout';
 import ShareDialog from '../../../components/ShareDialog';
+import ImageSourceBadge from '../../../components/ImageSourceBadge';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -64,12 +65,16 @@ function SideCard({ article }: { article: Article }) {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        borderRadius: '8px'
+        borderRadius: '8px',
+        position: 'relative'
       }}>
         {hasImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={article.imageUrl} alt={article.headline} onError={() => setImgError(true)}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '8px' }} />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={article.imageUrl} alt={article.headline} onError={() => setImgError(true)}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '8px' }} />
+            <ImageSourceBadge imageUrl={article.imageUrl} style={{ bottom: '3px', right: '3px', padding: '1px 4px', fontSize: '7px', borderRadius: '3px' }} />
+          </>
         ) : (
           <span style={{ color: bg, fontSize: 16, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.3 }}>IR</span>
         )}
@@ -139,13 +144,16 @@ function MoreStoriesCard({ article }: { article: Article }) {
     >
       <div style={{ height: 130, overflow: 'hidden', background: `linear-gradient(135deg, ${bg}22, ${bg}11)`, position: 'relative' }}>
         {hasImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={article.imageUrl}
-            alt={article.headline}
-            onError={() => setImgError(true)}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.35s', transform: hov ? 'scale(1.05)' : 'scale(1)' }}
-          />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={article.imageUrl}
+              alt={article.headline}
+              onError={() => setImgError(true)}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.35s', transform: hov ? 'scale(1.05)' : 'scale(1)' }}
+            />
+            <ImageSourceBadge imageUrl={article.imageUrl} style={{ bottom: '6px', right: '6px', padding: '2px 6px', fontSize: '9px', borderRadius: '4px' }} />
+          </>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
             <span style={{ color: bg, fontSize: 32, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.2 }}>IR</span>
@@ -604,14 +612,17 @@ export default function ArticlePage() {
           {/* Left Main Content */}
           <div style={{ minWidth: 0 }}>
             {/* Hero Image */}
-            <div style={{ position: 'relative', marginBottom: 32, borderRadius: '8px', overflow: 'hidden' }}>
+            <div style={{ position: 'relative', marginBottom: 20 }}>
               {article.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img 
-                  src={article.imageUrl} 
-                  alt={article.headline}
-                  style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 520, objectFit: 'cover', borderRadius: '8px' }}
-                />
+                <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img 
+                    src={article.imageUrl} 
+                    alt={article.headline}
+                    style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 520, objectFit: 'cover', borderRadius: '8px' }}
+                  />
+                  <ImageSourceBadge imageUrl={article.imageUrl} />
+                </div>
               ) : (
                 <div style={{
                   width: '100%', height: 380,

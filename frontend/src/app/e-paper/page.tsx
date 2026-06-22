@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../../components/Layout';
 import { fetchNews, Article } from '../../lib/api';
 import { Clock, BookOpen, Printer } from 'lucide-react';
+import ImageSourceBadge from '../../components/ImageSourceBadge';
 
 export default function EPaperPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -176,12 +177,15 @@ export default function EPaperPage() {
                   </div>
                   <div>
                     {articles[0].imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={articles[0].imageUrl}
-                        alt="Lead image"
-                        style={{ width: '100%', height: 'auto', border: '1px solid var(--border-secondary)', filter: 'grayscale(1)' }}
-                      />
+                      <div style={{ position: 'relative' }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={articles[0].imageUrl}
+                          alt="Lead image"
+                          style={{ width: '100%', height: 'auto', border: '1px solid var(--border-secondary)', filter: 'grayscale(1)' }}
+                        />
+                        <ImageSourceBadge imageUrl={articles[0].imageUrl} style={{ filter: 'grayscale(1)' }} />
+                      </div>
                     )}
                     <p style={{ fontSize: 10, fontStyle: 'italic', marginTop: 6, color: 'var(--color-ink-muted)' }}>
                       Photo from ingest stream associated with reports.
