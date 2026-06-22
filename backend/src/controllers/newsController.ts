@@ -58,6 +58,7 @@ export async function getRecentNews(req: Request, res: Response) {
     if (search) {
       whereClause = {
         OR: [
+          { keyword: { contains: search, mode: 'insensitive' } },
           { categories: { has: search } },
           { headline: { contains: search, mode: 'insensitive' } },
         ],

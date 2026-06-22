@@ -253,10 +253,13 @@ async function fetchArticlesForKeyword(keyword: string): Promise<{ title: string
 /**
  * Invalidate Redis Cache
  */
-async function invalidateCache(categories: string[]) {
+async function invalidateCache(categories: string[], searchQuery?: string) {
   if (!redis) return;
   try {
     const keys = ['homepage:news:all', ...categories.map(c => `homepage:news:${c}`)];
+    if (searchQuery) {
+      keys.push(`homepage:news:search:${searchQuery.toLowerCase()}`);
+    }
     console.log(`[Ingestion] Invalidating Redis caches: ${keys.join(', ')}`);
     await redis.del(...keys);
   } catch (err) {
@@ -366,7 +369,7 @@ export async function runIngestionPipeline(
       });
 
       ingestedCount++;
-      await invalidateCache(synthesis.categories);
+      await invalidateCache(synthesis.categories, keyword);
     } catch (err) {
       console.error(`[Ingestion] Synthesis/save failed for search topic "${keyword}":`, err);
       errorsCount++;
