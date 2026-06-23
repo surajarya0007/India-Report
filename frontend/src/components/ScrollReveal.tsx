@@ -14,6 +14,11 @@ export default function ScrollReveal({ children, delay = 0, className = '', styl
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      setRevealed(true);
+      return;
+    }
+
     const el = ref.current;
     if (!el) return;
 
