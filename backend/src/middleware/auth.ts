@@ -17,10 +17,6 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
 
   const normalizedEmail = adminEmail.trim().toLowerCase();
 
-  if (normalizedEmail !== ADMIN_EMAIL.toLowerCase()) {
-    return res.status(403).json({ success: false, message: 'Forbidden. Invalid admin credentials.' });
-  }
-
   try {
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail }

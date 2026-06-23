@@ -41,10 +41,17 @@ export async function getRecentNews(req: Request, res: Response) {
         if (cachedData) {
           console.log(`[NewsController] Cache hit for "${cacheKey}". Returning cached data.`);
           const parsedData = typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
-          articles = Array.isArray(parsedData)
+          const candidateArticles = Array.isArray(parsedData)
             ? parsedData.map((a) => sanitizeArticleImage(a))
             : parsedData;
-          source = 'cache';
+          
+          if (Array.isArray(candidateArticles) && candidateArticles.some((a) => a.enrichmentStatus === 'pending')) {
+            console.log(`[NewsController] Cache hit for "${cacheKey}" contains pending articles. Bypassing cache to get fresh status.`);
+            articles = null;
+          } else {
+            articles = candidateArticles;
+            source = 'cache';
+          }
         }
       } catch (redisError) {
         console.error('[NewsController] Redis read error (bypassing cache):', redisError);
