@@ -149,7 +149,7 @@ export default function ContactPage() {
         <ScrollReveal>
           <h2>Send Us a Message</h2>
           <div className="divider-accent" />
-          <form onSubmit={(e) => e.preventDefault()} style={{
+          <form style={{
             display: 'flex', flexDirection: 'column', gap: 16,
             padding: 32,
             background: 'var(--bg-secondary)',
