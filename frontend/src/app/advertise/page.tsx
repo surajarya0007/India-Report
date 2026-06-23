@@ -128,10 +128,7 @@ export default function Advertise() {
               borderRadius: 4,
               textDecoration: 'none',
               transition: 'transform 0.15s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'}
-            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-            >
+            }}>
               Contact Marketing Desk
             </a>
           </div>
