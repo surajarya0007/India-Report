@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getRecentNews, getArticleById, updateArticleImage, recordArticleView } from '../controllers/newsController';
+import { getRecentNews, getArticleById, getSitemapArticles, updateArticleImage, recordArticleView } from '../controllers/newsController';
 import { triggerIngestion, getIngestionStatusHandler } from '../controllers/ingestionController';
 
 const router = Router();
@@ -10,9 +10,9 @@ router.post('/ingest', triggerIngestion);
 
 // Fetch endpoints
 router.get('/', getRecentNews);
+router.get('/sitemap', getSitemapArticles);
 router.get('/:id', getArticleById);
 router.post('/:id/view', recordArticleView);
 router.patch('/:id/image', updateArticleImage);
 
 export default router;
-

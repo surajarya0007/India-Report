@@ -3,16 +3,22 @@ import "./globals.css";
 import PageTransition from "../components/PageTransition";
 import { ThemeProvider } from "../context/ThemeContext";
 import { AuthProvider } from "../context/AuthContext";
+import { siteUrl } from "../lib/seo";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "India Reports - India's Autonomous News Intelligence Platform",
   description:
-    "India Reports delivers AI-synthesized news covering India, World, Business, Tech, Science, Health and more. Updated every 15 minutes with real-time intelligence.",
+    "India Reports delivers AI-synthesized news covering India, World, Business, Tech, Science, Health and more. Updated every 4 hours with real-time intelligence.",
   keywords: "India news, AI news, autonomous news, India Reports, breaking news, world news, business news, technology news",
   authors: [{ name: "India Reports Editorial Desk" }],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "India Reports - India's Autonomous News Intelligence Platform",
     description: "AI-synthesized news covering India, World, Business, Tech, Science, Health and more.",
+    url: "/",
     type: "website",
     locale: "en_IN",
     siteName: "India Reports",

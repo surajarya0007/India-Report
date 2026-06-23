@@ -137,6 +137,36 @@ export async function getRecentNews(req: Request, res: Response) {
 }
 
 /**
+ * GET /api/news/sitemap — compact index for crawler-facing sitemap generation.
+ */
+export async function getSitemapArticles(_req: Request, res: Response) {
+  try {
+    const articles = await prisma.article.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+      select: {
+        id: true,
+        headline: true,
+        createdAt: true,
+        categories: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: articles,
+    });
+  } catch (error: any) {
+    console.error('[NewsController] Error retrieving sitemap articles:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve sitemap articles.',
+      error: error.message || error,
+    });
+  }
+}
+
+/**
  * GET /api/news/:id — full article details.
  */
 export async function getArticleById(req: Request, res: Response) {
