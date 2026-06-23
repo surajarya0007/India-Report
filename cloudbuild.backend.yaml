@@ -37,7 +37,7 @@ images:
 substitutions:
   _REGION: asia-south1
   _SERVICE: india-report-backend
-  _IMAGE: asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/india-report-backend:$SHORT_SHA
+  _IMAGE: asia-south1-docker.pkg.dev/project-0bdd0a8e-1e7e-4477-99a/cloud-run-source-deploy/india-report-backend:$SHORT_SHA
 
 options:
   logging: CLOUD_LOGGING_ONLY
