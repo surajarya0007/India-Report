@@ -4,11 +4,15 @@ import { GEMINI_MODEL_CHAIN, GEMINI_SEARCH_MIN_CHARS } from '../config/constants
 
 dotenv.config();
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const getApiKeys = (): string[] => {
+  const raw = process.env.GEMINI_API_KEY || '';
+  return raw.split(',').map(k => k.trim()).filter(k => k && k !== 'your_gemini_or_openai_key' && !k.startsWith('your_'));
+};
+
 const PRIMARY_MODEL = GEMINI_MODEL_CHAIN[0];
 
 const isRealApiConfigured = (): boolean => {
-  return !!(GEMINI_API_KEY && GEMINI_API_KEY !== 'your_gemini_or_openai_key' && !GEMINI_API_KEY.startsWith('your_'));
+  return getApiKeys().length > 0;
 };
 
 export interface SynthesizedArticle {
@@ -168,11 +172,11 @@ function normalizeSynthesis(synthesized: SynthesizedArticle, title: string): Syn
  * Google Search is used on the primary model only when scraped text is short.
  */
 export async function synthesizeArticle(title: string, rawText: string): Promise<SynthesisResult> {
-  if (!isRealApiConfigured()) {
+  const apiKeys = getApiKeys();
+  if (apiKeys.length === 0) {
     throw new Error('[AIService] API key not configured.');
   }
 
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY!);
   const userPrompt = `Title: ${title}\n\nContent:\n${rawText}`;
   const useSearch = rawText.trim().length < GEMINI_SEARCH_MIN_CHARS;
 
@@ -182,50 +186,82 @@ export async function synthesizeArticle(title: string, rawText: string): Promise
 
   let lastError: unknown;
 
-  for (let i = 0; i < GEMINI_MODEL_CHAIN.length; i++) {
-    const modelName = GEMINI_MODEL_CHAIN[i];
-    const isLastModel = i === GEMINI_MODEL_CHAIN.length - 1;
-    const strategies = strategiesForModel(modelName, useSearch);
+  for (let k = 0; k < apiKeys.length; k++) {
+    const apiKey = apiKeys[k];
+    const genAI = new GoogleGenerativeAI(apiKey);
+    
+    console.log(`[AIService] Using API key index ${k} (${apiKey.slice(0, 8)}...${apiKey.slice(-4)})`);
 
-    for (let j = 0; j < strategies.length; j++) {
-      const strategy = strategies[j];
-      const isLastStrategy = j === strategies.length - 1;
+    try {
+      for (let i = 0; i < GEMINI_MODEL_CHAIN.length; i++) {
+        const modelName = GEMINI_MODEL_CHAIN[i];
+        const isLastModel = i === GEMINI_MODEL_CHAIN.length - 1;
+        const strategies = strategiesForModel(modelName, useSearch);
 
-      try {
-        console.log(`[AIService] Trying ${modelName} (${strategy.label})`);
-        const model = buildModel(genAI, modelName, strategy);
-        const systemPrompt = buildSystemPrompt(strategy);
-        const result = await model.generateContent([{ text: systemPrompt }, { text: userPrompt }]);
-        const responseText = result.response.text();
-        const synthesized = parseJsonResponse(responseText);
-        console.log(`[AIService] Success with ${modelName} (${strategy.label})`);
-        return { ...normalizeSynthesis(synthesized, title), modelUsed: modelName };
-      } catch (err) {
-        lastError = err;
+        for (let j = 0; j < strategies.length; j++) {
+          const strategy = strategies[j];
+          const isLastStrategy = j === strategies.length - 1;
 
-        if (isRateLimitError(err)) {
-          console.warn(`[AIService] Rate limit on ${modelName}. Trying next model.`);
-          break;
+          try {
+            console.log(`[AIService] Trying ${modelName} (${strategy.label})`);
+            const model = buildModel(genAI, modelName, strategy);
+            const systemPrompt = buildSystemPrompt(strategy);
+            const result = await model.generateContent([{ text: systemPrompt }, { text: userPrompt }]);
+            const responseText = result.response.text();
+            const synthesized = parseJsonResponse(responseText);
+            console.log(`[AIService] Success with ${modelName} (${strategy.label})`);
+            return { ...normalizeSynthesis(synthesized, title), modelUsed: modelName };
+          } catch (err) {
+            lastError = err;
+
+            // Check if error represents rate limit or access issues to trigger API key rollover
+            const errMsg = (err as Error)?.message?.toLowerCase() || '';
+            const errStatus = (err as any)?.status;
+            const shouldSwitchKey = isRateLimitError(err) || 
+                                    errStatus === 403 || 
+                                    errStatus === 429 ||
+                                    errMsg.includes('denied') || 
+                                    errMsg.includes('forbidden') || 
+                                    errMsg.includes('quota') ||
+                                    errMsg.includes('resource_exhausted') ||
+                                    errMsg.includes('limit');
+
+            if (shouldSwitchKey && k < apiKeys.length - 1) {
+              console.warn(`[AIService] API key issue detected on model ${modelName} (${errStatus || 'Error'}). Failing over to next API key.`);
+              throw err; // throw to trigger outer catch and move to next key
+            }
+
+            if (isRateLimitError(err)) {
+              console.warn(`[AIService] Rate limit on ${modelName}. Trying next model.`);
+              break;
+            }
+
+            if (!isLastStrategy) {
+              console.warn(
+                `[AIService] ${modelName} (${strategy.label}) failed, trying alternate strategy:`,
+                (err as Error)?.message?.slice(0, 100)
+              );
+              continue;
+            }
+
+            if (!isLastModel) {
+              console.warn(`[AIService] ${modelName} exhausted. Trying next model.`);
+              break;
+            }
+
+            console.error(`[AIService] Gemini synthesis failed on ${modelName} for "${title}":`, err);
+            throw err;
+          }
         }
-
-        if (!isLastStrategy) {
-          console.warn(
-            `[AIService] ${modelName} (${strategy.label}) failed, trying alternate strategy:`,
-            (err as Error)?.message?.slice(0, 100)
-          );
-          continue;
-        }
-
-        if (!isLastModel) {
-          console.warn(`[AIService] ${modelName} exhausted. Trying next model.`);
-          break;
-        }
-
-        console.error(`[AIService] Gemini synthesis failed on ${modelName} for "${title}":`, err);
-        throw err;
       }
+    } catch (keyErr) {
+      if (k < apiKeys.length - 1) {
+        console.warn(`[AIService] API key index ${k} failed. Swapping to next key...`);
+        continue;
+      }
+      throw keyErr;
     }
   }
 
-  throw lastError ?? new Error('All Gemini models exhausted.');
+  throw lastError ?? new Error('All Gemini keys and models exhausted.');
 }

@@ -30,8 +30,10 @@ const CATEGORY_FEEDS: Record<string, string> = {
   'India': 'https://news.google.com/news/rss/headlines/section/topic/NATION?hl=en-IN&gl=IN&ceid=IN:en'
 };
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const getApiKeys = (): string[] => {
+  const raw = process.env.GEMINI_API_KEY || '';
+  return raw.split(',').map(k => k.trim()).filter(k => k && k !== 'your_gemini_or_openai_key' && !k.startsWith('your_'));
+};
 
 interface SynthesisOutput {
   headline: string;
@@ -64,8 +66,9 @@ import { GEMINI_MODEL_CHAIN } from '../config/constants';
  * Uses Gemini (with model fallback) to extract 5 trending keywords/topics from a list of headlines.
  */
 async function extractTrendingKeywords(category: string, headlines: string[], excludedKeywords: string[] = []): Promise<string[]> {
-  if (!GEMINI_API_KEY) {
-    console.warn('[Ingestion] No Gemini API key. Skipping trend extraction.');
+  const apiKeys = getApiKeys();
+  if (apiKeys.length === 0) {
+    console.warn('[Ingestion] No Gemini API keys configured. Skipping trend extraction.');
     return headlines.slice(0, 3);
   }
 
@@ -82,26 +85,46 @@ Headlines:
 ${headlines.map((h, i) => `${i + 1}. ${h}`).join('\n')}`;
 
   let lastError: any;
-  for (const modelName of GEMINI_MODEL_CHAIN) {
-    try {
-      console.log(`[Ingestion] Extracting trends using model: ${modelName}`);
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'array',
-            items: { type: 'string' },
-            description: 'Top 5 distinct, descriptive, event-driven queries representing specific news stories dominating the headlines.'
-          } as any
-        }
-      });
+  for (let k = 0; k < apiKeys.length; k++) {
+    const apiKey = apiKeys[k];
+    const genAI = new GoogleGenerativeAI(apiKey);
 
-      const result = await model.generateContent(prompt);
-      return JSON.parse(result.response.text().trim());
-    } catch (error: any) {
-      lastError = error;
-      console.warn(`[Ingestion] Trend extraction failed with model ${modelName}. Trying next model. Error:`, error.message || error);
+    try {
+      for (const modelName of GEMINI_MODEL_CHAIN) {
+        try {
+          console.log(`[Ingestion] Extracting trends using model: ${modelName} (key index ${k})`);
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Top 5 distinct, descriptive, event-driven queries representing specific news stories dominating the headlines.'
+              } as any
+            }
+          });
+
+          const result = await model.generateContent(prompt);
+          return JSON.parse(result.response.text().trim());
+        } catch (error: any) {
+          lastError = error;
+          console.warn(`[Ingestion] Trend extraction failed with model ${modelName} (key index ${k}). Error:`, error.message || error);
+
+          const errMsg = error.message?.toLowerCase() || '';
+          const errStatus = error.status;
+          const shouldSwitchKey = errStatus === 403 || errStatus === 429 || errMsg.includes('denied') || errMsg.includes('forbidden') || errMsg.includes('quota') || errMsg.includes('limit');
+          if (shouldSwitchKey && k < apiKeys.length - 1) {
+            console.warn(`[Ingestion] API key issue detected. Swapping to next API key.`);
+            throw error; // Propagate to swap key
+          }
+        }
+      }
+    } catch (keyErr) {
+      if (k < apiKeys.length - 1) {
+        console.warn(`[Ingestion] API key index ${k} failed. Swapping to next key...`);
+        continue;
+      }
     }
   }
 
@@ -113,6 +136,11 @@ ${headlines.map((h, i) => `${i + 1}. ${h}`).join('\n')}`;
  * Uses Gemini (with model fallback) to synthesize scraped content into a single professional, objective article dossier.
  */
 async function synthesizeTrendDossier(topic: string, sources: { headline: string; content: string }[]): Promise<SynthesisOutput> {
+  const apiKeys = getApiKeys();
+  if (apiKeys.length === 0) {
+    throw new Error('[Ingestion] No Gemini API keys configured.');
+  }
+
   const sourcesText = sources.map((s, i) => `Source ${i + 1}: ${s.headline}\nContent:\n${s.content.slice(0, 2500)}`).join('\n\n---\n\n');
 
   const prompt = `You are a senior journalist at a premium news publication writing a comprehensive editorial dossier for "India Reports".
@@ -140,91 +168,111 @@ Sources:
 ${sourcesText}`;
 
   let lastError: any;
-  for (const modelName of GEMINI_MODEL_CHAIN) {
-    try {
-      console.log(`[Ingestion] Synthesizing dossier using model: ${modelName}`);
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'object',
-            properties: {
-              headline: { type: 'string', description: 'A highly catchy, journalistic headline (under 15 words) tailored to reflect the article\'s overall sentiment (Positive, Negative, or Neutral).' },
-              summary: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'Exactly 5 distinct bullet points, each a complete sentence of minimum 20 words covering different story angles.'
-              },
-              contentBlocks: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'Exactly 8 full prose paragraphs, each at least 80 words. Use double-asterisks (**) selectively to bold a maximum of 2-3 key entities or figures per paragraph.'
-              },
-              sectionHeadings: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'Exactly 4 editorial section headings (3-6 words each) for paragraphs 2, 4, 6, and 8.'
-              },
-              highlightedFacts: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'Exactly 4 pull-quote worthy facts, statistics, or notable statements as single compelling sentences.'
-              },
-              sentiment: { type: 'string', enum: ['Positive', 'Negative', 'Neutral'] },
-              categories: {
-                type: 'array',
-                minItems: 1,
-                maxItems: 3,
-                items: {
-                  type: 'string',
-                  enum: ['Tech', 'Business', 'Science', 'Health', 'Entertainment', 'Finance', 'Politics', 'World', 'India', 'Sports']
-                }
-              },
-              imageSearchQuery: {
-                type: 'string',
-                description: 'A simple 2-4 word search query focusing strictly on the physical core noun/entity. Do NOT include generic locations (e.g., "India", "Sri Lanka") or generic temporal words (e.g., "monsoon", "rains") unless the location is the actual core subject of the photo.'
-              },
-              aiImagePrompt: {
-                type: 'string',
-                description: 'A highly detailed and specific photorealistic prompt depicting the exact brand, model, device, person, or event featured in the article (e.g. "A premium professional product photograph of a OnePlus Nord CE4 Lite...").'
-              },
-              imageSearchQueryFallbacks: {
-                type: 'array',
-                items: { type: 'string' },
-                description: 'A list of 2-3 fallback search keywords representing the key persons, agencies, or main nouns in the article (e.g. ["AR Rahman", "Asha Bhosle"]).'
-              },
-              imageSearchSubject: {
-                type: 'string',
-                description: 'The absolute core entity name, brand, person, or disease (e.g., "dengue", "OnePlus", "Pankaj Tripathi") to filter/validate search results.'
-              }
-            },
-            required: [
-              'headline',
-              'summary',
-              'contentBlocks',
-              'sectionHeadings',
-              'highlightedFacts',
-              'sentiment',
-              'categories',
-              'imageSearchQuery',
-              'aiImagePrompt',
-              'imageSearchQueryFallbacks',
-              'imageSearchSubject'
-            ]
-          } as any
-        }
-      });
+  for (let k = 0; k < apiKeys.length; k++) {
+    const apiKey = apiKeys[k];
+    const genAI = new GoogleGenerativeAI(apiKey);
 
-      const result = await model.generateContent(prompt);
-      return JSON.parse(result.response.text().trim());
-    } catch (error: any) {
-      lastError = error;
-      console.warn(`[Ingestion] Synthesis failed with model ${modelName}. Trying next model. Error:`, error.message || error);
+    try {
+      for (const modelName of GEMINI_MODEL_CHAIN) {
+        try {
+          console.log(`[Ingestion] Synthesizing dossier using model: ${modelName} (key index ${k})`);
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                type: 'object',
+                properties: {
+                  headline: { type: 'string', description: 'A highly catchy, journalistic headline (under 15 words) tailored to reflect the article\'s overall sentiment (Positive, Negative, or Neutral).' },
+                  summary: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Exactly 5 distinct bullet points, each a complete sentence of minimum 20 words covering different story angles.'
+                  },
+                  contentBlocks: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Exactly 8 full prose paragraphs, each at least 80 words. Use double-asterisks (**) selectively to bold a maximum of 2-3 key entities or figures per paragraph.'
+                  },
+                  sectionHeadings: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Exactly 4 editorial section headings (3-6 words each) for paragraphs 2, 4, 6, and 8.'
+                  },
+                  highlightedFacts: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Exactly 4 pull-quote worthy facts, statistics, or notable statements as single compelling sentences.'
+                  },
+                  sentiment: { type: 'string', enum: ['Positive', 'Negative', 'Neutral'] },
+                  categories: {
+                    type: 'array',
+                    minItems: 1,
+                    maxItems: 3,
+                    items: {
+                      type: 'string',
+                      enum: ['Tech', 'Business', 'Science', 'Health', 'Entertainment', 'Finance', 'Politics', 'World', 'India', 'Sports']
+                    }
+                  },
+                  imageSearchQuery: {
+                    type: 'string',
+                    description: 'A simple 2-4 word search query focusing strictly on the physical core noun/entity. Do NOT include generic locations (e.g., "India", "Sri Lanka") or generic temporal words (e.g., "monsoon", "rains") unless the location is the actual core subject of the photo.'
+                  },
+                  aiImagePrompt: {
+                    type: 'string',
+                    description: 'A highly detailed and specific photorealistic prompt depicting the exact brand, model, device, person, or event featured in the article (e.g. "A premium professional product photograph of a OnePlus Nord CE4 Lite...").'
+                  },
+                  imageSearchQueryFallbacks: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'A list of 2-3 fallback search keywords representing the key persons, agencies, or main nouns in the article (e.g. ["AR Rahman", "Asha Bhosle"]).'
+                  },
+                  imageSearchSubject: {
+                    type: 'string',
+                    description: 'The absolute core entity name, brand, person, or disease (e.g., "dengue", "OnePlus", "Pankaj Tripathi") to filter/validate search results.'
+                  }
+                },
+                required: [
+                  'headline',
+                  'summary',
+                  'contentBlocks',
+                  'sectionHeadings',
+                  'highlightedFacts',
+                  'sentiment',
+                  'categories',
+                  'imageSearchQuery',
+                  'aiImagePrompt',
+                  'imageSearchQueryFallbacks',
+                  'imageSearchSubject'
+                ]
+              } as any
+            }
+          });
+
+          const result = await model.generateContent(prompt);
+          return JSON.parse(result.response.text().trim());
+        } catch (error: any) {
+          lastError = error;
+          console.warn(`[Ingestion] Synthesis failed with model ${modelName} (key index ${k}). Error:`, error.message || error);
+
+          const errMsg = error.message?.toLowerCase() || '';
+          const errStatus = error.status;
+          const shouldSwitchKey = errStatus === 403 || errStatus === 429 || errMsg.includes('denied') || errMsg.includes('forbidden') || errMsg.includes('quota') || errMsg.includes('limit');
+          if (shouldSwitchKey && k < apiKeys.length - 1) {
+            console.warn(`[Ingestion] API key issue detected during synthesis. Swapping to next API key.`);
+            throw error; // Swap key
+          }
+        }
+      }
+    } catch (keyErr) {
+      if (k < apiKeys.length - 1) {
+        console.warn(`[Ingestion] API key index ${k} failed during synthesis. Swapping to next key...`);
+        continue;
+      }
     }
   }
 
-  throw lastError || new Error('All models in fallback chain failed for synthesis.');
+  throw lastError || new Error('All models and keys in fallback chain failed for synthesis.');
 }
 
 /**
