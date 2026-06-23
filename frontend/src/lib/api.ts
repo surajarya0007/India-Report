@@ -29,6 +29,8 @@ export interface IngestTriggerResponse {
   success: boolean;
   status: 'processing';
   message: string;
+  scope?: 'general' | 'search';
+  query?: string;
 }
 
 export type IngestJobStatus = 'idle' | 'processing' | 'scraping' | 'complete' | 'error';
@@ -37,6 +39,8 @@ export interface IngestStatusResponse {
   success: boolean;
   status: IngestJobStatus;
   message: string;
+  scope?: 'general' | 'search';
+  query?: string;
   startedAt?: string;
   completedAt?: string;
   ingestedCount?: number;
@@ -51,6 +55,10 @@ export interface IngestResult {
   ingestedCount: number;
   skippedCount: number;
   errorsCount: number;
+}
+
+interface IngestPollOptions {
+  search?: string;
 }
 
 const POLL_INTERVAL_MS = 4_000;
@@ -89,12 +97,13 @@ export async function fetchNews(category?: string, search?: string): Promise<Art
  * Poll ingestion status until complete, error, or timeout.
  */
 export async function pollIngestStatus(
+  options?: IngestPollOptions,
   onTick?: (status: IngestStatusResponse) => void
 ): Promise<IngestResult> {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
 
   while (Date.now() < deadline) {
-    const status = await fetchIngestStatus();
+    const status = await fetchIngestStatus(options);
     onTick?.(status);
 
     if (status.status === 'complete') {
@@ -129,9 +138,17 @@ export async function pollIngestStatus(
   };
 }
 
-export async function fetchIngestStatus(): Promise<IngestStatusResponse> {
+export async function fetchIngestStatus(options?: IngestPollOptions): Promise<IngestStatusResponse> {
   try {
-    const response = await fetch(`${API_URL}/api/news/ingest/status`, { cache: 'no-store' });
+    const params = new URLSearchParams();
+    if (options?.search) {
+      params.append('search', options.search);
+    }
+    const queryString = params.toString();
+    const url = queryString
+      ? `${API_URL}/api/news/ingest/status?${queryString}`
+      : `${API_URL}/api/news/ingest/status`;
+    const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`API error: ${response.statusText}`);
     }
@@ -173,7 +190,8 @@ export async function triggerIngest(
       throw new Error(`API error: ${response.statusText}`);
     }
 
-    return await pollIngestStatus(onStatus);
+    await response.json();
+    return await pollIngestStatus({ search }, onStatus);
   } catch (error: any) {
     console.error('[API] triggerIngest error:', error);
     return {

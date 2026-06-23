@@ -10,7 +10,9 @@ import {
   isIngestionRunning,
   markIngestionComplete,
   markIngestionError,
+  markIngestionScraping,
   markIngestionStarted,
+  type IngestionScope,
 } from '../services/ingestionStatus';
 
 const parser = new Parser({
@@ -359,7 +361,8 @@ async function crawlSources(sources: { title: string; url: string; description: 
 export async function runIngestionPipeline(
   category?: string,
   country?: string,
-  search?: string
+  search?: string,
+  scope: IngestionScope = search && search.trim() ? 'search' : 'general'
 ): Promise<{ ingestedCount: number; skippedCount: number; errorsCount: number }> {
   let ingestedCount = 0;
   let skippedCount = 0;
@@ -391,6 +394,7 @@ export async function runIngestionPipeline(
     }
 
     try {
+      markIngestionScraping(scope);
       const crawled = await crawlSources(items);
       const synthesis = await synthesizeTrendDossier(keyword, crawled);
       
@@ -517,6 +521,7 @@ export async function runIngestionPipeline(
         }
 
         try {
+          markIngestionScraping(scope);
           const crawled = await crawlSources(searchItems);
           const synthesis = await synthesizeTrendDossier(keyword, crawled);
           
@@ -570,9 +575,12 @@ export async function runIngestionPipeline(
  * GET /api/news/ingest/status
  */
 export function getIngestionStatusHandler(_req: Request, res: Response) {
+  const search = _req.query.search as string | undefined;
+  const scope: IngestionScope = search && search.trim() ? 'search' : 'general';
+
   res.status(200).json({
     success: true,
-    ...getIngestionStatus(),
+    ...getIngestionStatus(scope),
   });
 }
 
@@ -580,34 +588,50 @@ export function getIngestionStatusHandler(_req: Request, res: Response) {
  * POST /api/news/ingest — returns 202 immediately; pipeline runs in background.
  */
 export async function triggerIngestion(req: Request, res: Response) {
-  if (isIngestionRunning()) {
-    return res.status(202).json({
-      success: true,
-      ...getIngestionStatus(),
-    });
-  }
-
   const category = req.query.category as string;
   const country = req.query.country as string;
   const search = req.query.search as string;
+  const scope: IngestionScope = search && search.trim() ? 'search' : 'general';
 
-  markIngestionStarted();
+  if (isIngestionRunning(scope)) {
+    const currentStatus = getIngestionStatus(scope);
+
+    if (scope === 'search' && currentStatus.query && currentStatus.query.toLowerCase() !== search.trim().toLowerCase()) {
+      const { message: _message, ...statusWithoutMessage } = currentStatus;
+      return res.status(409).json({
+        success: false,
+        ...statusWithoutMessage,
+        message: `Another search ingestion is already running for "${currentStatus.query}". Please wait a moment and try again.`,
+      });
+    }
+
+    return res.status(202).json({
+      success: true,
+      ...currentStatus,
+    });
+  }
+
+  markIngestionStarted(scope, search?.trim() || undefined);
 
   res.status(202).json({
     success: true,
     status: 'processing',
-    message: 'Ingestion pipeline started. Poll /api/news/ingest/status for progress.',
+    scope,
+    query: search?.trim() || undefined,
+    message: scope === 'search'
+      ? `Search ingestion started for "${search.trim()}". Poll /api/news/ingest/status?search=${encodeURIComponent(search.trim())} for progress.`
+      : 'Ingestion pipeline started. Poll /api/news/ingest/status for progress.',
   });
 
-  void runIngestionPipeline(category, country, search)
+  void runIngestionPipeline(category, country, search, scope)
     .then((result) => {
-      markIngestionComplete({
+      markIngestionComplete(scope, {
         ingestedCount: result.ingestedCount,
         skippedCount: result.skippedCount,
         errorsCount: result.errorsCount,
       });
     })
     .catch((error: Error) => {
-      markIngestionError(error.message || 'Unknown error');
+      markIngestionError(scope, error.message || 'Unknown error');
     });
 }
