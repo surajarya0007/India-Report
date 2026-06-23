@@ -1,9 +1,13 @@
-'use client';
-
 import React from 'react';
+import type { Metadata } from 'next';
 import Layout from '../../components/Layout';
 import ScrollReveal from '../../components/ScrollReveal';
 import { Cpu, Globe, Database, Zap, Newspaper, Shield, Users, Target } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'About Us | India Reports',
+  description: "Learn about India's autonomous AI news synthesis pipeline, technologies, and team.",
+};
 
 const PIPELINE_STEPS = [
   { icon: <Globe style={{ width: 24, height: 24 }} />, title: 'Discover', desc: 'We continuously scan Google News RSS feeds across 10+ categories to discover breaking stories from India and the world.' },

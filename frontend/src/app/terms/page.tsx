@@ -1,8 +1,12 @@
-'use client';
-
 import React from 'react';
+import type { Metadata } from 'next';
 import Layout from '../../components/Layout';
 import ScrollReveal from '../../components/ScrollReveal';
+
+export const metadata: Metadata = {
+  title: 'Terms of Service | India Reports',
+  description: 'Review the terms that govern your use of India Reports and our automated news platform.',
+};
 
 export default function TermsOfService() {
   return (

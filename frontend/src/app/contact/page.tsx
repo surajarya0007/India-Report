@@ -1,9 +1,13 @@
-'use client';
-
-import React, { useState } from 'react';
+import React from 'react';
+import type { Metadata } from 'next';
 import Layout from '../../components/Layout';
 import ScrollReveal from '../../components/ScrollReveal';
 import { Mail, Phone, MapPin, Newspaper, DollarSign, Shield } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Contact Us | India Reports',
+  description: 'Reach the India Reports editorial desk, advertising team, or file DMCA correction notices.',
+};
 
 const CONTACT_CARDS = [
   {
@@ -48,9 +52,6 @@ const INQUIRY_TYPES = [
 ];
 
 export default function ContactPage() {
-  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
-  const [hoveredInquiry, setHoveredInquiry] = useState<number | null>(null);
-
   return (
     <Layout showNav={false}>
 
@@ -82,8 +83,6 @@ export default function ContactPage() {
             {CONTACT_CARDS.map((card, i) => (
               <div 
                 key={i}
-                onMouseEnter={() => setHoveredCard(i)}
-                onMouseLeave={() => setHoveredCard(null)}
                 style={{
                   padding: 28,
                   background: 'var(--bg-secondary)',
@@ -91,9 +90,6 @@ export default function ContactPage() {
                   borderTop: `3px solid ${card.color}`,
                   textAlign: 'center',
                   borderRadius: '8px',
-                  transform: hoveredCard === i ? 'translateY(-4px)' : 'translateY(0)',
-                  boxShadow: hoveredCard === i ? 'var(--shadow-md)' : 'none',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
                 }}
               >
                 <div style={{
@@ -123,8 +119,6 @@ export default function ContactPage() {
             {INQUIRY_TYPES.map((type, i) => (
               <div 
                 key={i}
-                onMouseEnter={() => setHoveredInquiry(i)}
-                onMouseLeave={() => setHoveredInquiry(null)}
                 style={{
                   display: 'flex', gap: 20, alignItems: 'flex-start',
                   padding: 24,
@@ -132,9 +126,6 @@ export default function ContactPage() {
                   border: '1px solid var(--border-secondary)',
                   borderLeft: `4px solid ${type.color}`,
                   borderRadius: '8px',
-                  transform: hoveredInquiry === i ? 'translateY(-2px)' : 'translateY(0)',
-                  boxShadow: hoveredInquiry === i ? 'var(--shadow-sm)' : 'none',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
                 }}
               >
                 <div style={{

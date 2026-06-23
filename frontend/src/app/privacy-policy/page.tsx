@@ -1,8 +1,12 @@
-'use client';
-
 import React from 'react';
+import type { Metadata } from 'next';
 import Layout from '../../components/Layout';
 import ScrollReveal from '../../components/ScrollReveal';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | India Reports',
+  description: 'Read how India Reports collects, stores, and protects user data across the platform.',
+};
 
 export default function PrivacyPolicy() {
   return (

@@ -1,9 +1,13 @@
-'use client';
-
 import React from 'react';
+import type { Metadata } from 'next';
 import Layout from '../../components/Layout';
 import ScrollReveal from '../../components/ScrollReveal';
 import { DollarSign, Eye, Award, Megaphone } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Advertise | India Reports',
+  description: 'Reach the India Reports audience with premium placements and native advertising opportunities.',
+};
 
 const METRICS = [
   { icon: <Eye style={{ width: 24, height: 24 }} />, label: 'Monthly Pageviews', value: '1.2M+' },

@@ -1,8 +1,12 @@
-'use client';
-
 import React from 'react';
+import type { Metadata } from 'next';
 import Layout from '../../components/Layout';
 import ScrollReveal from '../../components/ScrollReveal';
+
+export const metadata: Metadata = {
+  title: 'Ethics & Editorial Policy | India Reports',
+  description: 'Read our principles of news transparency, neutrality, source verification, and AI accountability.',
+};
 
 export default function EthicsPolicy() {
   return (
