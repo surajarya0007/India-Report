@@ -184,6 +184,7 @@ export default function EPaperPage() {
                           alt="Lead image"
                           fill
                           sizes="(max-width: 768px) 100vw, 400px"
+                          unoptimized
                           style={{ objectFit: 'cover', border: '1px solid var(--border-secondary)', filter: 'grayscale(1)' }}
                         />
                         <ImageSourceBadge imageUrl={articles[0].imageUrl} style={{ filter: 'grayscale(1)' }} />

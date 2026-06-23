@@ -74,6 +74,7 @@ function ImgBox({ article, height = 180, style = {} }: { article: Article; heigh
           alt={article.headline}
           fill
           sizes="(max-width: 768px) 100vw, 640px"
+          unoptimized
           onError={() => setImgError(true)}
           style={{
             objectFit: 'cover',

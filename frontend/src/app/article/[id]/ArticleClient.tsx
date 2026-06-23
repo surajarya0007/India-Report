@@ -77,6 +77,7 @@ function SideCard({ article }: { article: Article }) {
               alt={article.headline}
               fill
               sizes="80px"
+              unoptimized
               onError={() => setImgError(true)}
               style={{ objectFit: 'cover' }}
             />
@@ -157,6 +158,7 @@ function MoreStoriesCard({ article }: { article: Article }) {
               alt={article.headline}
               fill
               sizes="(max-width: 768px) 100vw, 300px"
+              unoptimized
               onError={() => setImgError(true)}
               style={{ objectFit: 'cover', transition: 'transform 0.35s', transform: hov ? 'scale(1.05)' : 'scale(1)' }}
             />
@@ -650,6 +652,7 @@ export default function ArticleClient({
                     fill
                     priority
                     sizes="(max-width: 768px) 100vw, 800px"
+                    unoptimized
                     style={{ objectFit: 'cover' }}
                   />
                   <ImageSourceBadge imageUrl={article.imageUrl} />
