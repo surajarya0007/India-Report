@@ -526,6 +526,26 @@ export default function Home() {
       ? 'More Stories' 
       : `Related ${activeNav} Stories`;
 
+  const gridTemplateColumns = [
+    leftFeed.length > 0 ? '240px' : '',
+    (centerHero || centerGrid.length > 0) ? '1fr' : '',
+    rightFeed.length > 0 ? '240px' : ''
+  ].filter(Boolean).join(' ');
+
+  const leftColumnStyle = {
+    borderRight: (centerHero || centerGrid.length > 0 || rightFeed.length > 0)
+      ? '1px solid var(--border-secondary)'
+      : 'none',
+    paddingRight: 24
+  };
+
+  const centerColumnStyle = {
+    borderRight: rightFeed.length > 0
+      ? '1px solid var(--border-secondary)'
+      : 'none',
+    paddingRight: rightFeed.length > 0 ? 24 : 0
+  };
+
   return (
     <Layout
       activeNav={activeNav}
@@ -622,37 +642,43 @@ export default function Home() {
             <>
             {/* 3-column grid */}
             {topStories.length > 0 && (
-              <div className="ir-home-grid" style={{ marginBottom: 36 }}>
+              <div className="ir-home-grid" style={{ marginBottom: 36, gridTemplateColumns: gridTemplateColumns || undefined }}>
 
                 {/* LEFT COLUMN */}
-                <aside style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
-                  <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink)' }}>Top Stories</span>
-                  </div>
-                  {leftFeed.map((a, i) => <CompactCard key={a.id} article={a} showDivider={i > 0} index={i} />)}
-                </aside>
+                {leftFeed.length > 0 && (
+                  <aside style={leftColumnStyle}>
+                    <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 0 }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink)' }}>Top Stories</span>
+                    </div>
+                    {leftFeed.map((a, i) => <CompactCard key={a.id} article={a} showDivider={i > 0} index={i} />)}
+                  </aside>
+                )}
 
                 {/* CENTER COLUMN */}
-                <div style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
-                  {centerHero && (
-                    <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid var(--border-secondary)' }}>
-                      <FeatureCard article={centerHero} index={0} />
-                    </div>
-                  )}
-                  {centerGrid.length > 0 && (
-                    <div className="ir-center-grid">
-                      {centerGrid.map((a, i) => <GridCard key={a.id} article={a} index={i + 1} />)}
-                    </div>
-                  )}
-                </div>
+                {(centerHero || centerGrid.length > 0) && (
+                  <div style={centerColumnStyle}>
+                    {centerHero && (
+                      <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid var(--border-secondary)' }}>
+                        <FeatureCard article={centerHero} index={0} />
+                      </div>
+                    )}
+                    {centerGrid.length > 0 && (
+                      <div className="ir-center-grid">
+                        {centerGrid.map((a, i) => <GridCard key={a.id} article={a} index={i + 1} />)}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* RIGHT COLUMN */}
-                <aside style={{ paddingLeft: 0 }}>
-                  <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink)' }}>Latest News</span>
-                  </div>
-                  {rightFeed.map((a, i) => <SidebarItem key={a.id} article={a} rank={i + 1} index={i} />)}
-                </aside>
+                {rightFeed.length > 0 && (
+                  <aside style={{ paddingLeft: 0 }}>
+                    <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 0 }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--color-ink)' }}>Latest News</span>
+                    </div>
+                    {rightFeed.map((a, i) => <SidebarItem key={a.id} article={a} rank={i + 1} index={i} />)}
+                  </aside>
+                )}
               </div>
             )}
 
