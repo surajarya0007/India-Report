@@ -66,9 +66,24 @@ export default function Header({
 
   const [localQuery, setLocalQuery] = useState(searchQuery || '');
 
+  const desktopInputRef = React.useRef<HTMLInputElement>(null);
+  const mobileInputRef = React.useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     setLocalQuery(searchQuery || '');
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (searchOpen) {
+      setTimeout(() => {
+        if (window.innerWidth >= 768) {
+          desktopInputRef.current?.focus();
+        } else {
+          mobileInputRef.current?.focus();
+        }
+      }, 100);
+    }
+  }, [searchOpen]);
 
   const handleSearchSubmit = useCallback((e?: React.FormEvent) => {
     e?.preventDefault();
@@ -106,7 +121,7 @@ export default function Header({
         }}>
           
           {/* Left: Sidebar Icon + Date/Time Info Inline */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 280 }}>
+          <div className="ir-header-left" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <button
               onClick={() => setDrawerOpen(!drawerOpen)}
               style={{
@@ -119,13 +134,15 @@ export default function Header({
               {drawerOpen ? <X style={{ width: 24, height: 24 }} /> : <Menu style={{ width: 24, height: 24 }} />}
             </button>
 
-            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.01em', color: 'var(--color-ink-muted)', whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.01em', color: 'var(--color-ink-muted)', whiteSpace: 'nowrap' }} className="hide-mobile">
               {now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
             </span>
             
-            <span style={{ width: 1, height: 16, background: 'var(--border-secondary)' }} />
+            <span style={{ width: 1, height: 16, background: 'var(--border-secondary)' }} className="hide-mobile" />
             
-            <WeatherWidget />
+            <div className="hide-mobile">
+              <WeatherWidget />
+            </div>
           </div>
 
           {/* Center: Logo */}
@@ -146,44 +163,78 @@ export default function Header({
                 fontFamily: 'var(--font-serif)',
                 fontSize: 24, fontWeight: 900, letterSpacing: '-0.03em',
                 color: 'var(--color-ink)', marginLeft: 8,
-              }}>
+              }} className="hide-mobile">
                 INDIA REPORTS
               </span>
             </div>
           </a>
 
           {/* Right: Search, Ingestion, Theme, Login */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, minWidth: 280, justifyContent: 'flex-end' }}>
+          <div className="ir-header-right" style={{ display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'flex-end' }}>
             
-            {/* Search Input inline left of update feed */}
             <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-              {searchOpen ? (
-                <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 6 }}>
-                  <input
-                    autoFocus
-                    value={localQuery}
-                    onChange={e => {
-                      setLocalQuery(e.target.value);
-                      onSearchQueryChange?.(e.target.value);
-                    }}
-                    placeholder="Search..."
-                    className="ir-input"
-                    style={{
-                      width: 160, padding: '6px 12px', fontSize: 13, borderRadius: 6,
-                    }}
-                  />
-                </form>
-              ) : null}
+              <form
+                onSubmit={handleSearchSubmit}
+                className="hide-mobile"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  position: 'relative',
+                  width: searchOpen ? 180 : 0,
+                  opacity: searchOpen ? 1 : 0,
+                  pointerEvents: searchOpen ? 'auto' : 'none',
+                  marginRight: searchOpen ? 6 : 0,
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  overflow: 'hidden',
+                }}
+              >
+                <input
+                  ref={desktopInputRef}
+                  value={localQuery}
+                  onChange={e => {
+                    setLocalQuery(e.target.value);
+                    onSearchQueryChange?.(e.target.value);
+                  }}
+                  placeholder="Search..."
+                  className="ir-input"
+                  tabIndex={searchOpen ? 0 : -1}
+                  style={{
+                    width: '100%', padding: '6px 32px 6px 12px', fontSize: 13, borderRadius: 6,
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={clearSearch}
+                  tabIndex={searchOpen ? 0 : -1}
+                  style={{
+                    position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: 4, color: 'var(--color-ink-muted)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center'
+                  }}
+                  title="Close Search"
+                >
+                  <X style={{ width: 14, height: 14 }} />
+                </button>
+              </form>
               
               <button
-                onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) clearSearch(); }}
+                onClick={() => setSearchOpen(true)}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  padding: 8, color: 'var(--color-ink)', display: 'flex',
+                  padding: 8, color: 'var(--color-ink)',
+                  display: 'flex',
+                  opacity: searchOpen ? 0 : 1,
+                  pointerEvents: searchOpen ? 'none' : 'auto',
+                  width: searchOpen ? 0 : 36,
+                  paddingLeft: searchOpen ? 0 : 8,
+                  paddingRight: searchOpen ? 0 : 8,
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  overflow: 'hidden',
                 }}
                 title="Search"
               >
-                {searchOpen ? <X style={{ width: 20, height: 20 }} /> : <Search style={{ width: 20, height: 20 }} />}
+                <Search style={{ width: 20, height: 20 }} />
               </button>
             </div>
 
@@ -191,6 +242,7 @@ export default function Header({
             {onIngest && (
               <button
                 onClick={onIngest} disabled={ingesting}
+                className="ir-update-btn"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   border: '2px solid var(--color-ink)',
@@ -202,7 +254,7 @@ export default function Header({
                 }}
               >
                 <Cpu style={{ width: 14, height: 14 }} />
-                {ingesting ? 'Updating…' : 'Update Feed'}
+                <span className="hide-mobile">{ingesting ? 'Updating…' : 'Update Feed'}</span>
               </button>
             )}
 
@@ -210,6 +262,7 @@ export default function Header({
             <button
               onClick={toggleTheme}
               title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+              className="hide-mobile"
               style={{
                 color: 'var(--color-ink)', background: 'none', border: 'none',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -272,6 +325,7 @@ export default function Header({
             ) : (
               <button
                 onClick={() => setLoginOpen(true)}
+                className="ir-login-btn"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   border: '1.5px solid var(--border-primary)',
@@ -290,10 +344,45 @@ export default function Header({
                 }}
               >
                 <User style={{ width: 15, height: 15 }} />
-                Login
+                <span className="hide-mobile">Login</span>
               </button>
             )}
           </div>
+        </div>
+
+        {/* Mobile Full-Width Search Bar */}
+        <div className={`ir-mobile-search-bar ${searchOpen ? 'open' : ''}`}>
+          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', width: '100%', position: 'relative' }}>
+            <input
+              ref={mobileInputRef}
+              value={localQuery}
+              onChange={e => {
+                setLocalQuery(e.target.value);
+                onSearchQueryChange?.(e.target.value);
+              }}
+              placeholder="Search headlines, topics..."
+              className="ir-input"
+              tabIndex={searchOpen ? 0 : -1}
+              style={{
+                width: '100%',
+                paddingRight: 36,
+              }}
+            />
+            <button
+              type="button"
+              onClick={clearSearch}
+              tabIndex={searchOpen ? 0 : -1}
+              style={{
+                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: 6, color: 'var(--color-ink-muted)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center'
+              }}
+              title="Close Search"
+            >
+              <X style={{ width: 18, height: 18 }} />
+            </button>
+          </form>
         </div>
 
         {/* Navigation Bar */}

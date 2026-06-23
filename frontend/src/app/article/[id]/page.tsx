@@ -349,7 +349,7 @@ function ArticleBody({
           }}>
             KEY TAKEAWAYS
           </h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="ir-takeaways-grid">
             {highlightedFacts.slice(2).map((fact, idx) => (
               <div key={idx} style={{
                 padding: '16px',
@@ -382,7 +382,7 @@ function ArticleBody({
 function PageSkeleton() {
   return (
     <Layout showNav={false}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', width: '100%', padding: '32px 20px', display: 'grid', gridTemplateColumns: '1fr 340px', gap: '0 48px' }}>
+      <div className="ir-article-grid" style={{ maxWidth: 1200, margin: '0 auto', width: '100%', padding: '32px var(--container-padding)' }}>
         <div>
           <div style={{ width: 120, height: 18, background: 'var(--bg-tertiary)', marginBottom: 16, borderRadius: 4 }} />
           <div style={{ width: '90%', height: 38, background: 'var(--bg-tertiary)', marginBottom: 24, borderRadius: 4 }} />
@@ -525,7 +525,7 @@ export default function ArticlePage() {
 
   return (
     <Layout showNav={false}>
-      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 20px' }}>
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px var(--container-padding)' }}>
         {/* Breadcrumb / Category Tag */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
           <span 
@@ -609,7 +609,7 @@ export default function ArticlePage() {
         </div>
 
         {/* ── Page Grid ───────────────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '0 48px', alignItems: 'start' }}>
+        <div className="ir-article-grid">
           
           {/* Left Main Content */}
           <div style={{ minWidth: 0 }}>

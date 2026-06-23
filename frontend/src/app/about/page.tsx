@@ -62,7 +62,7 @@ export default function AboutPage() {
       <div className="static-page">
         {/* Mission */}
         <ScrollReveal>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, marginBottom: 56 }}>
+          <div className="about-mission-grid" style={{ marginBottom: 56 }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
                 <Target style={{ width: 20, height: 20, color: 'var(--ir-crimson)' }} />
@@ -95,7 +95,7 @@ export default function AboutPage() {
           <p style={{ marginBottom: 32 }}>
             Our fully automated pipeline transforms raw news into structured intelligence reports in under 60 seconds:
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 56 }}>
+          <div className="about-pipeline-grid" style={{ marginBottom: 56 }}>
             {PIPELINE_STEPS.map((step, i) => (
               <div key={i} style={{
                 padding: 24,
@@ -128,7 +128,7 @@ export default function AboutPage() {
         <ScrollReveal>
           <h2>Technology Stack</h2>
           <div className="divider-accent" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 56 }}>
+          <div className="about-tech-grid" style={{ marginBottom: 56 }}>
             {TECH_STACK.map((tech, i) => (
               <div key={i} style={{
                 padding: '20px 24px',

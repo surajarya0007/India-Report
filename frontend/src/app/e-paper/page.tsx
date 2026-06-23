@@ -88,10 +88,10 @@ export default function EPaperPage() {
       {/* Main Newspaper Layout */}
       <div className="print-container" style={{
         maxWidth: 1100,
-        margin: '40px auto',
+        margin: 'clamp(10px, 4vw, 40px) auto',
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border-secondary)',
-        padding: '40px',
+        padding: 'clamp(16px, 4vw, 40px)',
         boxShadow: 'var(--shadow-md)',
         color: 'var(--color-ink)',
       }}>
@@ -149,7 +149,7 @@ export default function EPaperPage() {
             {/* Top Headline Section (Lead Story) */}
             {articles[0] && (
               <div style={{ borderBottom: '1px solid var(--border-secondary)', paddingBottom: 24, marginBottom: 24 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+                <div className="epaper-lead-grid">
                   <div>
                     <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--ir-crimson)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
                       {articles[0].categories?.[0] || 'TOP REPORT'}
@@ -196,19 +196,10 @@ export default function EPaperPage() {
             )}
 
             {/* Sub-grid of other news articles */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 24,
-            }}>
-              {articles.slice(1).map((art, idx) => (
+            <div className="epaper-sub-grid">
+              {articles.slice(1).map((art) => (
                 <div
                   key={art.id}
-                  style={{
-                    borderRight: (idx + 1) % 3 === 0 ? 'none' : '1px solid var(--border-secondary)',
-                    paddingRight: (idx + 1) % 3 === 0 ? 0 : 20,
-                    marginBottom: 20,
-                  }}
                 >
                   <span style={{ fontSize: 9, fontWeight: 900, color: 'var(--color-ink-faint)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                     {art.categories?.[0] || 'General'}

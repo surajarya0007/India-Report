@@ -345,7 +345,7 @@ function SectionHead({ title }: { title: string }) {
 
 function HomeSkeleton() {
   return (
-    <div className="ir-home-grid" style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: '0 24px', marginBottom: 36, animation: 'fadeIn 0.3s ease-out forwards' }}>
+    <div className="ir-home-grid" style={{ marginBottom: 36, animation: 'fadeIn 0.3s ease-out forwards' }}>
       {/* LEFT COLUMN SKELETON */}
       <aside style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
         <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 16 }}>
@@ -545,7 +545,7 @@ export default function Home() {
     >
       {/* Toast */}
       {toast && (
-        <div style={{
+        <div className="ir-toast" style={{
           position: 'fixed', top: 16, right: 16, zIndex: 9999,
           background: toast.ok ? '#14532d' : '#7f1d1d',
           color: '#fff', padding: '10px 18px', borderRadius: 6, fontSize: 13, fontWeight: 600,
@@ -556,7 +556,7 @@ export default function Home() {
       )}
 
       {/* ── Main Content ─────────────────────────────────────────────────────── */}
-      <main className="ir-container" style={{ padding: '24px 20px' }}>
+      <main className="ir-container" style={{ padding: '24px var(--container-padding)' }}>
 
         {/* Unified full-page loader with progress bar block */}
         {ingesting && filtered.length === 0 && (
@@ -626,7 +626,7 @@ export default function Home() {
             <>
             {/* 3-column grid */}
             {topStories.length > 0 && (
-              <div className="ir-home-grid" style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: '0 24px', marginBottom: 36 }}>
+              <div className="ir-home-grid" style={{ marginBottom: 36 }}>
 
                 {/* LEFT COLUMN */}
                 <aside style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
@@ -644,7 +644,7 @@ export default function Home() {
                     </div>
                   )}
                   {centerGrid.length > 0 && (
-                    <div className="ir-center-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div className="ir-center-grid">
                       {centerGrid.map((a, i) => <GridCard key={a.id} article={a} index={i + 1} />)}
                     </div>
                   )}
@@ -665,7 +665,7 @@ export default function Home() {
               <ScrollReveal>
                 <section style={{ marginBottom: 36 }}>
                   <SectionHead title={sectionTitle} />
-                  <div className="ir-more-stories-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                  <div className="ir-more-stories-grid">
                     {bottomStories.slice(0, 4).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
                   </div>
                 </section>
@@ -677,7 +677,7 @@ export default function Home() {
               <ScrollReveal>
                 <section style={{ marginBottom: 36 }}>
                   <SectionHead title={isCategoryView ? "Other Related Reports" : "All Reports"} />
-                  <div className="ir-more-stories-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                  <div className="ir-more-stories-grid">
                     {bottomStories.slice(4).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
                   </div>
                 </section>

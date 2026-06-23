@@ -38,7 +38,7 @@ export default function Advertise() {
       <div className="static-page" style={{ maxWidth: 900 }}>
         {/* Metric Cards */}
         <ScrollReveal>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 48 }}>
+          <div className="advertise-metrics-grid" style={{ marginBottom: 48 }}>
             {METRICS.map((metric, i) => (
               <div key={i} style={{
                 padding: 24,
@@ -73,7 +73,7 @@ export default function Advertise() {
             We offer clean, non-intrusive placements that respect user experience while ensuring viewability.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 48 }}>
+          <div className="advertise-placements-grid" style={{ marginBottom: 48 }}>
             <div style={{
               padding: 24,
               border: '1px solid var(--border-secondary)',

@@ -78,7 +78,7 @@ export default function ContactPage() {
       <div className="static-page" style={{ maxWidth: 960 }}>
         {/* Contact Cards */}
         <ScrollReveal>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 48 }}>
+          <div className="contact-cards-grid" style={{ marginBottom: 48 }}>
             {CONTACT_CARDS.map((card, i) => (
               <div 
                 key={i}
@@ -166,7 +166,7 @@ export default function ContactPage() {
             borderRadius: '8px',
             marginBottom: 48,
           }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="contact-form-grid">
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--color-ink-muted)', marginBottom: 6 }}>
                   Full Name
