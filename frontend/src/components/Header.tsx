@@ -238,27 +238,7 @@ export default function Header({
               </button>
             </div>
 
-            {/* Update Feed Ingestion Button */}
-            {onIngest && (
-              <button
-                onClick={onIngest} disabled={ingesting}
-                className="ir-update-btn"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  border: '2px solid var(--color-ink)',
-                  background: ingesting ? 'var(--bg-secondary)' : 'var(--color-ink)',
-                  color: ingesting ? 'var(--color-ink-faint)' : 'var(--bg-primary)',
-                  borderRadius: 6, padding: '8px 16px', fontSize: 13, fontWeight: 700,
-                  cursor: ingesting ? 'not-allowed' : 'pointer', letterSpacing: '0.04em',
-                  transition: 'all 0.2s', whiteSpace: 'nowrap', fontFamily: 'var(--font-sans)',
-                }}
-              >
-                <Cpu style={{ width: 14, height: 14 }} />
-                <span className="hide-mobile">{ingesting ? 'Updating…' : 'Update Feed'}</span>
-              </button>
-            )}
-
-            {/* Theme Toggle in between update feed and login */}
+            {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
               title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
