@@ -21,8 +21,20 @@ model Article {
   imageUrls         String[] // All scraped image URLs from the articles
   enrichmentStatus  String   @default("complete") // "pending" | "complete"
   createdAt         DateTime @default(now())
+  views             ArticleView[]
 
   @@index([keyword])
   @@index([createdAt])
   @@index([categories])
 }
+
+model ArticleView {
+  id        String   @id @default(uuid())
+  articleId String
+  viewedAt  DateTime @default(now())
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@index([viewedAt])
+}
+

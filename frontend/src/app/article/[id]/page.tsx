@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { fetchArticleById, fetchNews, updateArticleImage, Article } from '../../../lib/api';
+import { fetchArticleById, fetchNews, updateArticleImage, recordArticleView, Article } from '../../../lib/api';
 import { 
   Clock, 
   ChevronLeft, 
@@ -436,6 +436,8 @@ export default function ArticlePage() {
     if (!id) return;
     setLoading(true);
     let active = true;
+
+    recordArticleView(id);
 
     Promise.all([fetchArticleById(id), fetchNews()]).then(([art, all]) => {
       if (!active) return;

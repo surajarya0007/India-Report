@@ -14,6 +14,7 @@ export interface Article {
   imageUrls?: string[];
   enrichmentStatus?: 'pending' | 'complete';
   createdAt: string;
+  viewCount24h?: number;
 }
 
 export interface FetchNewsResponse {
@@ -231,6 +232,21 @@ export async function updateArticleImage(id: string, imageUrl: string): Promise<
     return res.success;
   } catch (error) {
     console.error('[API] updateArticleImage error:', error);
+    return false;
+  }
+}
+
+/**
+ * Record a page view for an article in the database.
+ */
+export async function recordArticleView(id: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_URL}/api/news/${id}/view`, {
+      method: 'POST',
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('[API] recordArticleView error:', error);
     return false;
   }
 }

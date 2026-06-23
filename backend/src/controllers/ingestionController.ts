@@ -272,7 +272,7 @@ async function invalidateCache(categories: string[], searchQuery?: string) {
  */
 async function crawlSources(sources: { title: string; url: string; description: string }[]): Promise<{ headline: string; content: string }[]> {
   const results: { headline: string; content: string }[] = [];
-  const concurrency = 3;
+  const concurrency = 5;
   let index = 0;
 
   async function worker() {

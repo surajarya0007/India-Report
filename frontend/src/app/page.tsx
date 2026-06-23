@@ -341,6 +341,66 @@ function SectionHead({ title }: { title: string }) {
   );
 }
 
+// ─── Home Page Skeleton ───────────────────────────────────────────────────────
+
+function HomeSkeleton() {
+  return (
+    <div className="ir-home-grid" style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: '0 24px', marginBottom: 36, animation: 'fadeIn 0.3s ease-out forwards' }}>
+      {/* LEFT COLUMN SKELETON */}
+      <aside style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
+        <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 16 }}>
+          <div className="skeleton-pulse" style={{ width: 100, height: 14, borderRadius: 3 }} />
+        </div>
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} style={{ padding: '16px 0', borderBottom: i < 4 ? '1px solid var(--border-secondary)' : 'none' }}>
+            <div className="skeleton-pulse" style={{ width: 60, height: 10, marginBottom: 8, borderRadius: 2 }} />
+            <div className="skeleton-pulse" style={{ width: '100%', height: 14, marginBottom: 6, borderRadius: 3 }} />
+            <div className="skeleton-pulse" style={{ width: '80%', height: 14, borderRadius: 3 }} />
+          </div>
+        ))}
+      </aside>
+
+      {/* CENTER COLUMN SKELETON */}
+      <div style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
+        {/* Featured Hero Skeleton */}
+        <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid var(--border-secondary)' }}>
+          <div className="skeleton-pulse" style={{ width: '100%', height: 230, borderRadius: 6, marginBottom: 16 }} />
+          <div className="skeleton-pulse" style={{ width: 80, height: 12, borderRadius: 2, marginBottom: 12 }} />
+          <div className="skeleton-pulse" style={{ width: '90%', height: 24, borderRadius: 4, marginBottom: 12 }} />
+          <div className="skeleton-pulse" style={{ width: '100%', height: 14, borderRadius: 3, marginBottom: 6 }} />
+          <div className="skeleton-pulse" style={{ width: '95%', height: 14, borderRadius: 3 }} />
+        </div>
+        {/* Center Grid Skeleton */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i}>
+              <div className="skeleton-pulse" style={{ width: '100%', height: 130, borderRadius: 6, marginBottom: 12 }} />
+              <div className="skeleton-pulse" style={{ width: '90%', height: 14, borderRadius: 3, marginBottom: 6 }} />
+              <div className="skeleton-pulse" style={{ width: '70%', height: 14, borderRadius: 3 }} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN SKELETON */}
+      <aside>
+        <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 16 }}>
+          <div className="skeleton-pulse" style={{ width: 100, height: 14, borderRadius: 3 }} />
+        </div>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} style={{ display: 'flex', gap: 12, padding: '16px 0', borderBottom: i < 5 ? '1px solid var(--border-secondary)' : 'none' }}>
+            <div className="skeleton-pulse" style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div className="skeleton-pulse" style={{ width: 50, height: 10, marginBottom: 6, borderRadius: 2 }} />
+              <div className="skeleton-pulse" style={{ width: '100%', height: 14, borderRadius: 3 }} />
+            </div>
+          </div>
+        ))}
+      </aside>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -408,6 +468,19 @@ export default function Home() {
     setTimeout(() => setToast(null), 5000);
   };
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('q');
+      if (q) {
+        setSearchQuery(q);
+        handleSearch(q);
+        // Clean URL so the query parameter is not sticky
+        window.history.replaceState(null, '', '/');
+      }
+    }
+  }, []);
+
   const handleNavChange = (nav: string) => {
     setActiveNav(nav);
     setActiveSearch(undefined);
@@ -421,14 +494,35 @@ export default function Home() {
     ? filtered.filter(a => a.categories?.[0] === activeNav)
     : filtered;
 
-  const bottomStories = isCategoryView
-    ? filtered.filter(a => a.categories?.includes(activeNav) && a.categories?.[0] !== activeNav)
-    : filtered.slice(11);
+  // 1. Sort by 24h view count (descending), then by recency if counts are equal
+  const mostViewed = [...topStories].sort((a, b) => {
+    const viewA = a.viewCount24h || 0;
+    const viewB = b.viewCount24h || 0;
+    if (viewB !== viewA) return viewB - viewA;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
-  const centerHero = topStories[0];
-  const centerGrid = topStories.slice(1, 5);
-  const leftFeed = topStories.slice(5, 9);
-  const rightFeed = topStories.slice(9, 15);
+  // 2. Sort by recency (createdAt descending)
+  const latestNews = [...topStories].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Distribute articles uniquely to avoid any duplication on the page
+  const centerHero = mostViewed[0];
+
+  const leftFeed = mostViewed.filter(a => a.id !== centerHero?.id).slice(0, 4);
+
+  const usedIds = new Set<string>();
+  if (centerHero) usedIds.add(centerHero.id);
+  leftFeed.forEach(a => usedIds.add(a.id));
+
+  const centerGrid = latestNews.filter(a => !usedIds.has(a.id)).slice(0, 4);
+  centerGrid.forEach(a => usedIds.add(a.id));
+
+  const rightFeed = latestNews.filter(a => !usedIds.has(a.id)).slice(0, 5);
+  rightFeed.forEach(a => usedIds.add(a.id));
+
+  const bottomStories = isCategoryView
+    ? filtered.filter(a => a.categories?.includes(activeNav) && a.categories?.[0] !== activeNav && !usedIds.has(a.id))
+    : latestNews.filter(a => !usedIds.has(a.id));
 
   const sectionTitle = activeSearch 
     ? `Results for "${activeSearch}"` 
@@ -465,7 +559,7 @@ export default function Home() {
       <main className="ir-container" style={{ padding: '24px 20px' }}>
 
         {/* Unified full-page loader with progress bar block */}
-        {isLoadingOrIngesting && filtered.length === 0 && (
+        {ingesting && filtered.length === 0 && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '100px 20px', width: '100%' }}>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -493,7 +587,7 @@ export default function Home() {
         )}
 
         {/* Background refresh banner */}
-        {(activeSearch ? ingesting : (ingesting || hasPendingArticles)) && filtered.length > 0 && (
+        {!loading && (activeSearch ? ingesting : (ingesting || hasPendingArticles)) && filtered.length > 0 && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             padding: '12px 16px', marginBottom: 16, borderRadius: 4,
@@ -525,8 +619,11 @@ export default function Home() {
           </div>
         )}
 
-        {(topStories.length > 0 || bottomStories.length > 0) && (
-          <>
+        {loading ? (
+          <HomeSkeleton />
+        ) : (
+          (topStories.length > 0 || bottomStories.length > 0) && (
+            <>
             {/* 3-column grid */}
             {topStories.length > 0 && (
               <div className="ir-home-grid" style={{ display: 'grid', gridTemplateColumns: '240px 1fr 240px', gap: '0 24px', marginBottom: 36 }}>
@@ -587,7 +684,7 @@ export default function Home() {
               </ScrollReveal>
             )}
           </>
-        )}
+        ))}
       </main>
     </Layout>
   );

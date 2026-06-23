@@ -32,67 +32,92 @@ export async function getRecentNews(req: Request, res: Response) {
       : 'homepage:news:all';
 
   try {
+    let articles: any[] | null = null;
+    let source: 'cache' | 'database' = 'database';
+
     if (redis) {
       try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) {
           console.log(`[NewsController] Cache hit for "${cacheKey}". Returning cached data.`);
           const parsedData = typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
-          const sanitized = Array.isArray(parsedData)
+          articles = Array.isArray(parsedData)
             ? parsedData.map((a) => sanitizeArticleImage(a))
             : parsedData;
-          return res.status(200).json({
-            success: true,
-            source: 'cache',
-            data: sanitized,
-          });
+          source = 'cache';
         }
       } catch (redisError) {
         console.error('[NewsController] Redis read error (bypassing cache):', redisError);
       }
     }
 
-    console.log(`[NewsController] Cache miss for "${cacheKey}". Querying database...`);
+    if (!articles) {
+      console.log(`[NewsController] Cache miss for "${cacheKey}". Querying database...`);
+      let whereClause = {};
+      if (search) {
+        whereClause = {
+          OR: [
+            { keyword: { contains: search, mode: 'insensitive' } },
+            { categories: { has: search } },
+            { headline: { contains: search, mode: 'insensitive' } },
+          ],
+        };
+      } else if (category && category !== 'Home' && category !== 'undefined') {
+        whereClause = {
+          categories: {
+            has: category,
+          },
+        };
+      }
 
-    let whereClause = {};
-    if (search) {
-      whereClause = {
-        OR: [
-          { keyword: { contains: search, mode: 'insensitive' } },
-          { categories: { has: search } },
-          { headline: { contains: search, mode: 'insensitive' } },
-        ],
-      };
-    } else if (category && category !== 'Home' && category !== 'undefined') {
-      whereClause = {
-        categories: {
-          has: category,
-        },
-      };
-    }
+      articles = (
+        await prisma.article.findMany({
+          where: whereClause,
+          orderBy: { createdAt: 'desc' },
+          take: 50, // Retrieve a larger pool so we have both latest and most-viewed
+          select: LIST_SELECT,
+        })
+      ).map((a) => sanitizeArticleImage(a));
 
-    const articles = (
-      await prisma.article.findMany({
-        where: whereClause,
-        orderBy: { createdAt: 'desc' },
-        take: DISPLAY_LIMIT,
-        select: LIST_SELECT,
-      })
-    ).map((a) => sanitizeArticleImage(a));
-
-    if (redis && articles.length > 0) {
-      try {
-        await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(articles));
-        console.log(`[NewsController] Cached ${articles.length} articles in Redis for key "${cacheKey}".`);
-      } catch (redisError) {
-        console.error('[NewsController] Redis write error:', redisError);
+      if (redis && articles.length > 0) {
+        try {
+          await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(articles));
+          console.log(`[NewsController] Cached ${articles.length} articles in Redis for key "${cacheKey}".`);
+        } catch (redisError) {
+          console.error('[NewsController] Redis write error:', redisError);
+        }
       }
     }
 
+    // Always merge real-time 24-hour view counts
+    const articleIds = articles.map((a) => a.id);
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const viewCounts = await prisma.articleView.groupBy({
+      by: ['articleId'],
+      where: {
+        articleId: { in: articleIds },
+        viewedAt: { gte: twentyFourHoursAgo },
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    const viewCountMap = new Map<string, number>();
+    viewCounts.forEach((vc) => {
+      viewCountMap.set(vc.articleId, vc._count.id);
+    });
+
+    const dataWithViews = articles.map((a) => ({
+      ...a,
+      viewCount24h: viewCountMap.get(a.id) || 0,
+    }));
+
     return res.status(200).json({
       success: true,
-      source: 'database',
-      data: articles,
+      source,
+      data: dataWithViews,
     });
   } catch (error: any) {
     console.error('[NewsController] Critical error retrieving news:', error);
@@ -154,6 +179,30 @@ export async function updateArticleImage(req: Request, res: Response) {
     return res.status(200).json({ success: true, data: sanitizeArticleImage(article) });
   } catch (error: any) {
     console.error('[NewsController] Error updating article image:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
+ * POST /api/news/:id/view — record a page view for an article.
+ */
+export async function recordArticleView(req: Request, res: Response) {
+  const { id } = req.params;
+  try {
+    const article = await prisma.article.findUnique({ where: { id } });
+    if (!article) {
+      return res.status(404).json({ success: false, message: 'Article not found.' });
+    }
+
+    await prisma.articleView.create({
+      data: {
+        articleId: id,
+      },
+    });
+
+    return res.status(200).json({ success: true });
+  } catch (error: any) {
+    console.error('[NewsController] Error recording article view:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 }

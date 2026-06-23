@@ -64,14 +64,25 @@ export default function Header({
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
+  const [localQuery, setLocalQuery] = useState(searchQuery || '');
+
+  useEffect(() => {
+    setLocalQuery(searchQuery || '');
+  }, [searchQuery]);
+
   const handleSearchSubmit = useCallback((e?: React.FormEvent) => {
     e?.preventDefault();
-    if (searchQuery.trim() && onSearch) {
-      onSearch(searchQuery.trim());
+    if (localQuery.trim()) {
+      if (onSearch) {
+        onSearch(localQuery.trim());
+      } else {
+        router.push(`/?q=${encodeURIComponent(localQuery.trim())}`);
+      }
     }
-  }, [searchQuery, onSearch]);
+  }, [localQuery, onSearch, router]);
 
   const clearSearch = useCallback(() => {
+    setLocalQuery('');
     onSearchQueryChange?.('');
     setSearchOpen(false);
   }, [onSearchQueryChange]);
@@ -150,28 +161,17 @@ export default function Header({
                 <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 6 }}>
                   <input
                     autoFocus
-                    value={searchQuery}
-                    onChange={e => onSearchQueryChange?.(e.target.value)}
+                    value={localQuery}
+                    onChange={e => {
+                      setLocalQuery(e.target.value);
+                      onSearchQueryChange?.(e.target.value);
+                    }}
                     placeholder="Search..."
                     className="ir-input"
                     style={{
                       width: 160, padding: '6px 12px', fontSize: 13, borderRadius: 6,
                     }}
                   />
-                  <button
-                    type="submit"
-                    disabled={ingesting || !searchQuery.trim()}
-                    style={{
-                      border: '1px solid var(--color-ink)', background: 'var(--color-ink)',
-                      color: 'var(--bg-primary)', borderRadius: 6, padding: '6px 10px',
-                      fontSize: 12, fontWeight: 700,
-                      cursor: ingesting || !searchQuery.trim() ? 'not-allowed' : 'pointer',
-                      opacity: ingesting || !searchQuery.trim() ? 0.5 : 1,
-                      fontFamily: 'var(--font-sans)',
-                    }}
-                  >
-                    Go
-                  </button>
                 </form>
               ) : null}
               
