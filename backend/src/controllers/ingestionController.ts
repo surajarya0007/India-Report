@@ -27,7 +27,9 @@ const CATEGORY_FEEDS: Record<string, string> = {
   'Entertainment': 'https://news.google.com/news/rss/headlines/section/topic/ENTERTAINMENT?hl=en-IN&gl=IN&ceid=IN:en',
   'Sports': 'https://news.google.com/news/rss/headlines/section/topic/SPORTS?hl=en-IN&gl=IN&ceid=IN:en',
   'World': 'https://news.google.com/news/rss/headlines/section/topic/WORLD?hl=en-IN&gl=IN&ceid=IN:en',
-  'India': 'https://news.google.com/news/rss/headlines/section/topic/NATION?hl=en-IN&gl=IN&ceid=IN:en'
+  'India': 'https://news.google.com/news/rss/headlines/section/topic/NATION?hl=en-IN&gl=IN&ceid=IN:en',
+  'Finance': 'https://news.google.com/rss/search?q=finance&hl=en-IN&gl=IN&ceid=IN:en',
+  'Politics': 'https://news.google.com/news/rss/headlines/section/topic/POLITICS?hl=en-IN&gl=IN&ceid=IN:en'
 };
 
 const getApiKeys = (): string[] => {

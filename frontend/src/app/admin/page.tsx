@@ -1057,7 +1057,7 @@ export default function AdminDashboard() {
                           className="ir-input"
                           style={{ background: 'var(--bg-primary)', padding: '10px 12px' }}
                         >
-                          {['Tech', 'Business', 'Science', 'Health', 'Entertainment', 'Sports', 'World', 'India'].map(cat => (
+                          {['Tech', 'Business', 'Science', 'Health', 'Entertainment', 'Sports', 'World', 'India', 'Finance', 'Politics'].map(cat => (
                             <option key={cat} value={cat}>{cat} RSS Feed</option>
                           ))}
                         </select>
