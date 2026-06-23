@@ -23,6 +23,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [googleClientId, setGoogleClientId] = useState('');
 
   const resetForm = () => {
     setName('');
@@ -65,6 +66,27 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     return () => window.removeEventListener('message', handleMessage);
   }, [login, signup, onClose]);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    let ignore = false;
+
+    fetch('/api/runtime-config', { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((config) => {
+        if (!ignore) {
+          setGoogleClientId(config?.googleClientId || '');
+        }
+      })
+      .catch((err) => {
+        console.error('[LoginModal] Failed to load runtime config:', err);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isOpen]);
+
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -98,10 +120,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   };
 
   const handleGoogleClick = () => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    const clientId = googleClientId;
     
     if (!clientId || clientId.trim() === '' || clientId.includes('YOUR_GOOGLE_CLIENT_ID')) {
-      setError('Please add NEXT_PUBLIC_GOOGLE_CLIENT_ID to your frontend/.env.local file.');
+      setError('Google sign in is not configured yet.');
       return;
     }
 

@@ -120,7 +120,9 @@ export default function WeatherWidget() {
     // Helper to get from backend IP proxy
     const getIPLocation = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const API_URL =
+          process.env.NEXT_PUBLIC_API_URL ||
+          (process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : '');
         const locRes = await fetch(`${API_URL}/api/location`);
         if (locRes.ok) {
           const locData = await locRes.json();
@@ -435,4 +437,3 @@ export default function WeatherWidget() {
     </div>
   );
 }
-

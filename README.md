@@ -113,6 +113,59 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to view the 
 
 ---
 
+## ☁️ Deploying to Google Cloud Run
+
+This project deploys as two Cloud Run services:
+
+- **Backend**: Express API from `/backend`
+- **Frontend**: Next.js standalone server from `/frontend`
+
+### 1. Prerequisites
+
+Install and authenticate the Google Cloud CLI, then enable the required APIs:
+
+```bash
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+```
+
+### 2. Configure backend environment variables
+
+Create a local env file for the backend deployment. Do not commit this file.
+
+```yaml
+# backend.env.yaml
+DATABASE_URL: "postgresql://postgres:password@db.supabase.co:5432/postgres"
+REDIS_URL: "rediss://default:password@upstash.io:6379"
+GEMINI_API_KEY: "your_gemini_api_key"
+FIRECRAWL_API_KEY: "your_firecrawl_api_key"
+NEWS_API_KEY: "your_news_api_key"
+```
+
+For production, prefer Secret Manager instead of inline secret values.
+
+### 3. Deploy both services
+
+```bash
+chmod +x deploy/cloud-run.sh
+PROJECT_ID=YOUR_PROJECT_ID REGION=asia-south1 BACKEND_ENV_FILE=backend.env.yaml ./deploy/cloud-run.sh
+```
+
+The script deploys the backend first, reads its Cloud Run URL, then deploys the frontend with `BACKEND_URL` set. The frontend exposes a runtime `/api/*` proxy route that forwards browser requests to the backend.
+
+### 4. Optional frontend variables
+
+If you use Google OAuth in the login modal, set the frontend public client id:
+
+```bash
+gcloud run services update india-report-frontend \
+  --region asia-south1 \
+  --set-env-vars NEXT_PUBLIC_GOOGLE_CLIENT_ID="your_google_client_id"
+```
+
+---
+
 ## 🧪 Testing the Pipeline Manually
 You don't need to wait 15 minutes for the cron job to run. The frontend includes a **"Trigger Pipeline"** button in the header.
 Clicking it will send a POST request to `/api/news/ingest` which triggers the ingestion workflow immediately, updates the database, invalidates the cache, and refreshes your newsfeed in real time.

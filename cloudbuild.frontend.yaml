@@ -1,0 +1,46 @@
+steps:
+  - id: build-frontend
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - ${_IMAGE}
+      - .
+    dir: frontend
+
+  - id: push-frontend
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_IMAGE}
+
+  - id: deploy-frontend
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image
+      - ${_IMAGE}
+      - --region
+      - ${_REGION}
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --port
+      - '8080'
+      - --update-env-vars
+      - BACKEND_URL=${_BACKEND_URL}
+
+images:
+  - ${_IMAGE}
+
+substitutions:
+  _REGION: asia-south1
+  _SERVICE: india-report-frontend
+  _BACKEND_URL: https://india-report-backend-qzqmxyljqa-el.a.run.app
+  _IMAGE: asia-south1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/india-report-frontend:$SHORT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
