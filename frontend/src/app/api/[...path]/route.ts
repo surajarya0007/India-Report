@@ -5,7 +5,7 @@ const backendUrl = (
 ).replace(/\/$/, '');
 
 type ProxyContext = {
-  params: Promise<{ path: string[] }> | { path: string[] };
+  params: Promise<{ path: string[] }>;
 };
 
 function getForwardHeaders(request: Request) {
