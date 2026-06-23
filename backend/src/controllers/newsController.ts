@@ -17,6 +17,7 @@ const LIST_SELECT = {
   sentiment: true,
   enrichmentStatus: true,
   createdAt: true,
+  updatedAt: true,
 } as const;
 
 /**
@@ -148,6 +149,7 @@ export async function getSitemapArticles(_req: Request, res: Response) {
         id: true,
         headline: true,
         createdAt: true,
+        updatedAt: true,
         categories: true,
       },
     });

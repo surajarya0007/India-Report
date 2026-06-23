@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Layout from '../../components/Layout';
 import { fetchNews, Article } from '../../lib/api';
 import { Clock, BookOpen, Printer } from 'lucide-react';
@@ -177,12 +178,13 @@ export default function EPaperPage() {
                   </div>
                   <div>
                     {articles[0].imageUrl && (
-                      <div style={{ position: 'relative' }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                      <div style={{ position: 'relative', aspectRatio: '4 / 3', overflow: 'hidden' }}>
+                        <Image
                           src={articles[0].imageUrl}
                           alt="Lead image"
-                          style={{ width: '100%', height: 'auto', border: '1px solid var(--border-secondary)', filter: 'grayscale(1)' }}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 400px"
+                          style={{ objectFit: 'cover', border: '1px solid var(--border-secondary)', filter: 'grayscale(1)' }}
                         />
                         <ImageSourceBadge imageUrl={articles[0].imageUrl} style={{ filter: 'grayscale(1)' }} />
                       </div>

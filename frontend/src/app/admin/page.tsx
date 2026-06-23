@@ -20,6 +20,7 @@ import {
   Article,
   IngestStatusResponse
 } from '../../lib/api';
+import { articlePath } from '../../lib/seo';
 
 type AdminTab = 'overview' | 'cms' | 'ingestion' | 'maintenance';
 
@@ -549,7 +550,7 @@ export default function AdminDashboard() {
                         stats.topArticles.map((art: any, idx: number) => (
                           <div key={art.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: idx < stats.topArticles.length - 1 ? '1px solid var(--border-secondary)' : 'none' }}>
                             <div style={{ flex: 1, paddingRight: 16 }}>
-                              <a href={`/article/${art.id}`} target="_blank" style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-serif)', color: 'var(--color-ink)', textDecoration: 'none' }} className="hover-line">
+                              <a href={articlePath(art.id, art.headline)} target="_blank" style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-serif)', color: 'var(--color-ink)', textDecoration: 'none' }} className="hover-line">
                                 {art.headline}
                               </a>
                               <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
@@ -900,7 +901,7 @@ export default function AdminDashboard() {
                               {articles.slice((cmsPage - 1) * 10, cmsPage * 10).map(art => (
                                 <tr key={art.id} style={{ borderBottom: '1px solid var(--border-secondary)', transition: 'background 0.2s' }}>
                                   <td style={{ padding: '12px 8px', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    <a href={`/article/${art.id}`} target="_blank" style={{ color: 'var(--color-ink)', fontWeight: 700, textDecoration: 'none' }} className="hover-line">
+                                    <a href={articlePath(art.id, art.headline)} target="_blank" style={{ color: 'var(--color-ink)', fontWeight: 700, textDecoration: 'none' }} className="hover-line">
                                       {art.headline}
                                     </a>
                                   </td>

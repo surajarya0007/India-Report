@@ -20,7 +20,23 @@ export interface ArticleSitemapEntry {
   id: string;
   headline: string;
   createdAt: string;
+  updatedAt?: string;
   categories: string[];
+}
+
+export function slugifyHeadline(headline: string): string {
+  return headline
+    .toLowerCase()
+    .replace(/['’"]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 90) || 'article';
+}
+
+export function articlePath(id: string, headline?: string): string {
+  const slug = headline ? slugifyHeadline(headline) : 'article';
+  return `/article/${encodeURIComponent(id)}/${slug}`;
 }
 
 function apiUrl(path: string): string {
@@ -31,8 +47,8 @@ function apiUrl(path: string): string {
   return `${backendUrl}${path}`;
 }
 
-export function articleUrl(id: string): string {
-  return `${siteUrl}/article/${encodeURIComponent(id)}`;
+export function articleUrl(id: string, headline?: string): string {
+  return `${siteUrl}${articlePath(id, headline)}`;
 }
 
 export function buildArticleDescription(article: Article): string {

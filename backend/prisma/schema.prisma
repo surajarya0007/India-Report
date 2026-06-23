@@ -21,6 +21,7 @@ model Article {
   imageUrls         String[] // All scraped image URLs from the articles
   enrichmentStatus  String   @default("complete") // "pending" | "complete"
   createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
   views             ArticleView[]
 
   @@index([keyword])
@@ -46,4 +47,3 @@ model User {
   role         String   @default("user") // "user" | "admin"
   createdAt    DateTime @default(now())
 }
-

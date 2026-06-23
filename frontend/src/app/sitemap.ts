@@ -27,8 +27,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: route === '' ? 1 : 0.5,
     })),
     ...articles.map((article) => ({
-      url: articleUrl(article.id),
-      lastModified: new Date(article.createdAt),
+      url: articleUrl(article.id, article.headline),
+      lastModified: new Date(article.updatedAt || article.createdAt),
       changeFrequency: 'daily' as const,
       priority: 0.8,
     })),

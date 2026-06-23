@@ -16,6 +16,7 @@ export interface Article {
   imageUrls?: string[];
   enrichmentStatus?: 'pending' | 'complete';
   createdAt: string;
+  updatedAt?: string;
   viewCount24h?: number;
 }
 

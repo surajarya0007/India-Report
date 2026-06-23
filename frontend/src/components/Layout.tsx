@@ -6,6 +6,7 @@ import Header from './Header';
 import Footer from './Footer';
 import DisclaimerModal from './DisclaimerModal';
 import { Article, fetchNews } from '../lib/api';
+import { articlePath } from '../lib/seo';
 import { Clock } from 'lucide-react';
 
 interface LayoutProps {
@@ -49,7 +50,7 @@ function BreakingTicker({ articles = [] }: { articles?: Article[] }) {
             item.id ? (
               <Link
                 key={i}
-                href={`/article/${item.id}`}
+                href={articlePath(item.id, item.headline)}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

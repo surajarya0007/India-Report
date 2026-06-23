@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { fetchArticleById, fetchNews, updateArticleImage, recordArticleView, Article } from '../../../lib/api';
+import { articlePath } from '../../../lib/seo';
 import { 
   Clock, 
   ChevronLeft, 
@@ -52,7 +54,7 @@ function SideCard({ article }: { article: Article }) {
   const hasImage = !!article.imageUrl && !imgError;
   return (
     <Link
-      href={`/article/${article.id}`}
+      href={articlePath(article.id, article.headline)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--border-secondary)', textDecoration: 'none', color: 'inherit' }}
     >
@@ -70,13 +72,18 @@ function SideCard({ article }: { article: Article }) {
       }}>
         {hasImage ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={article.imageUrl} alt={article.headline} onError={() => setImgError(true)}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', borderRadius: '8px' }} />
+            <Image
+              src={article.imageUrl!}
+              alt={article.headline}
+              fill
+              sizes="80px"
+              onError={() => setImgError(true)}
+              style={{ objectFit: 'cover' }}
+            />
             <ImageSourceBadge imageUrl={article.imageUrl} style={{ bottom: '3px', right: '3px', padding: '1px 4px', fontSize: '7px', borderRadius: '3px' }} />
           </>
         ) : (
-          <span style={{ color: bg, fontSize: 16, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.3 }}>IR</span>
+          <span style={{ color: bg, fontSize: 16, fontWeight: 900, fontFamily: 'var(--font-serif)', opacity: 0.3 }}>IR</span>
         )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -94,7 +101,7 @@ function SideCard({ article }: { article: Article }) {
           </span>
         )}
         <p style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
+          fontFamily: 'var(--font-serif)',
           fontSize: 13, 
           fontWeight: 700, 
           lineHeight: 1.35, 
@@ -125,7 +132,7 @@ function MoreStoriesCard({ article }: { article: Article }) {
 
   return (
     <Link
-      href={`/article/${article.id}`}
+      href={articlePath(article.id, article.headline)}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -145,18 +152,19 @@ function MoreStoriesCard({ article }: { article: Article }) {
       <div style={{ height: 130, overflow: 'hidden', background: `linear-gradient(135deg, ${bg}22, ${bg}11)`, position: 'relative' }}>
         {hasImage ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={article.imageUrl}
+            <Image
+              src={article.imageUrl!}
               alt={article.headline}
+              fill
+              sizes="(max-width: 768px) 100vw, 300px"
               onError={() => setImgError(true)}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.35s', transform: hov ? 'scale(1.05)' : 'scale(1)' }}
+              style={{ objectFit: 'cover', transition: 'transform 0.35s', transform: hov ? 'scale(1.05)' : 'scale(1)' }}
             />
             <ImageSourceBadge imageUrl={article.imageUrl} style={{ bottom: '6px', right: '6px', padding: '2px 6px', fontSize: '9px', borderRadius: '4px' }} />
           </>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <span style={{ color: bg, fontSize: 32, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.2 }}>IR</span>
+            <span style={{ color: bg, fontSize: 32, fontWeight: 900, fontFamily: 'var(--font-serif)', opacity: 0.2 }}>IR</span>
           </div>
         )}
       </div>
@@ -175,7 +183,7 @@ function MoreStoriesCard({ article }: { article: Article }) {
           </span>
         )}
         <h4 style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
+          fontFamily: 'var(--font-serif)',
           fontSize: 13,
           fontWeight: 700,
           lineHeight: 1.35,
@@ -228,7 +236,7 @@ function PullQuote({ text, color }: { text: string; color: string }) {
         position: 'absolute', top: 16, right: 20
       }} />
       <p style={{
-        fontFamily: "'Playfair Display', Georgia, serif",
+        fontFamily: 'var(--font-serif)',
         fontSize: '19px',
         fontStyle: 'italic',
         fontWeight: 600,
@@ -339,7 +347,7 @@ function ArticleBody({
           borderRadius: '8px',
         }}>
           <h4 style={{
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: 'var(--font-sans)',
             fontSize: 10,
             fontWeight: 900,
             letterSpacing: '0.14em',
@@ -359,7 +367,7 @@ function ArticleBody({
                 borderRadius: '8px',
               }}>
                 <p style={{
-                  fontFamily: "'Source Serif 4', Georgia, serif",
+                  fontFamily: 'var(--font-body)',
                   fontSize: 14,
                   lineHeight: 1.6,
                   color: 'var(--color-ink-secondary)',
@@ -565,7 +573,7 @@ export default function ArticleClient({
 
         {/* Headline */}
         <h1 style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
+          fontFamily: 'var(--font-serif)',
           fontSize: 'clamp(28px, 4vw, 46px)',
           fontWeight: 800,
           lineHeight: 1.15,
@@ -635,12 +643,14 @@ export default function ArticleClient({
             {/* Hero Image */}
             <div style={{ position: 'relative', marginBottom: 20 }}>
               {article.imageUrl ? (
-                <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src={article.imageUrl} 
+                <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '16 / 9', maxHeight: 520 }}>
+                  <Image
+                    src={article.imageUrl!}
                     alt={article.headline}
-                    style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 520, objectFit: 'cover', borderRadius: '8px' }}
+                    fill
+                    priority
+                    sizes="(max-width: 768px) 100vw, 800px"
+                    style={{ objectFit: 'cover' }}
                   />
                   <ImageSourceBadge imageUrl={article.imageUrl} />
                 </div>
@@ -658,7 +668,7 @@ export default function ArticleClient({
                   {article.enrichmentStatus === 'pending' ? (
                     <span style={{ color: 'var(--color-ink-faint)', fontSize: 16, fontWeight: 600, opacity: 0.7 }}>Loading Editorial Image...</span>
                   ) : (
-                    <span style={{ color: categoryColorHex, fontSize: 72, fontWeight: 900, fontFamily: 'Georgia, serif', opacity: 0.15 }}>IR</span>
+                    <span style={{ color: categoryColorHex, fontSize: 72, fontWeight: 900, fontFamily: 'var(--font-serif)', opacity: 0.15 }}>IR</span>
                   )}
                 </div>
               )}
@@ -687,7 +697,7 @@ export default function ArticleClient({
                 </h4>
                 <ul style={{ 
                   margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 12,
-                  fontFamily: "'Source Serif 4', Georgia, serif",
+                  fontFamily: 'var(--font-body)',
                   fontSize: '15.5px', lineHeight: 1.65, color: 'var(--color-ink-secondary)'
                 }}>
                   {article.summary.map((bullet, idx) => (
@@ -705,7 +715,7 @@ export default function ArticleClient({
               paddingBottom: 12, borderBottom: '2px solid var(--border-primary)'
             }}>
               <span style={{
-                fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: 900,
+                fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 900,
                 color: categoryColorHex, letterSpacing: '0.15em', textTransform: 'uppercase'
               }}>
                 IN-DEPTH ANALYSIS
@@ -800,7 +810,7 @@ export default function ArticleClient({
                 paddingBottom: 10, borderBottom: `2.5px solid ${categoryColorHex}` 
               }}>
                 <h3 style={{ 
-                  fontFamily: "'Inter', sans-serif", fontSize: 11, fontWeight: 900,
+                  fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 900,
                   color: 'var(--color-ink)', letterSpacing: '0.12em', margin: 0, textTransform: 'uppercase'
                 }}>
                   Related Stories

@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useNews } from '../hooks/useNews';
 import { Article } from '../lib/api';
+import { articlePath } from '../lib/seo';
 import { Clock, RefreshCw, ChevronRight } from 'lucide-react';
 import Layout from '../components/Layout';
 import ShareDialog from '../components/ShareDialog';
@@ -67,16 +69,14 @@ function ImgBox({ article, height = 180, style = {} }: { article: Article; heigh
         background: `linear-gradient(140deg, ${bg}dd 0%, ${bg}77 100%)`,
         ...style,
       }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={article.imageUrl}
+        <Image
+          src={article.imageUrl!}
           alt={article.headline}
+          fill
+          sizes="(max-width: 768px) 100vw, 640px"
           onError={() => setImgError(true)}
           style={{
-            width: '100%',
-            height: '100%',
             objectFit: 'cover',
-            display: 'block',
           }}
           className="img-fade-in"
         />
@@ -94,7 +94,7 @@ function ImgBox({ article, height = 180, style = {} }: { article: Article; heigh
       overflow: 'hidden', flexShrink: 0,
       ...style,
     }}>
-      <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 48, fontWeight: 900, lineHeight: 1, fontFamily: 'Georgia, serif' }}>IR</span>
+      <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 48, fontWeight: 900, lineHeight: 1, fontFamily: 'var(--font-serif)' }}>IR</span>
       <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 }}>{cat || 'News'}</span>
     </div>
   );
@@ -170,7 +170,7 @@ function FeatureCard({ article, index = 0 }: { article: Article; index?: number 
 
   return (
     <Link
-      href={`/article/${article.id}`}
+      href={articlePath(article.id, article.headline)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="card-entrance"
       style={{ display: 'block', textDecoration: 'none', color: 'inherit', animationDelay: `${index * 50}ms` }}
@@ -208,7 +208,7 @@ function CompactCard({ article, showDivider = true, index = 0 }: { article: Arti
     <>
       {showDivider && <div style={{ height: 1, background: 'var(--border-secondary)', margin: '0' }} />}
       <Link
-        href={`/article/${article.id}`}
+        href={articlePath(article.id, article.headline)}
         onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
         className="card-entrance"
         style={{
@@ -247,7 +247,7 @@ function GridCard({ article, index = 0 }: { article: Article; index?: number }) 
   const firstSentence = article.summary?.[0] ?? '';
   return (
     <Link
-      href={`/article/${article.id}`}
+      href={articlePath(article.id, article.headline)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="card-entrance"
       style={{
@@ -291,7 +291,7 @@ function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: num
   const [hov, setHov] = useState(false);
   return (
     <Link
-      href={`/article/${article.id}`}
+      href={articlePath(article.id, article.headline)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="card-entrance"
       style={{

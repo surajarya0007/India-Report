@@ -48,7 +48,7 @@ function PageTransitionTrigger({ children }: { children: React.ReactNode }) {
             <div className="logo-box animate-logo-r" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, background: 'var(--color-ink)', color: 'var(--bg-primary)', fontWeight: 900, fontSize: 28, fontFamily: 'Georgia, serif', borderRadius: 4 }}>R</div>
           </div>
           <div className="animate-text" style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
+            fontFamily: 'var(--font-serif)',
             fontSize: 22,
             fontWeight: 900,
             letterSpacing: '0.08em',
