@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useNews } from '../hooks/useNews';
 import { Article } from '../lib/api';
 import { Clock, RefreshCw, ChevronRight } from 'lucide-react';
@@ -165,16 +165,15 @@ function BreakingTicker({ articles }: { articles: Article[] }) {
 // ─── Article Cards ────────────────────────────────────────────────────────────
 
 function FeatureCard({ article, index = 0 }: { article: Article; index?: number }) {
-  const router = useRouter();
   const [hov, setHov] = useState(false);
   const firstSentence = article.summary?.[0] ?? '';
 
   return (
-    <div
-      onClick={() => router.push(`/article/${article.id}`)}
+    <Link
+      href={`/article/${article.id}`}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="card-entrance"
-      style={{ cursor: 'pointer', animationDelay: `${index * 50}ms` }}
+      style={{ display: 'block', textDecoration: 'none', color: 'inherit', animationDelay: `${index * 50}ms` }}
     >
       <div style={{ overflow: 'hidden', borderRadius: 3 }}>
         <ImgBox article={article} height={230} style={{ transform: hov ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.35s ease' }} />
@@ -199,22 +198,21 @@ function FeatureCard({ article, index = 0 }: { article: Article; index?: number 
           <span>{timeAgo(article.createdAt)}</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
 function CompactCard({ article, showDivider = true, index = 0 }: { article: Article; showDivider?: boolean; index?: number }) {
-  const router = useRouter();
   const [hov, setHov] = useState(false);
   return (
     <>
       {showDivider && <div style={{ height: 1, background: 'var(--border-secondary)', margin: '0' }} />}
-      <div
-        onClick={() => router.push(`/article/${article.id}`)}
+      <Link
+        href={`/article/${article.id}`}
         onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
         className="card-entrance"
         style={{
-          display: 'flex', gap: 12, padding: '13px 0', cursor: 'pointer',
+          display: 'flex', gap: 12, padding: '13px 0', textDecoration: 'none', color: 'inherit',
           animationDelay: `${index * 50}ms`,
         }}
       >
@@ -239,22 +237,21 @@ function CompactCard({ article, showDivider = true, index = 0 }: { article: Arti
             {timeAgo(article.createdAt)}
           </div>
         </div>
-      </div>
+      </Link>
     </>
   );
 }
 
 function GridCard({ article, index = 0 }: { article: Article; index?: number }) {
-  const router = useRouter();
   const [hov, setHov] = useState(false);
   const firstSentence = article.summary?.[0] ?? '';
   return (
-    <div
-      onClick={() => router.push(`/article/${article.id}`)}
+    <Link
+      href={`/article/${article.id}`}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="card-entrance"
       style={{
-        cursor: 'pointer', borderRadius: 4, overflow: 'hidden',
+        display: 'block', textDecoration: 'none', color: 'inherit', borderRadius: 4, overflow: 'hidden',
         border: '1px solid var(--border-primary)',
         boxShadow: hov ? 'var(--shadow-md)' : 'var(--shadow-sm)',
         transition: 'box-shadow 0.25s',
@@ -286,21 +283,20 @@ function GridCard({ article, index = 0 }: { article: Article; index?: number }) 
           {timeAgo(article.createdAt)}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
 function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: number; index?: number }) {
-  const router = useRouter();
   const [hov, setHov] = useState(false);
   return (
-    <div
-      onClick={() => router.push(`/article/${article.id}`)}
+    <Link
+      href={`/article/${article.id}`}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="card-entrance"
       style={{
         display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 0',
-        borderBottom: '1px solid var(--border-faint)', cursor: 'pointer',
+        borderBottom: '1px solid var(--border-faint)', textDecoration: 'none', color: 'inherit',
         animationDelay: `${index * 50}ms`,
       }}
     >
@@ -325,7 +321,7 @@ function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: num
           {timeAgo(article.createdAt)}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

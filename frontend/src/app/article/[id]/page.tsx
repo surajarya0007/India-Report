@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { fetchArticleById, fetchNews, updateArticleImage, recordArticleView, Article } from '../../../lib/api';
 import { 
   Clock, 
@@ -44,17 +45,16 @@ function catColor(cat?: string) {
 // ─── Sidebar article card ─────────────────────────────────────────────────────
 
 function SideCard({ article }: { article: Article }) {
-  const router = useRouter();
   const [hov, setHov] = useState(false);
   const [imgError, setImgError] = useState(false);
   const cat = article.categories?.[0];
   const bg = catColor(cat);
   const hasImage = !!article.imageUrl && !imgError;
   return (
-    <div
-      onClick={() => router.push(`/article/${article.id}`)}
+    <Link
+      href={`/article/${article.id}`}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--border-secondary)', cursor: 'pointer' }}
+      style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--border-secondary)', textDecoration: 'none', color: 'inherit' }}
     >
       <div style={{ 
         flexShrink: 0, 
@@ -109,14 +109,13 @@ function SideCard({ article }: { article: Article }) {
           {article.headline}
         </p>
       </div>
-    </div>
+    </Link>
   );
 }
 
 // ─── More Stories Card ────────────────────────────────────────────────────────
 
 function MoreStoriesCard({ article }: { article: Article }) {
-  const router = useRouter();
   const [hov, setHov] = useState(false);
   const [imgError, setImgError] = useState(false);
   const cat = article.categories?.[0];
@@ -125,14 +124,15 @@ function MoreStoriesCard({ article }: { article: Article }) {
   const summarySnippet = article.summary?.[0] || '';
 
   return (
-    <div
-      onClick={() => router.push(`/article/${article.id}`)}
+    <Link
+      href={`/article/${article.id}`}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
         display: 'flex',
         flexDirection: 'column',
-        cursor: 'pointer',
+        textDecoration: 'none',
+        color: 'inherit',
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border-primary)',
         borderRadius: '8px',
@@ -207,7 +207,7 @@ function MoreStoriesCard({ article }: { article: Article }) {
           <span>{new Date(article.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

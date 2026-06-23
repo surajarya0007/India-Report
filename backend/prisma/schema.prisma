@@ -38,3 +38,12 @@ model ArticleView {
   @@index([viewedAt])
 }
 
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("user") // "user" | "admin"
+  createdAt    DateTime @default(now())
+}
+

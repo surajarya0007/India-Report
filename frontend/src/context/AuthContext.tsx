@@ -2,25 +2,28 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
 interface User {
   email: string;
   displayName: string;
   avatarInitial: string;
+  role: 'admin' | 'user';
 }
 
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
-  login: (email: string, password: string) => { success: boolean; message: string };
-  signup: (name: string, email: string, password: string) => { success: boolean; message: string };
+  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  signup: (name: string, email: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoggedIn: false,
-  login: () => ({ success: false, message: '' }),
-  signup: () => ({ success: false, message: '' }),
+  login: async () => ({ success: false, message: '' }),
+  signup: async () => ({ success: false, message: '' }),
   logout: () => {},
 });
 
@@ -51,35 +54,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = useCallback((email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     if (!email || !password) {
       return { success: false, message: 'Please fill in all fields.' };
     }
-    if (password.length < 4) {
-      return { success: false, message: 'Invalid credentials.' };
+    try {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        persistUser(data.user);
+        return { success: true, message: data.message || 'Welcome back!' };
+      } else {
+        return { success: false, message: data.message || 'Login failed.' };
+      }
+    } catch (err: any) {
+      console.error('[AuthContext] Login error:', err);
+      return { success: false, message: 'Failed to connect to authentication server.' };
     }
-
-    // Mock authentication — any valid email/password works
-    const displayName = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    const avatarInitial = displayName[0]?.toUpperCase() || 'U';
-    persistUser({ email, displayName, avatarInitial });
-    return { success: true, message: 'Welcome back!' };
   }, [persistUser]);
 
-  const signup = useCallback((name: string, email: string, password: string) => {
+  const signup = useCallback(async (name: string, email: string, password: string) => {
     if (!name || !email || !password) {
       return { success: false, message: 'Please fill in all fields.' };
     }
-    if (password.length < 6) {
-      return { success: false, message: 'Password must be at least 6 characters.' };
+    try {
+      const res = await fetch(`${API_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        persistUser(data.user);
+        return { success: true, message: data.message || 'Account created successfully!' };
+      } else {
+        return { success: false, message: data.message || 'Signup failed.' };
+      }
+    } catch (err: any) {
+      console.error('[AuthContext] Signup error:', err);
+      return { success: false, message: 'Failed to connect to authentication server.' };
     }
-    if (!email.includes('@')) {
-      return { success: false, message: 'Please enter a valid email address.' };
-    }
-
-    const avatarInitial = name[0]?.toUpperCase() || 'U';
-    persistUser({ email, displayName: name, avatarInitial });
-    return { success: true, message: 'Account created successfully!' };
   }, [persistUser]);
 
   const logout = useCallback(() => {

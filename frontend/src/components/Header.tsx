@@ -307,6 +307,22 @@ export default function Header({
                     <div style={{ padding: '8px 12px', fontSize: 11, color: 'var(--color-ink-muted)', borderBottom: '1px solid var(--border-secondary)', marginBottom: 4 }}>
                       {user.email}
                     </div>
+                    {user.role === 'admin' && (
+                      <a
+                        href="/admin"
+                        onClick={() => setUserMenuOpen(false)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                          padding: '8px 12px', textDecoration: 'none',
+                          cursor: 'pointer', fontSize: 12, color: 'var(--color-ink)',
+                          fontWeight: 600, borderRadius: 4, fontFamily: 'var(--font-sans)',
+                          marginBottom: 4
+                        }}
+                      >
+                        <Cpu style={{ width: 14, height: 14 }} />
+                        Admin Dashboard
+                      </a>
+                    )}
                     <button
                       onClick={() => { logout(); setUserMenuOpen(false); }}
                       style={{
@@ -532,7 +548,7 @@ export default function Header({
         </div>
 
         {/* Login in drawer */}
-        {!isLoggedIn && (
+        {!isLoggedIn ? (
           <div style={{ padding: '12px 24px' }}>
             <button
               onClick={() => { setLoginOpen(true); setDrawerOpen(false); }}
@@ -558,6 +574,20 @@ export default function Header({
               Login
             </button>
           </div>
+        ) : (
+          user?.role === 'admin' && (
+            <div style={{ padding: '0 24px 12px 24px' }}>
+              <a
+                href="/admin"
+                onClick={() => setDrawerOpen(false)}
+                className="ir-drawer-link"
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: 'none' }}
+              >
+                <Cpu style={{ width: 16, height: 16 }} />
+                Admin Dashboard
+              </a>
+            </div>
+          )
         )}
       </nav>
 

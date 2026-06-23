@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Header from './Header';
 import Footer from './Footer';
 import DisclaimerModal from './DisclaimerModal';
@@ -24,7 +24,6 @@ interface LayoutProps {
 
 // Breaking ticker component (extracted from page.tsx)
 function BreakingTicker({ articles = [] }: { articles?: Article[] }) {
-  const router = useRouter();
   const items = articles.length > 0
     ? [...articles, ...articles]
     : [
@@ -47,24 +46,43 @@ function BreakingTicker({ articles = [] }: { articles?: Article[] }) {
       <div style={{ overflow: 'hidden', flex: 1 }}>
         <div className="ticker-track" style={{ display: 'flex', width: 'max-content', alignItems: 'center', height: 36 }}>
           {items.map((item, i) => (
-            <span 
-              key={i} 
-              onClick={() => item.id && router.push(`/article/${item.id}`)}
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                color: '#fff', 
-                fontSize: 13, 
-                padding: '0 28px', 
-                whiteSpace: 'nowrap', 
-                gap: 10,
-                cursor: item.id ? 'pointer' : 'default',
-              }}
-              className={item.id ? 'ticker-item-clickable' : ''}
-            >
-              <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'inline-block', flexShrink: 0 }} />
-              {item.headline}
-            </span>
+            item.id ? (
+              <Link
+                key={i}
+                href={`/article/${item.id}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  color: '#fff',
+                  fontSize: 13,
+                  padding: '0 28px',
+                  whiteSpace: 'nowrap',
+                  gap: 10,
+                  textDecoration: 'none',
+                }}
+                className="ticker-item-clickable"
+              >
+                <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'inline-block', flexShrink: 0 }} />
+                {item.headline}
+              </Link>
+            ) : (
+              <span
+                key={i}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  color: '#fff',
+                  fontSize: 13,
+                  padding: '0 28px',
+                  whiteSpace: 'nowrap',
+                  gap: 10,
+                  cursor: 'default',
+                }}
+              >
+                <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'inline-block', flexShrink: 0 }} />
+                {item.headline}
+              </span>
+            )
           ))}
         </div>
       </div>

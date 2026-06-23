@@ -250,3 +250,113 @@ export async function recordArticleView(id: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Fetch dashboard statistics for administrator.
+ */
+export async function fetchAdminStats(adminEmail: string): Promise<any> {
+  try {
+    const response = await fetch(`${API_URL}/api/admin/stats`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Email': adminEmail
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Stats fetch failed with status ${response.status}`);
+    }
+    const res = await response.json();
+    return res.success ? res.stats : null;
+  } catch (error) {
+    console.error('[API] fetchAdminStats error:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a news article manually (Admin).
+ */
+export async function createArticle(article: Partial<Article>, adminEmail: string): Promise<Article | null> {
+  try {
+    const response = await fetch(`${API_URL}/api/admin/news`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Email': adminEmail
+      },
+      body: JSON.stringify(article)
+    });
+    if (!response.ok) {
+      throw new Error(`Article creation failed: ${response.statusText}`);
+    }
+    const res = await response.json();
+    return res.success ? res.data : null;
+  } catch (error) {
+    console.error('[API] createArticle error:', error);
+    return null;
+  }
+}
+
+/**
+ * Update an article manually (Admin).
+ */
+export async function updateArticle(id: string, article: Partial<Article>, adminEmail: string): Promise<Article | null> {
+  try {
+    const response = await fetch(`${API_URL}/api/admin/news/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Email': adminEmail
+      },
+      body: JSON.stringify(article)
+    });
+    if (!response.ok) {
+      throw new Error(`Article update failed: ${response.statusText}`);
+    }
+    const res = await response.json();
+    return res.success ? res.data : null;
+  } catch (error) {
+    console.error('[API] updateArticle error:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete an article (Admin).
+ */
+export async function deleteArticle(id: string, adminEmail: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_URL}/api/admin/news/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'X-Admin-Email': adminEmail
+      }
+    });
+    if (!response.ok) return false;
+    const res = await response.json();
+    return res.success;
+  } catch (error) {
+    console.error('[API] deleteArticle error:', error);
+    return false;
+  }
+}
+
+/**
+ * Clear Redis cache entirely (Admin).
+ */
+export async function clearRedisCache(adminEmail: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_URL}/api/admin/clear-cache`, {
+      method: 'POST',
+      headers: {
+        'X-Admin-Email': adminEmail
+      }
+    });
+    if (!response.ok) return false;
+    const res = await response.json();
+    return res.success;
+  } catch (error) {
+    console.error('[API] clearRedisCache error:', error);
+    return false;
+  }
+}

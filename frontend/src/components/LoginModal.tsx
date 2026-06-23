@@ -38,10 +38,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   };
 
   React.useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
+    const handleMessage = async (event: MessageEvent) => {
       if (event.data && event.data.type === 'GOOGLE_AUTH_SUCCESS') {
         const { email: googleEmail, name: googleName } = event.data;
-        const result = login(googleEmail, 'google-oauth-flow-secret');
+        // Try login. If it fails, sign them up first.
+        let result = await login(googleEmail, 'google-oauth-flow-secret');
+        if (!result.success) {
+          result = await signup(googleName, googleEmail, 'google-oauth-flow-secret');
+        }
+        
         if (result.success) {
           setSuccess(`Signed in as ${googleName}`);
           setError('');
@@ -58,15 +63,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [login, onClose]);
+  }, [login, signup, onClose]);
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
 
     if (mode === 'login') {
-      const result = login(email, password);
+      const result = await login(email, password);
       if (result.success) {
         setSuccess(result.message);
         setTimeout(() => {
@@ -78,7 +83,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         setError(result.message);
       }
     } else {
-      const result = signup(name, email, password);
+      const result = await signup(name, email, password);
       if (result.success) {
         setSuccess(result.message);
         setTimeout(() => {

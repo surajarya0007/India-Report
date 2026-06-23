@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import newsRoutes from './routes/newsRoutes';
+import authRoutes from './routes/authRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 dotenv.config();
 
@@ -71,6 +73,10 @@ app.get('/api/location', async (req, res) => {
 
 // Mount News and Ingestion API routes
 app.use('/api/news', newsRoutes);
+
+// Mount Auth and Admin API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {
