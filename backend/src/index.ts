@@ -28,40 +28,57 @@ app.get('/api/location', async (req, res) => {
     // Check if loopback/local IP
     const isLocal = !clientIp || clientIp === '::1' || clientIp === '127.0.0.1' || clientIp.startsWith('192.168.') || clientIp.startsWith('10.') || clientIp.includes('127.0.0.1');
 
-    const url = isLocal
-      ? 'https://freeipapi.com/api/json'
-      : `https://freeipapi.com/api/json/${clientIp}`;
-
-    const apiRes = await fetch(url);
-    if (!apiRes.ok) {
-      throw new Error(`FreeIPAPI returned status ${apiRes.status}`);
-    }
-    const data = await apiRes.json();
-    res.json({
-      success: true,
-      city: data.cityName || 'New Delhi',
-      latitude: data.latitude || 28.6139,
-      longitude: data.longitude || 77.2090,
-    });
-  } catch (err: any) {
-    console.error('Backend geolocation proxy error:', err.message);
-    
-    // Fallback to ipapi.co (server-to-server)
+    // 1. Try ip-api.com first (higher accuracy for dynamic Indian IPs)
     try {
-      const apiRes = await fetch('https://ipapi.co/json/');
+      const ipApiUrl = isLocal
+        ? 'http://ip-api.com/json'
+        : `http://ip-api.com/json/${clientIp}`;
+
+      const apiRes = await fetch(ipApiUrl);
+      if (apiRes.ok) {
+        const data = await apiRes.json();
+        if (data.status === 'success') {
+          return res.json({
+            success: true,
+            city: data.city || 'New Delhi',
+            latitude: data.lat || 28.6139,
+            longitude: data.lon || 77.2090,
+          });
+        }
+      }
+    } catch (ipApiErr: any) {
+      console.error('IP-API proxy error:', ipApiErr.message);
+    }
+
+    // 2. Fallback to freeipapi.com
+    try {
+      const freeIpUrl = isLocal
+        ? 'https://freeipapi.com/api/json'
+        : `https://freeipapi.com/api/json/${clientIp}`;
+
+      const apiRes = await fetch(freeIpUrl);
       if (apiRes.ok) {
         const data = await apiRes.json();
         return res.json({
           success: true,
-          city: data.city || 'New Delhi',
+          city: data.cityName || 'New Delhi',
           latitude: data.latitude || 28.6139,
           longitude: data.longitude || 77.2090,
         });
       }
-    } catch (fallbackErr: any) {
-      console.error('Fallback ipapi.co server-to-server also failed:', fallbackErr.message);
+    } catch (freeIpErr: any) {
+      console.error('FreeIPAPI fallback error:', freeIpErr.message);
     }
 
+    // 3. Absolute fallback to New Delhi
+    res.json({
+      success: false,
+      city: 'New Delhi',
+      latitude: 28.6139,
+      longitude: 77.2090,
+    });
+  } catch (err: any) {
+    console.error('General geolocation proxy error:', err.message);
     res.json({
       success: false,
       city: 'New Delhi',
