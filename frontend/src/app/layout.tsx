@@ -116,7 +116,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd).replace(/</g, '\\u003c') }}
         />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>
             {children}

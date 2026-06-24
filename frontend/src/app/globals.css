@@ -602,26 +602,47 @@ img {
    ════════════════════════════════════════════════════════════════════════════ */
 
 .weather-popup {
-  position: absolute;
-  top: calc(100% + 8px);
+  position: fixed;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%) scale(0.95);
+  transform: translate(-50%, -50%) scale(0.95);
   background: var(--bg-elevated);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 20px;
-  width: 280px;
-  box-shadow: var(--shadow-lg);
+  border-radius: 16px;
+  padding: 0;
+  width: 580px;
+  max-width: 92vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: none; /* Hide scrollbar for Firefox */
+  -ms-overflow-style: none; /* Hide scrollbar for IE/Edge */
+  box-shadow: var(--shadow-xl);
   opacity: 0;
   visibility: hidden;
   transition: all var(--transition-base);
-  z-index: 100;
+  z-index: 999;
 }
 
 .weather-popup.open {
   opacity: 1;
   visibility: visible;
-  transform: translateX(-50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.weather-popup::-webkit-scrollbar {
+  display: none;
+}
+
+.weather-hourly-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.weather-hourly-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.weather-hourly-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 2px;
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
