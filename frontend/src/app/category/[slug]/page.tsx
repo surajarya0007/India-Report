@@ -81,8 +81,8 @@ export async function generateMetadata({ params }: CategoryPageParams): Promise<
 function CategoryCard({ article, featured = false }: { article: Article; featured?: boolean }) {
   const description = buildArticleDescription(article);
   const hasImage = Boolean(article.imageUrl);
-  const href = articlePath(article.id, article.headline);
   const category = article.categories?.[0];
+  const href = articlePath(category || 'news', article.headline);
 
   return (
     <article

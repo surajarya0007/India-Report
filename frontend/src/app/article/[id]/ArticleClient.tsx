@@ -54,7 +54,7 @@ function SideCard({ article }: { article: Article }) {
   const hasImage = !!article.imageUrl && !imgError;
   return (
     <Link
-      href={articlePath(article.id, article.headline)}
+      href={articlePath(article.categories?.[0] || 'news', article.headline)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{ display: 'flex', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--border-secondary)', textDecoration: 'none', color: 'inherit' }}
     >
@@ -133,7 +133,7 @@ function MoreStoriesCard({ article }: { article: Article }) {
 
   return (
     <Link
-      href={articlePath(article.id, article.headline)}
+      href={articlePath(article.categories?.[0] || 'news', article.headline)}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -413,16 +413,18 @@ interface ArticleClientProps {
   initialArticle?: Article | null;
   initialRelated?: Article[];
   initialMoreStories?: Article[];
+  articleId?: string;
 }
 
 export default function ArticleClient({
   initialArticle = null,
   initialRelated = [],
   initialMoreStories = [],
+  articleId,
 }: ArticleClientProps) {
   const params = useParams();
   const router = useRouter();
-  const id = params?.id as string;
+  const id = articleId || (params?.id as string);
 
   const [article, setArticle] = useState<Article | null>(initialArticle);
   const [related, setRelated] = useState<Article[]>(initialRelated);

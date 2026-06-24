@@ -46,9 +46,9 @@ export function slugifyHeadline(headline: string): string {
     .slice(0, 90) || 'article';
 }
 
-export function articlePath(id: string, headline?: string): string {
+export function articlePath(category: string, headline?: string): string {
   const slug = headline ? slugifyHeadline(headline) : 'article';
-  return `/article/${encodeURIComponent(id)}/${slug}`;
+  return `/${categorySlug(category)}/${slug}`;
 }
 
 export function categorySlug(category: string): string {
@@ -75,8 +75,15 @@ function apiUrl(path: string): string {
   return `${backendUrl}${path}`;
 }
 
-export function articleUrl(id: string, headline?: string): string {
-  return `${siteUrl}${articlePath(id, headline)}`;
+export function articleUrl(category: string, headline?: string): string {
+  return `${siteUrl}${articlePath(category, headline)}`;
+}
+
+export async function findArticleByCategoryAndSlug(category: string, slug: string): Promise<Article | null> {
+  const articles = await fetchArticlesForCategory(category);
+  const match = articles.find((article) => slugifyHeadline(article.headline) === slug);
+  if (!match) return null;
+  return fetchArticleForSeo(match.id);
 }
 
 export function buildArticleDescription(article: Article): string {

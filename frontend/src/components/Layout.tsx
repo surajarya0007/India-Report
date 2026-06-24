@@ -50,7 +50,7 @@ function BreakingTicker({ articles = [] }: { articles?: Article[] }) {
             item.id ? (
               <Link
                 key={i}
-                href={articlePath(item.id, item.headline)}
+                href={articlePath('categories' in item && item.categories?.[0] ? item.categories[0] : 'news', item.headline)}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

@@ -13,5 +13,10 @@ export default async function ArticleLegacyPage({ params }: ArticlePageParams) {
     notFound();
   }
 
-  redirect(articlePath(article.id, article.headline));
+  const primaryCategory = article.categories?.[0];
+  if (!primaryCategory) {
+    notFound();
+  }
+
+  redirect(articlePath(primaryCategory, article.headline));
 }

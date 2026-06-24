@@ -171,7 +171,7 @@ function FeatureCard({ article, index = 0 }: { article: Article; index?: number 
 
   return (
     <Link
-      href={articlePath(article.id, article.headline)}
+      href={articlePath(article.categories?.[0] || 'news', article.headline)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="card-entrance"
       style={{ display: 'block', textDecoration: 'none', color: 'inherit', animationDelay: `${index * 50}ms` }}
@@ -209,7 +209,7 @@ function CompactCard({ article, showDivider = true, index = 0 }: { article: Arti
     <>
       {showDivider && <div style={{ height: 1, background: 'var(--border-secondary)', margin: '0' }} />}
       <Link
-        href={articlePath(article.id, article.headline)}
+        href={articlePath(article.categories?.[0] || 'news', article.headline)}
         onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
         className="card-entrance"
         style={{
@@ -248,7 +248,7 @@ function GridCard({ article, index = 0 }: { article: Article; index?: number }) 
   const firstSentence = article.summary?.[0] ?? '';
   return (
     <Link
-      href={articlePath(article.id, article.headline)}
+      href={articlePath(article.categories?.[0] || 'news', article.headline)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="card-entrance"
       style={{
@@ -292,7 +292,7 @@ function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: num
   const [hov, setHov] = useState(false);
   return (
     <Link
-      href={articlePath(article.id, article.headline)}
+      href={articlePath(article.categories?.[0] || 'news', article.headline)}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="card-entrance"
       style={{

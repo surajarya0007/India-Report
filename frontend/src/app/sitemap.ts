@@ -33,7 +33,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     })),
     ...articles.map((article) => ({
-      url: articleUrl(article.id, article.headline),
+      url: articleUrl(article.categories?.[0] || 'news', article.headline),
       lastModified: new Date(article.updatedAt || article.createdAt),
       changeFrequency: 'daily' as const,
       priority: 0.8,

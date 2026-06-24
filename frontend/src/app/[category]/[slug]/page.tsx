@@ -1,29 +1,39 @@
 import type { Metadata } from 'next';
-import { notFound, redirect } from 'next/navigation';
-import ArticleClient from '../ArticleClient';
+import { notFound } from 'next/navigation';
+import ArticleClient from '../../article/[id]/ArticleClient';
 import {
   PUBLISHER_NAME,
   SITE_NAME,
-  articlePath,
   articleUrl,
   buildArticleDescription,
+  categoryNameFromSlug,
   categoryUrl,
-  fetchArticleForSeo,
-  fetchRelatedArticlesForSeo,
+  findArticleByCategoryAndSlug,
   siteUrl,
-  slugifyHeadline,
-} from '../../../../lib/seo';
+} from '../../../lib/seo';
 
+export const dynamic = 'force-dynamic';
 export const revalidate = 900;
 
 type ArticlePageParams = {
-  params: Promise<{ id: string; slug: string }>;
+  params: Promise<{ category: string; slug: string }>;
 };
 
 export async function generateMetadata({ params }: ArticlePageParams): Promise<Metadata> {
-  const { id } = await params;
-  const article = await fetchArticleForSeo(id);
+  const { category, slug } = await params;
+  const categoryName = categoryNameFromSlug(category);
 
+  if (!categoryName) {
+    return {
+      title: `Article Not Found | ${SITE_NAME}`,
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const article = await findArticleByCategoryAndSlug(categoryName, slug);
   if (!article) {
     return {
       title: `Article Not Found | ${SITE_NAME}`,
@@ -35,7 +45,7 @@ export async function generateMetadata({ params }: ArticlePageParams): Promise<M
   }
 
   const description = buildArticleDescription(article);
-  const canonicalUrl = articleUrl(article.id, article.headline);
+  const canonicalUrl = articleUrl(categoryName, article.headline);
   const images = article.imageUrl ? [{ url: article.imageUrl, alt: article.headline }] : [];
 
   return {
@@ -74,30 +84,26 @@ export async function generateMetadata({ params }: ArticlePageParams): Promise<M
 }
 
 export default async function ArticlePage({ params }: ArticlePageParams) {
-  const { id, slug } = await params;
-  const article = await fetchArticleForSeo(id);
+  const { category, slug } = await params;
+  const categoryName = categoryNameFromSlug(category);
+
+  if (!categoryName) {
+    notFound();
+  }
+
+  const article = await findArticleByCategoryAndSlug(categoryName, slug);
 
   if (!article) {
     notFound();
   }
 
-  const canonicalSlug = slugifyHeadline(article.headline);
-  if (slug !== canonicalSlug) {
-    redirect(articlePath(article.id, article.headline));
-  }
-
-  const relatedArticles = await fetchRelatedArticlesForSeo(article);
-  const related = relatedArticles.slice(0, 5);
-  const moreStories = relatedArticles.filter((story) => !related.some((item) => item.id === story.id)).slice(0, 4);
-  const description = buildArticleDescription(article);
-  const canonicalUrl = articleUrl(article.id, article.headline);
-  const primaryCategory = article.categories?.[0];
+  const canonicalUrl = articleUrl(categoryName, article.headline);
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
     headline: article.headline,
-    description,
+    description: buildArticleDescription(article),
     image: article.imageUrl ? [article.imageUrl] : undefined,
     datePublished: article.createdAt,
     dateModified: article.updatedAt || article.createdAt,
@@ -124,35 +130,29 @@ export default async function ArticlePage({ params }: ArticlePageParams) {
     isAccessibleForFree: true,
   };
 
-  const breadcrumbItems = [
-    {
-      '@type': 'ListItem',
-      position: 1,
-      name: 'Home',
-      item: siteUrl,
-    },
-  ];
-
-  if (primaryCategory) {
-    breadcrumbItems.push({
-      '@type': 'ListItem',
-      position: 2,
-      name: primaryCategory,
-      item: categoryUrl(primaryCategory),
-    });
-  }
-
-  breadcrumbItems.push({
-    '@type': 'ListItem',
-    position: primaryCategory ? 3 : 2,
-    name: article.headline,
-    item: canonicalUrl,
-  });
-
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    itemListElement: breadcrumbItems,
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: siteUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: categoryName,
+        item: categoryUrl(categoryName),
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: article.headline,
+        item: canonicalUrl,
+      },
+    ],
   };
 
   return (
@@ -167,8 +167,9 @@ export default async function ArticlePage({ params }: ArticlePageParams) {
       />
       <ArticleClient
         initialArticle={article}
-        initialRelated={related}
-        initialMoreStories={moreStories}
+        initialRelated={[]}
+        initialMoreStories={[]}
+        articleId={article.id}
       />
     </>
   );
