@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Link2, Check, MessageCircle } from 'lucide-react';
 
 interface ShareDialogProps {
@@ -23,7 +23,14 @@ const SHARE_OPTIONS = [
 
 export default function ShareDialog({ isOpen, onClose, url, title }: ShareDialogProps) {
   const [copied, setCopied] = useState(false);
-  const shareUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
+  const [shareUrl, setShareUrl] = useState(url || '');
+
+  useEffect(() => {
+    if (!url && typeof window !== 'undefined') {
+      setShareUrl(window.location.href);
+    }
+  }, [url]);
+
   const shareTitle = title || 'Check out this article on India Reports';
 
   const handleCopy = async () => {

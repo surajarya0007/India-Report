@@ -53,12 +53,12 @@ export default function Footer({ onNavChange, onDisclaimerClick }: FooterProps) 
 
   return (
     <>
-      <footer className="ir-footer" style={{ marginTop: 20 }}>
-        <div className="ir-container" style={{ padding: '48px 20px 0' }}>
+      <footer className="ir-footer" style={{ marginTop: 'var(--spacing-md)' }}>
+        <div className="ir-container" style={{ padding: 'var(--spacing-xxl) var(--container-padding) 0' }}>
           {/* Main Grid */}
           <div className="ir-footer-grid" style={{
             display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1fr',
-            gap: 40, marginBottom: 36,
+            gap: 'var(--spacing-xl)', marginBottom: 'var(--spacing-xl)',
           }}>
             {/* Column 1: Brand */}
             <div>

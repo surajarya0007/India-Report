@@ -181,22 +181,22 @@ function FeatureCard({ article, index = 0 }: { article: Article; index?: number 
       <div style={{ overflow: 'hidden', borderRadius: 3 }}>
         <ImgBox article={article} height={230} style={{ transform: hov ? 'scale(1.04)' : 'scale(1)', transition: 'transform 0.35s ease' }} priority={true} />
       </div>
-      <div style={{ marginTop: 12 }}>
+      <div style={{ marginTop: 'var(--spacing-sm)' }}>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
           <CatTag cat={article.categories?.[0]} />
           {article.enrichmentStatus === 'pending' && <EnrichingBadge />}
         </div>
         <h2 style={{
           fontFamily: 'var(--font-serif)',
-          fontSize: 22, fontWeight: 800, lineHeight: 1.25, marginTop: 8, marginBottom: 8,
+          fontSize: 'var(--fs-xl)', fontWeight: 800, lineHeight: 1.25, marginTop: 'var(--spacing-sm)', marginBottom: 'var(--spacing-sm)',
           color: hov ? 'var(--ir-crimson)' : 'var(--color-ink)', transition: 'color 0.2s',
         }}>
           {article.headline}
         </h2>
-        <p style={{ fontSize: 13, color: 'var(--color-ink-muted)', lineHeight: 1.65, marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-ink-muted)', lineHeight: 1.65, marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {firstSentence}
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--color-ink-faint)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-ink-faint)' }}>
           <Clock style={{ width: 11, height: 11 }} aria-hidden="true" />
           <time dateTime={new Date(article.createdAt).toISOString()}>{timeAgo(article.createdAt)}</time>
         </div>
@@ -215,7 +215,7 @@ function CompactCard({ article, showDivider = true, index = 0 }: { article: Arti
         onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
         className="card-entrance"
         style={{
-          display: 'flex', gap: 12, padding: '13px 0', textDecoration: 'none', color: 'inherit',
+          display: 'flex', gap: 'var(--spacing-md)', padding: 'var(--spacing-sm) 0', textDecoration: 'none', color: 'inherit',
           animationDelay: `${index * 50}ms`,
         }}
       >
@@ -229,13 +229,13 @@ function CompactCard({ article, showDivider = true, index = 0 }: { article: Arti
           </div>
           <h3 style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: 14, fontWeight: 700, lineHeight: 1.3, marginTop: 5,
+            fontSize: 'var(--fs-base)', fontWeight: 700, lineHeight: 1.3, marginTop: 5,
             color: hov ? 'var(--ir-crimson)' : 'var(--color-ink)', transition: 'color 0.2s',
             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>
             {article.headline}
           </h3>
-          <div style={{ fontSize: 11, color: 'var(--color-ink-ghost)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-ink-ghost)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
             <Clock style={{ width: 10, height: 10 }} aria-hidden="true" />
             <time dateTime={new Date(article.createdAt).toISOString()}>{timeAgo(article.createdAt)}</time>
           </div>
@@ -265,23 +265,23 @@ function GridCard({ article, index = 0 }: { article: Article; index?: number }) 
       <div style={{ overflow: 'hidden' }}>
         <ImgBox article={article} height={140} style={{ transform: hov ? 'scale(1.05)' : 'scale(1)', transition: 'transform 0.35s' }} />
       </div>
-      <div style={{ padding: '12px 13px 14px' }}>
+      <div style={{ padding: 'var(--spacing-sm) var(--spacing-md)' }}>
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
           <CatTag cat={article.categories?.[0]} />
           {article.enrichmentStatus === 'pending' && <EnrichingBadge />}
         </div>
         <h3 style={{
           fontFamily: 'var(--font-serif)',
-          fontSize: 14, fontWeight: 700, lineHeight: 1.3, marginTop: 7, marginBottom: 5,
+          fontSize: 'var(--fs-base)', fontWeight: 700, lineHeight: 1.3, marginTop: 7, marginBottom: 5,
           color: hov ? 'var(--ir-crimson)' : 'var(--color-ink)', transition: 'color 0.2s',
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
           {article.headline}
         </h3>
-        <p style={{ fontSize: 12, color: 'var(--color-ink-muted)', lineHeight: 1.5, marginBottom: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-ink-muted)', lineHeight: 1.5, marginBottom: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {firstSentence}
         </p>
-        <div style={{ fontSize: 11, color: 'var(--color-ink-ghost)', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-ink-ghost)', display: 'flex', alignItems: 'center', gap: 4 }}>
           <Clock style={{ width: 10, height: 10 }} aria-hidden="true" />
           <time dateTime={new Date(article.createdAt).toISOString()}>{timeAgo(article.createdAt)}</time>
         </div>
@@ -298,12 +298,12 @@ function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: num
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       className="card-entrance"
       style={{
-        display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 0',
+        display: 'flex', gap: 10, alignItems: 'flex-start', padding: 'var(--spacing-sm) 0',
         borderBottom: '1px solid var(--border-faint)', textDecoration: 'none', color: 'inherit',
         animationDelay: `${index * 50}ms`,
       }}
     >
-      <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--border-primary)', fontFamily: 'Georgia, serif', lineHeight: 1, flexShrink: 0, minWidth: 26, textAlign: 'right' }}>
+      <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 900, color: 'var(--border-primary)', fontFamily: 'Georgia, serif', lineHeight: 1, flexShrink: 0, minWidth: 26, textAlign: 'right' }}>
         {String(rank).padStart(2, '0')}
       </span>
       <div style={{ minWidth: 0 }}>
@@ -313,13 +313,13 @@ function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: num
         </div>
         <h4 style={{
           fontFamily: 'var(--font-serif)',
-          fontSize: 13, fontWeight: 700, lineHeight: 1.35, marginTop: 5,
+          fontSize: 'var(--fs-sm)', fontWeight: 700, lineHeight: 1.35, marginTop: 5,
           color: hov ? 'var(--ir-crimson)' : 'var(--color-ink)', transition: 'color 0.2s',
           display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
         }}>
           {article.headline}
         </h4>
-        <div style={{ fontSize: 11, color: 'var(--color-ink-ghost)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+        <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-ink-ghost)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
           <Clock style={{ width: 10, height: 10 }} aria-hidden="true" />
           <time dateTime={new Date(article.createdAt).toISOString()}>{timeAgo(article.createdAt)}</time>
         </div>
@@ -332,9 +332,9 @@ function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: num
 
 function SectionHead({ title }: { title: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--color-ink)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-md)', paddingBottom: 10, borderBottom: '2px solid var(--color-ink)' }}>
       <div style={{ width: 4, height: 20, background: 'var(--ir-crimson)', borderRadius: 2, flexShrink: 0 }} />
-      <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 900, color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>{title}</h2>
+      <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 'var(--fs-lg)', fontWeight: 900, color: 'var(--color-ink)', letterSpacing: '-0.01em' }}>{title}</h2>
       <div style={{ flex: 1, height: 1, background: 'var(--border-primary)', marginLeft: 4 }} />
     </div>
   );
@@ -546,14 +546,14 @@ export default function HomeClient({ initialArticles, initialNav = 'Home' }: { i
     borderRight: (centerHero || centerGrid.length > 0 || rightFeed.length > 0)
       ? '1px solid var(--border-secondary)'
       : 'none',
-    paddingRight: 24
+    paddingRight: 'var(--spacing-lg)'
   };
 
   const centerColumnStyle = {
     borderRight: rightFeed.length > 0
       ? '1px solid var(--border-secondary)'
       : 'none',
-    paddingRight: rightFeed.length > 0 ? 24 : 0
+    paddingRight: rightFeed.length > 0 ? 'var(--spacing-lg)' : 0
   };
 
   return (
@@ -582,7 +582,7 @@ export default function HomeClient({ initialArticles, initialNav = 'Home' }: { i
       )}
 
       {/* ── Main Content ─────────────────────────────────────────────────────── */}
-      <main className="ir-container" style={{ padding: '24px var(--container-padding)' }}>
+      <main className="ir-container" style={{ padding: 'var(--spacing-md) var(--container-padding)' }}>
 
         {/* Unified full-page loader with progress bar block */}
         {ingesting && filtered.length === 0 && (

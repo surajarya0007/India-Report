@@ -226,8 +226,8 @@ function MoreStoriesCard({ article }: { article: Article }) {
 function PullQuote({ text, color }: { text: string; color: string }) {
   return (
     <div style={{
-      margin: '36px 0',
-      padding: '28px 32px',
+      margin: 'var(--spacing-xl) 0',
+      padding: 'var(--spacing-md) var(--spacing-lg)',
       borderLeft: `5px solid ${color}`,
       background: 'var(--bg-secondary)',
       position: 'relative',
@@ -239,7 +239,7 @@ function PullQuote({ text, color }: { text: string; color: string }) {
       }} />
       <p style={{
         fontFamily: 'var(--font-serif)',
-        fontSize: '19px',
+        fontSize: 'var(--fs-lg)',
         fontStyle: 'italic',
         fontWeight: 600,
         lineHeight: 1.6,
@@ -342,8 +342,8 @@ function ArticleBody({
       {/* Remaining highlighted facts as a callout grid at the end */}
       {highlightedFacts && highlightedFacts.length > 2 && (
         <div style={{ 
-          marginTop: 40, 
-          padding: '28px',
+          marginTop: 'var(--spacing-xl)', 
+          padding: 'var(--spacing-md)',
           background: 'var(--bg-secondary)',
           borderTop: `3px solid ${color}`,
           borderRadius: '8px',
@@ -362,7 +362,7 @@ function ArticleBody({
           <div className="ir-takeaways-grid">
             {highlightedFacts.slice(2).map((fact, idx) => (
               <div key={idx} style={{
-                padding: '16px',
+                padding: 'var(--spacing-md)',
                 background: 'var(--bg-primary)',
                 border: '1px solid var(--border-primary)',
                 borderLeft: `3px solid ${color}`,
@@ -556,7 +556,7 @@ export default function ArticleClient({
 
   return (
     <Layout showNav={true} activeNav={primaryCategory || 'Home'}>
-      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px var(--container-padding)' }}>
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: 'var(--spacing-lg) var(--container-padding)' }}>
         {/* Breadcrumb / Category Tag */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
           <Link
@@ -601,13 +601,13 @@ export default function ArticleClient({
         {/* Headline */}
         <h1 style={{
           fontFamily: 'var(--font-serif)',
-          fontSize: 'clamp(28px, 4vw, 46px)',
+          fontSize: 'var(--fs-hero)',
           fontWeight: 800,
           lineHeight: 1.15,
           color: 'var(--color-ink)',
-          marginBottom: 20,
+          marginBottom: 'var(--spacing-md)',
           letterSpacing: '-0.02em',
-          maxWidth: '90%'
+          maxWidth: '95%'
         }}>
           {article.headline}
         </h1>
@@ -618,8 +618,8 @@ export default function ArticleClient({
         {/* Premium Meta Row */}
         <div style={{ 
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexWrap: 'wrap', gap: 16, paddingBottom: 18, 
-          borderBottom: '1px solid var(--border-primary)', marginBottom: 28
+          flexWrap: 'wrap', gap: 'var(--spacing-md)', paddingBottom: 'var(--spacing-md)', 
+          borderBottom: '1px solid var(--border-primary)', marginBottom: 'var(--spacing-lg)'
         }}>
           {/* Author/Date Info */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -642,7 +642,7 @@ export default function ArticleClient({
           </div>
 
           {/* Action Pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-xs)', flexWrap: 'wrap' }}>
             <button className="action-pill" onClick={toggleAudio}>
               <Volume2 style={{ width: 14, height: 14 }} />
               <span>{audioPlaying ? 'STOP' : 'LISTEN'}</span>
@@ -651,7 +651,7 @@ export default function ArticleClient({
               <Bookmark style={{ width: 14, height: 14 }} />
               <span>SAVE</span>
             </button>
-            <button className="action-pill" onClick={handlePrint}>
+            <button className="action-pill">
               <Printer style={{ width: 14, height: 14 }} />
               <span>PRINT</span>
             </button>
@@ -713,20 +713,20 @@ export default function ArticleClient({
               <div style={{
                 background: 'var(--bg-secondary)',
                 borderLeft: `4px solid ${categoryColorHex}`,
-                padding: '24px 28px',
-                marginBottom: 36,
+                padding: 'var(--spacing-lg) var(--spacing-lg)',
+                marginBottom: 'var(--spacing-xl)',
                 borderRadius: '8px',
               }}>
                 <h4 style={{ 
-                  fontSize: 10, fontWeight: 900, letterSpacing: '0.15em',
+                  fontSize: 'var(--fs-sm)', fontWeight: 900, letterSpacing: '0.15em',
                   textTransform: 'uppercase', margin: '0 0 14px 0', color: categoryColorHex 
                 }}>
                   IR SUMMARY — KEY POINTS
                 </h4>
                 <ul style={{ 
-                  margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 12,
+                  margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)',
                   fontFamily: 'var(--font-body)',
-                  fontSize: '15.5px', lineHeight: 1.65, color: 'var(--color-ink-secondary)'
+                  fontSize: 'var(--fs-md)', lineHeight: 1.65, color: 'var(--color-ink-secondary)'
                 }}>
                   {article.summary.map((bullet, idx) => (
                     <li key={idx} style={{ paddingLeft: 4 }}>
@@ -738,26 +738,25 @@ export default function ArticleClient({
             )}
 
             {/* Content Header */}
-            <div style={{ 
-              display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24,
-              paddingBottom: 12, borderBottom: '2px solid var(--border-primary)'
-            }}>
+            <div className="ir-content-header">
               <span style={{
-                fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 900,
+                fontFamily: 'var(--font-sans)', fontSize: 'var(--fs-sm)', fontWeight: 900,
                 color: categoryColorHex, letterSpacing: '0.15em', textTransform: 'uppercase'
               }}>
                 IN-DEPTH ANALYSIS
               </span>
-              <div style={{ flex: 1, height: 1, background: 'var(--border-primary)' }} />
-              {article.categories?.map((cat, i) => (
-                <span key={i} style={{
-                  fontSize: 9, fontWeight: 800, color: catColor(cat),
-                  background: `${catColor(cat)}15`, padding: '3px 8px',
-                  letterSpacing: '0.08em', textTransform: 'uppercase'
-                }}>
-                  {cat}
-                </span>
-              ))}
+              <div className="ir-content-header-divider" />
+              <div className="ir-content-header-tags">
+                {article.categories?.map((cat, i) => (
+                  <span key={i} style={{
+                    fontSize: 9, fontWeight: 800, color: catColor(cat),
+                    background: `${catColor(cat)}15`, padding: '3px 8px',
+                    letterSpacing: '0.08em', textTransform: 'uppercase'
+                  }}>
+                    {cat}
+                  </span>
+                ))}
+              </div>
             </div>
 
             {/* Article Body */}
@@ -770,16 +769,16 @@ export default function ArticleClient({
 
             {/* Reactions Block */}
             <div style={{ 
-              marginTop: 52, paddingTop: 28, borderTop: '2px solid var(--border-primary)',
+              marginTop: 'var(--spacing-xxl)', paddingTop: 'var(--spacing-md)', borderTop: '2px solid var(--border-primary)',
               textAlign: 'center'
             }}>
               <span style={{ 
                 fontSize: 11, fontWeight: 800, color: 'var(--color-ink-secondary)', letterSpacing: '0.1em',
-                textTransform: 'uppercase', display: 'block', marginBottom: 18
+                textTransform: 'uppercase', display: 'block', marginBottom: 'var(--spacing-md)'
               }}>
                 How do you feel about this story?
               </span>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
                 {[
                   { key: 'like', emoji: '👍', label: 'Like' },
                   { key: 'love', emoji: '❤️', label: 'Love' },
@@ -809,8 +808,8 @@ export default function ArticleClient({
             {/* Sentiment Tag */}
             {article.sentiment && (
               <div style={{
-                marginBottom: 24,
-                padding: '14px 20px',
+                marginBottom: 'var(--spacing-md)',
+                padding: 'var(--spacing-sm) var(--spacing-md)',
                 background: article.sentiment === 'Positive' ? 'rgba(22, 163, 74, 0.1)' : article.sentiment === 'Negative' ? 'rgba(225, 29, 72, 0.1)' : 'var(--bg-secondary)',
                 border: `1px solid ${article.sentiment === 'Positive' ? 'rgba(22, 163, 74, 0.2)' : article.sentiment === 'Negative' ? 'rgba(225, 29, 72, 0.2)' : 'var(--border-primary)'}`,
                 borderRadius: '8px',
@@ -832,7 +831,7 @@ export default function ArticleClient({
             )}
 
             {/* Related News List */}
-            <div style={{ marginBottom: 32 }}>
+            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
               <div style={{ 
                 display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
                 paddingBottom: 10, borderBottom: `2.5px solid ${categoryColorHex}` 
@@ -871,7 +870,7 @@ export default function ArticleClient({
             </div>
 
             {/* AI assisted notice */}
-            <div style={{ background: 'var(--bg-secondary)', padding: '20px', border: '1px solid var(--border-primary)', borderRadius: '8px' }}>
+            <div style={{ background: 'var(--bg-secondary)', padding: 'var(--spacing-md)', border: '1px solid var(--border-primary)', borderRadius: '8px' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
                 <AlertCircle style={{ width: 14, height: 14, color: categoryColorHex }} />
                 <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-ink)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
@@ -915,7 +914,6 @@ export default function ArticleClient({
       <ShareDialog
         isOpen={shareOpen}
         onClose={() => setShareOpen(false)}
-        url={typeof window !== 'undefined' ? window.location.href : ''}
         title={article.headline}
       />
     </Layout>

@@ -56,7 +56,7 @@ export default function EPaperPage() {
       <div className="no-print" style={{
         background: 'var(--bg-secondary)',
         borderBottom: '1px solid var(--border-secondary)',
-        padding: '12px 20px',
+        padding: 'var(--spacing-sm) var(--container-padding)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -92,7 +92,7 @@ export default function EPaperPage() {
         margin: 'clamp(10px, 4vw, 40px) auto',
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border-secondary)',
-        padding: 'clamp(16px, 4vw, 40px)',
+        padding: 'var(--spacing-lg) var(--container-padding)',
         boxShadow: 'var(--shadow-md)',
         color: 'var(--color-ink)',
       }}>

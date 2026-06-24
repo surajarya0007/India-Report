@@ -124,13 +124,13 @@ export default function Header({
       <header className={`ir-header ${scrolled ? 'scrolled' : ''}`}>
         <div className="ir-container" style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          height: 76, position: 'relative',
+          height: 'var(--header-height)', position: 'relative',
         }}>
           
           {/* Left: Sidebar Icon + Date/Time Info Inline */}
           <div className="ir-header-left" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <button
-              onClick={() => setDrawerOpen(!drawerOpen)}
+               onClick={() => setDrawerOpen(!drawerOpen)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 padding: '8px 10px', borderRadius: 4, display: 'flex',
@@ -161,8 +161,8 @@ export default function Header({
               {['I', 'R'].map((l, i) => (
                 <span key={i} style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 34, height: 34, background: 'var(--color-ink)', color: 'var(--bg-primary)',
-                  fontWeight: 900, fontSize: 18, fontFamily: 'Georgia, serif',
+                  width: 'var(--logo-box-size)', height: 'var(--logo-box-size)', background: 'var(--color-ink)', color: 'var(--bg-primary)',
+                  fontWeight: 900, fontSize: 'var(--logo-box-fs)', fontFamily: 'Georgia, serif',
                   letterSpacing: '-0.02em',
                 }}>{l}</span>
               ))}
