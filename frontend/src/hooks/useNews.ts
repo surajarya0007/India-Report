@@ -161,18 +161,24 @@ export function useNews(category?: string, search?: string, initialArticles: Art
     [loadSearchResults, runBackgroundIngest]
   );
 
-  const hasInitialRender = useRef(false);
+  const initialCategoryRef = useRef(category);
+  const initialSearchRef = useRef(search);
+  const hasLoadedInitial = useRef(initialArticles.length > 0);
 
   useEffect(() => {
-    if (!hasInitialRender.current && initialArticles.length > 0) {
-      hasInitialRender.current = true;
+    // If we have initial articles and this is the category/search we started with,
+    // do not trigger a fetch on mount/load. This prevents reload/hydration flickers.
+    if (hasLoadedInitial.current && category === initialCategoryRef.current && search === initialSearchRef.current) {
       return;
     }
-    hasInitialRender.current = true;
+
     if (!search) {
-      loadNews();
+      const timer = setTimeout(() => {
+        loadNews();
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [loadNews, search, initialArticles.length]);
+  }, [category, search, loadNews]);
 
   useEffect(() => () => stopStubPolling(), [stopStubPolling]);
 

@@ -133,7 +133,6 @@
 
 html {
   scroll-behavior: smooth;
-  transition: background-color var(--transition-base), color var(--transition-base);
 }
 
 body {
@@ -144,7 +143,6 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color var(--transition-base), color var(--transition-base);
 }
 
 h1, h2, h3, h4, h5 {
@@ -221,7 +219,7 @@ img {
 }
 
 .card-entrance {
-  animation: cardEntrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: none;
 }
 
 @keyframes imageFadeIn {
@@ -230,7 +228,7 @@ img {
 }
 
 .img-fade-in {
-  animation: imageFadeIn 0.5s ease-out forwards;
+  animation: none;
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -238,18 +236,16 @@ img {
    ════════════════════════════════════════════════════════════════════════════ */
 
 .scroll-reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  pointer-events: none;
-  visibility: hidden;
-  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+  visibility: visible;
+  transition: none;
 }
 
 .scroll-reveal.revealed {
   opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-  visibility: visible;
+  transform: none;
 }
 
 /* ════════════════════════════════════════════════════════════════════════════

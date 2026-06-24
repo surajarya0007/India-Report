@@ -105,21 +105,34 @@ export default function Layout({
   onSearchQueryChange,
 }: LayoutProps) {
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
-  const [tickerNews, setTickerNews] = useState<Article[]>([]);
+  const [tickerNews, setTickerNews] = useState<Article[]>(breakingArticles);
 
   useEffect(() => {
-    if (breakingArticles && breakingArticles.length > 0) {
+    if (breakingArticles.length > 0) {
       setTickerNews(breakingArticles);
-    } else {
-      fetchNews()
-        .then((all) => {
-          setTickerNews(all.slice(0, 8));
-        })
-        .catch((err) => {
-          console.error('[Layout] Failed to fetch ticker news:', err);
-        });
+      return;
     }
-  }, [breakingArticles.length]);
+
+    if (!showBreakingTicker) {
+      return;
+    }
+
+    let cancelled = false;
+
+    fetchNews()
+      .then((all) => {
+        if (!cancelled) {
+          setTickerNews(all.slice(0, 8));
+        }
+      })
+      .catch((err) => {
+        console.error('[Layout] Failed to fetch ticker news:', err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [breakingArticles, showBreakingTicker]);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', color: 'var(--color-ink)', fontFamily: 'var(--font-sans)' }}>
@@ -135,7 +148,7 @@ export default function Layout({
         onDisclaimerClick={() => setDisclaimerOpen(true)}
       />
 
-      <BreakingTicker articles={tickerNews} />
+      {showBreakingTicker && <BreakingTicker articles={tickerNews} />}
 
       <div style={{ flex: 1 }}>
         {children}

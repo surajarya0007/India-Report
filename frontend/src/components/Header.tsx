@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, startTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Search, Menu, X, Cpu, Sun, Moon, User, LogOut,
@@ -49,7 +49,7 @@ export default function Header({
   onDisclaimerClick,
 }: HeaderProps) {
   const router = useRouter();
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { toggleTheme, isDark, mounted: themeMounted } = useTheme();
   const { user, isLoggedIn, logout } = useAuth();
 
   const [searchOpen, setSearchOpen] = useState(false);
@@ -104,12 +104,16 @@ export default function Header({
   }, [onSearchQueryChange]);
 
   const handleNavClick = useCallback((item: string) => {
+    const target = item === 'Home' ? '/' : categoryPath(item);
+
+    void router.prefetch(target);
+
     if (onNavChange) {
       onNavChange(item);
-    } else if (item === 'Home') {
-      router.push('/');
     } else {
-      router.push(categoryPath(item));
+      startTransition(() => {
+        router.push(target);
+      });
     }
     setDrawerOpen(false);
   }, [onNavChange, router]);
@@ -244,17 +248,22 @@ export default function Header({
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+              title={themeMounted ? `Switch to ${isDark ? 'light' : 'dark'} mode` : 'Toggle theme'}
               className="hide-mobile"
+              aria-label={themeMounted ? `Switch to ${isDark ? 'light' : 'dark'} mode` : 'Toggle theme'}
               style={{
                 color: 'var(--color-ink)', background: 'none', border: 'none',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: 8, transition: 'transform 0.2s',
+                padding: 8, transition: 'transform 0.2s', width: 36, height: 36,
               }}
               onMouseEnter={e => e.currentTarget.style.transform = 'rotate(15deg)'}
               onMouseLeave={e => e.currentTarget.style.transform = 'rotate(0deg)'}
             >
-              {isDark ? <Sun style={{ width: 20, height: 20 }} /> : <Moon style={{ width: 20, height: 20 }} />}
+              {themeMounted ? (
+                isDark ? <Sun style={{ width: 20, height: 20 }} /> : <Moon style={{ width: 20, height: 20 }} />
+              ) : (
+                <span aria-hidden="true" style={{ width: 20, height: 20, display: 'inline-block' }} />
+              )}
             </button>
 
             {/* Login / Profile dropdown */}
@@ -525,8 +534,12 @@ export default function Header({
             className="ir-drawer-link"
             style={{ border: 'none', padding: '10px 0', borderBottom: 'none' }}
           >
-            {isDark ? <Sun style={{ width: 16, height: 16 }} /> : <Moon style={{ width: 16, height: 16 }} />}
-            {isDark ? 'Light Mode' : 'Dark Mode'}
+            {themeMounted ? (
+              isDark ? <Sun style={{ width: 16, height: 16 }} /> : <Moon style={{ width: 16, height: 16 }} />
+            ) : (
+              <span aria-hidden="true" style={{ width: 16, height: 16, display: 'inline-block' }} />
+            )}
+            {themeMounted ? (isDark ? 'Light Mode' : 'Dark Mode') : 'Theme'}
           </button>
         </div>
 

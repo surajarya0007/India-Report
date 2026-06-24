@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, startTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useNews } from '../hooks/useNews';
 import { Article } from '../lib/api';
-import { articlePath } from '../lib/seo';
+import { articlePath, categoryPath } from '../lib/seo';
 import { Clock, RefreshCw, ChevronRight } from 'lucide-react';
 import Layout from '../components/Layout';
 import ShareDialog from '../components/ShareDialog';
@@ -343,7 +344,7 @@ function SectionHead({ title }: { title: string }) {
 
 function HomeSkeleton() {
   return (
-    <div className="ir-home-grid" style={{ marginBottom: 36, animation: 'fadeIn 0.3s ease-out forwards' }}>
+      <div className="ir-home-grid" style={{ marginBottom: 36 }}>
       {/* LEFT COLUMN SKELETON */}
       <aside style={{ borderRight: '1px solid var(--border-secondary)', paddingRight: 24 }}>
         <div style={{ borderBottom: '2px solid var(--color-ink)', paddingBottom: 8, marginBottom: 16 }}>
@@ -401,8 +402,9 @@ function HomeSkeleton() {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function HomeClient({ initialArticles }: { initialArticles: Article[] }) {
-  const [activeNav, setActiveNav] = useState('Home');
+export default function HomeClient({ initialArticles, initialNav = 'Home' }: { initialArticles: Article[]; initialNav?: string }) {
+  const router = useRouter();
+  const [activeNav, setActiveNav] = useState(initialNav);
   const [activeSearch, setActiveSearch] = useState<string | undefined>(undefined);
   const { articles, loading, ingesting, hasPendingArticles, refresh, triggerIngest, searchNews } = useNews(activeNav, activeSearch, initialArticles);
   const [searchQuery, setSearchQuery] = useState('');
@@ -480,9 +482,13 @@ export default function HomeClient({ initialArticles }: { initialArticles: Artic
   }, []);
 
   const handleNavChange = (nav: string) => {
-    setActiveNav(nav);
-    setActiveSearch(undefined);
-    setSearchQuery('');
+    const target = nav === 'Home' ? '/' : categoryPath(nav);
+
+    void router.prefetch(target);
+
+    startTransition(() => {
+      router.push(target);
+    });
   };
 
   // Layout slots
@@ -522,6 +528,8 @@ export default function HomeClient({ initialArticles }: { initialArticles: Artic
     ? filtered.filter(a => a.categories?.includes(activeNav) && a.categories?.[0] !== activeNav && !usedIds.has(a.id))
     : latestNews.filter(a => !usedIds.has(a.id));
 
+  const breakingArticles = useMemo(() => articles.slice(0, 6), [articles]);
+
   const sectionTitle = activeSearch 
     ? `Results for "${activeSearch}"` 
     : activeNav === 'Home' 
@@ -559,7 +567,7 @@ export default function HomeClient({ initialArticles }: { initialArticles: Artic
       onSearchQueryChange={setSearchQuery}
       showNav={true}
       showBreakingTicker={true}
-      breakingArticles={articles.slice(0, 6)}
+      breakingArticles={breakingArticles}
     >
       {/* Toast */}
       {toast && (
@@ -567,7 +575,7 @@ export default function HomeClient({ initialArticles }: { initialArticles: Artic
           position: 'fixed', top: 16, right: 16, zIndex: 9999,
           background: toast.ok ? '#14532d' : '#7f1d1d',
           color: '#fff', padding: '10px 18px', borderRadius: 6, fontSize: 13, fontWeight: 600,
-          boxShadow: 'var(--shadow-lg)', animation: 'fadeIn 0.2s ease',
+          boxShadow: 'var(--shadow-lg)',
         }}>
           {toast.msg}
         </div>
