@@ -131,7 +131,7 @@ export default function Layout({
         ingesting={ingesting}
         searchQuery={searchQuery}
         onSearchQueryChange={onSearchQueryChange}
-        showNav={true}
+        showNav={showNav}
         onDisclaimerClick={() => setDisclaimerOpen(true)}
       />
 

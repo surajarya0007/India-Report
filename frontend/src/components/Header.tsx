@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { categoryPath } from '../lib/seo';
 import WeatherWidget from './WeatherWidget';
 import LoginModal from './LoginModal';
 
@@ -105,8 +106,10 @@ export default function Header({
   const handleNavClick = useCallback((item: string) => {
     if (onNavChange) {
       onNavChange(item);
-    } else {
+    } else if (item === 'Home') {
       router.push('/');
+    } else {
+      router.push(categoryPath(item));
     }
     setDrawerOpen(false);
   }, [onNavChange, router]);

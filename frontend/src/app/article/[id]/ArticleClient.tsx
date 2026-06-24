@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fetchArticleById, fetchNews, updateArticleImage, recordArticleView, Article } from '../../../lib/api';
-import { articlePath } from '../../../lib/seo';
+import { articlePath, categoryPath } from '../../../lib/seo';
 import { 
   Clock, 
   ChevronLeft, 
@@ -391,7 +391,7 @@ function ArticleBody({
 
 function PageSkeleton() {
   return (
-    <Layout showNav={false}>
+    <Layout showNav={true}>
       <div className="ir-article-grid" style={{ maxWidth: 1200, margin: '0 auto', width: '100%', padding: '32px var(--container-padding)' }}>
         <div>
           <div style={{ width: 120, height: 18, background: 'var(--bg-tertiary)', marginBottom: 16, borderRadius: 4 }} />
@@ -436,6 +436,7 @@ export default function ArticleClient({
     like: 24, love: 15, laugh: 4, wow: 9, sad: 1, angry: 0
   });
   const [selectedReaction, setSelectedReaction] = useState<string | null>(null);
+  const primaryCategory = article?.categories?.[0];
 
   const handleReactionClick = (key: string) => {
     if (selectedReaction === key) {
@@ -535,7 +536,7 @@ export default function ArticleClient({
 
   if (!article) {
     return (
-      <Layout showNav={false}>
+      <Layout showNav={true} activeNav={primaryCategory || 'Home'}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: 12 }}>
           <p style={{ fontSize: 16, color: 'var(--color-ink-muted)', fontWeight: 600 }}>Article not found</p>
           <button onClick={() => router.push('/')}
@@ -548,29 +549,51 @@ export default function ArticleClient({
     );
   }
 
-  const primaryCategory = article.categories?.[0] || 'News';
   const categoryColorHex = catColor(primaryCategory);
   const readTime = Math.ceil(((article.contentBlocks?.join(' ') || '').split(' ').length) / 200);
 
   return (
-    <Layout showNav={false}>
+    <Layout showNav={true} activeNav={primaryCategory || 'Home'}>
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px var(--container-padding)' }}>
         {/* Breadcrumb / Category Tag */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-          <span 
-            onClick={() => router.push('/')}
-            style={{ 
-              fontSize: 11, fontWeight: 800, color: categoryColorHex, 
-              letterSpacing: '0.12em', textTransform: 'uppercase',
-              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4
+          <Link
+            href="/"
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              color: categoryColorHex,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              textDecoration: 'none',
             }}
           >
             Home
-          </span>
+          </Link>
           <span style={{ fontSize: 11, color: 'var(--color-ink-ghost)' }}>/</span>
-          <span style={{ fontSize: 11, fontWeight: 800, color: categoryColorHex, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            {primaryCategory}
-          </span>
+          {primaryCategory ? (
+            <Link
+              href={categoryPath(primaryCategory)}
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                color: categoryColorHex,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                textDecoration: 'none',
+              }}
+            >
+              {primaryCategory}
+            </Link>
+          ) : (
+            <span style={{ fontSize: 11, fontWeight: 800, color: categoryColorHex, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              News
+            </span>
+          )}
         </div>
 
         {/* Headline */}

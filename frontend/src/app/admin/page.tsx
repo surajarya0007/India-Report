@@ -45,7 +45,7 @@ export default function AdminDashboard() {
   // Ingestion states
   const [ingestStatus, setIngestStatus] = useState<IngestStatusResponse | null>(null);
   const [ingestMode, setIngestMode] = useState<'category' | 'keyword'>('category');
-  const [ingestCategory, setIngestCategory] = useState('Tech');
+  const [ingestCategory, setIngestCategory] = useState('all');
   const [ingestKeyword, setIngestKeyword] = useState('');
   const [ingestRunning, setIngestRunning] = useState(false);
   const [ingestResultMsg, setIngestResultMsg] = useState('');
@@ -174,7 +174,7 @@ export default function AdminDashboard() {
     setIngestRunning(true);
     setIngestResultMsg('Triggering ingestion pipeline...');
 
-    const categoryParam = ingestMode === 'category' ? ingestCategory : undefined;
+    const categoryParam = ingestMode === 'category' && ingestCategory !== 'all' ? ingestCategory : undefined;
     const keywordParam = ingestMode === 'keyword' ? ingestKeyword : undefined;
 
     // Trigger ingest asynchronously
@@ -378,6 +378,16 @@ export default function AdminDashboard() {
       </svg>
     );
   };
+
+  const lastRunTime = ingestStatus?.completedAt || ingestStatus?.startedAt;
+  const lastRunLabel = ingestStatus?.completedAt
+    ? 'Last run'
+    : ingestStatus?.startedAt
+      ? 'Last started'
+      : 'Last run';
+  const triggerButtonLabel = ingestMode === 'category' && ingestCategory === 'all'
+    ? 'Trigger All Categories'
+    : 'Trigger Ingestion';
 
   return (
     <div className="ir-container" style={{ padding: '36px var(--container-padding)', minHeight: '80vh' }}>
@@ -1006,11 +1016,12 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {ingestStatus && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12, color: 'var(--color-ink-muted)', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
-                      <div>Status message: <strong style={{ color: 'var(--color-ink)' }}>{ingestStatus.message}</strong></div>
-                      {ingestStatus.startedAt && <div>Last trigger: <span style={{ color: 'var(--color-ink)' }}>{new Date(ingestStatus.startedAt).toLocaleString('en-IN')}</span></div>}
-                      {ingestStatus.completedAt && <div>Last finish: <span style={{ color: 'var(--color-ink)' }}>{new Date(ingestStatus.completedAt).toLocaleString('en-IN')}</span></div>}
+                      {ingestStatus && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12, color: 'var(--color-ink-muted)', fontFamily: 'var(--font-sans)', fontWeight: 600 }}>
+                          <div>Status message: <strong style={{ color: 'var(--color-ink)' }}>{ingestStatus.message}</strong></div>
+                      {lastRunTime && <div>{lastRunLabel}: <span style={{ color: 'var(--color-ink)' }}>{new Date(lastRunTime).toLocaleString('en-IN')}</span></div>}
+                      {ingestStatus.startedAt && ingestStatus.completedAt && <div>Started: <span style={{ color: 'var(--color-ink)' }}>{new Date(ingestStatus.startedAt).toLocaleString('en-IN')}</span></div>}
+                      {ingestStatus.completedAt && <div>Finished: <span style={{ color: 'var(--color-ink)' }}>{new Date(ingestStatus.completedAt).toLocaleString('en-IN')}</span></div>}
                       
                       {(ingestStatus.ingestedCount !== undefined || ingestStatus.skippedCount !== undefined) && (
                         <div style={{ display: 'flex', gap: 16, borderTop: '1px dashed var(--border-primary)', paddingTop: 10, marginTop: 4 }}>
@@ -1058,12 +1069,13 @@ export default function AdminDashboard() {
                           className="ir-input"
                           style={{ background: 'var(--bg-primary)', padding: '10px 12px' }}
                         >
+                          <option value="all">All Categories</option>
                           {['Tech', 'Business', 'Science', 'Health', 'Entertainment', 'Sports', 'World', 'India', 'Finance', 'Politics'].map(cat => (
                             <option key={cat} value={cat}>{cat} RSS Feed</option>
                           ))}
                         </select>
                         <p style={{ fontSize: 11, color: 'var(--color-ink-faint)', marginTop: 4 }}>
-                          Extracts emerging trends from Google News category feeds, scrapes matching reports, and generates syntheses using Gemini.
+                          Extracts emerging trends from Google News category feeds, scrapes matching reports, and generates syntheses using Gemini. Choose All Categories to run the same broad ingestion pass used by the scheduler.
                         </p>
                       </div>
                     ) : (
@@ -1098,7 +1110,7 @@ export default function AdminDashboard() {
                             Executing...
                           </>
                         ) : (
-                          'Trigger Ingestion'
+                          triggerButtonLabel
                         )}
                       </button>
                     </div>

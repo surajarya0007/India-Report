@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronUp } from 'lucide-react';
+import { categoryPath } from '../lib/seo';
 
 const NAV_SECTIONS = ['India', 'World', 'Business', 'Tech', 'Sports', 'Science', 'Finance', 'Health', 'Entertainment', 'Politics'];
 
@@ -27,6 +29,7 @@ interface FooterProps {
 
 export default function Footer({ onNavChange, onDisclaimerClick }: FooterProps) {
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const handler = () => setShowBackToTop(window.scrollY > 400);
@@ -43,7 +46,8 @@ export default function Footer({ onNavChange, onDisclaimerClick }: FooterProps) 
       onNavChange(section);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      window.location.href = '/';
+      router.push(section === 'Home' ? '/' : categoryPath(section));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 

@@ -3,6 +3,18 @@ import type { Article } from './api';
 export const SITE_NAME = 'India Reports';
 export const PUBLISHER_NAME = 'India Reports Editorial Desk';
 export const DEFAULT_SITE_URL = 'https://india-report-frontend-qzqmxyljqa-el.a.run.app';
+export const CATEGORY_NAMES = [
+  'India',
+  'World',
+  'Business',
+  'Tech',
+  'Sports',
+  'Science',
+  'Finance',
+  'Health',
+  'Entertainment',
+  'Politics',
+] as const;
 
 export const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ||
@@ -37,6 +49,22 @@ export function slugifyHeadline(headline: string): string {
 export function articlePath(id: string, headline?: string): string {
   const slug = headline ? slugifyHeadline(headline) : 'article';
   return `/article/${encodeURIComponent(id)}/${slug}`;
+}
+
+export function categorySlug(category: string): string {
+  return slugifyHeadline(category);
+}
+
+export function categoryNameFromSlug(slug: string): string | null {
+  return CATEGORY_NAMES.find((category) => categorySlug(category) === slug) || null;
+}
+
+export function categoryPath(category: string): string {
+  return `/category/${categorySlug(category)}`;
+}
+
+export function categoryUrl(category: string): string {
+  return `${siteUrl}${categoryPath(category)}`;
 }
 
 function apiUrl(path: string): string {
@@ -91,6 +119,22 @@ export async function fetchArticlesForSitemap(): Promise<ArticleSitemapEntry[]> 
     return result.success && Array.isArray(result.data) ? result.data : [];
   } catch (error) {
     console.error('[SEO] Failed to fetch sitemap articles:', error);
+    return [];
+  }
+}
+
+export async function fetchArticlesForCategory(category: string): Promise<Article[]> {
+  try {
+    const response = await fetch(apiUrl(`/api/news?category=${encodeURIComponent(category)}`), {
+      next: { revalidate: 900 },
+    });
+
+    if (!response.ok) return [];
+
+    const result = await response.json();
+    return result.success && Array.isArray(result.data) ? result.data : [];
+  } catch (error) {
+    console.error(`[SEO] Failed to fetch category articles for "${category}":`, error);
     return [];
   }
 }

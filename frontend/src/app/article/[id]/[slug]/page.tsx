@@ -7,6 +7,7 @@ import {
   articlePath,
   articleUrl,
   buildArticleDescription,
+  categoryUrl,
   fetchArticleForSeo,
   fetchRelatedArticlesForSeo,
   siteUrl,
@@ -90,6 +91,7 @@ export default async function ArticlePage({ params }: ArticlePageParams) {
   const moreStories = relatedArticles.filter((story) => !related.some((item) => item.id === story.id)).slice(0, 4);
   const description = buildArticleDescription(article);
   const canonicalUrl = articleUrl(article.id, article.headline);
+  const primaryCategory = article.categories?.[0];
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -122,23 +124,35 @@ export default async function ArticlePage({ params }: ArticlePageParams) {
     isAccessibleForFree: true,
   };
 
+  const breadcrumbItems = [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Home',
+      item: siteUrl,
+    },
+  ];
+
+  if (primaryCategory) {
+    breadcrumbItems.push({
+      '@type': 'ListItem',
+      position: 2,
+      name: primaryCategory,
+      item: categoryUrl(primaryCategory),
+    });
+  }
+
+  breadcrumbItems.push({
+    '@type': 'ListItem',
+    position: primaryCategory ? 3 : 2,
+    name: article.headline,
+    item: canonicalUrl,
+  });
+
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: siteUrl,
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: article.headline,
-        item: canonicalUrl,
-      },
-    ].filter(Boolean),
+    itemListElement: breadcrumbItems,
   };
 
   return (
