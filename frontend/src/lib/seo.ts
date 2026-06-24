@@ -56,6 +56,7 @@ export function categorySlug(category: string): string {
 }
 
 export function categoryNameFromSlug(slug: string): string | null {
+  if (slug === 'news') return 'News';
   return CATEGORY_NAMES.find((category) => categorySlug(category) === slug) || null;
 }
 
@@ -80,10 +81,19 @@ export function articleUrl(category: string, headline?: string): string {
 }
 
 export async function findArticleByCategoryAndSlug(category: string, slug: string): Promise<Article | null> {
-  const articles = await fetchArticlesForCategory(category);
-  const match = articles.find((article) => slugifyHeadline(article.headline) === slug);
-  if (!match) return null;
-  return fetchArticleForSeo(match.id);
+  try {
+    const response = await fetch(apiUrl(`/api/news/resolve/${encodeURIComponent(category)}/${encodeURIComponent(slug)}`), {
+      next: { revalidate: 900 },
+    });
+
+    if (!response.ok) return null;
+
+    const result = await response.json();
+    return result.success ? result.data : null;
+  } catch (error) {
+    console.error('[SEO] Failed to resolve article by category and slug:', error);
+    return null;
+  }
 }
 
 export function buildArticleDescription(article: Article): string {
@@ -130,19 +140,29 @@ export async function fetchArticlesForSitemap(): Promise<ArticleSitemapEntry[]> 
   }
 }
 
-export async function fetchArticlesForCategory(category: string): Promise<Article[]> {
+export interface PaginatedArticles {
+  articles: Article[];
+  totalPages: number;
+  currentPage: number;
+}
+
+export async function fetchArticlesForCategory(category: string, page: number = 1): Promise<PaginatedArticles> {
   try {
-    const response = await fetch(apiUrl(`/api/news?category=${encodeURIComponent(category)}`), {
+    const response = await fetch(apiUrl(`/api/news?category=${encodeURIComponent(category)}&page=${page}`), {
       next: { revalidate: 900 },
     });
 
-    if (!response.ok) return [];
+    if (!response.ok) return { articles: [], totalPages: 0, currentPage: 1 };
 
     const result = await response.json();
-    return result.success && Array.isArray(result.data) ? result.data : [];
+    return {
+      articles: result.success && Array.isArray(result.data) ? result.data : [],
+      totalPages: result.totalPages || 0,
+      currentPage: result.currentPage || 1,
+    };
   } catch (error) {
     console.error(`[SEO] Failed to fetch category articles for "${category}":`, error);
-    return [];
+    return { articles: [], totalPages: 0, currentPage: 1 };
   }
 }
 
@@ -168,6 +188,22 @@ export async function fetchRelatedArticlesForSeo(article: Article): Promise<Arti
       });
   } catch (error) {
     console.error('[SEO] Failed to fetch related articles:', error);
+    return [];
+  }
+}
+
+export async function fetchHomeArticles(): Promise<Article[]> {
+  try {
+    const response = await fetch(apiUrl('/api/news'), {
+      next: { revalidate: 60 },
+    });
+
+    if (!response.ok) return [];
+
+    const result = await response.json();
+    return result.success && Array.isArray(result.data) ? result.data : [];
+  } catch (error) {
+    console.error('[SEO] Failed to fetch home articles:', error);
     return [];
   }
 }

@@ -20,6 +20,7 @@ export const revalidate = 900;
 
 type CategoryPageParams = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 function sortArticlesByFreshness(articles: Article[]): Article[] {
@@ -38,8 +39,10 @@ function getCategoryDescription(category: string, articleCount: number) {
   return `Latest ${category} coverage from India Reports, including ${articleCount} recent article${articleCount === 1 ? '' : 's'} and ongoing updates.`;
 }
 
-export async function generateMetadata({ params }: CategoryPageParams): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: CategoryPageParams): Promise<Metadata> {
   const { slug } = await params;
+  const searchP = await searchParams;
+  const page = searchP?.page ? parseInt(searchP.page as string) : 1;
   const category = categoryNameFromSlug(slug);
 
   if (!category) {
@@ -52,8 +55,9 @@ export async function generateMetadata({ params }: CategoryPageParams): Promise<
     };
   }
 
-  const articles = sortArticlesByFreshness(await fetchArticlesForCategory(category));
-  const canonicalUrl = categoryUrl(category);
+  const { articles: rawArticles } = await fetchArticlesForCategory(category, page);
+  const articles = sortArticlesByFreshness(rawArticles);
+  const canonicalUrl = page > 1 ? `${categoryUrl(category)}?page=${page}` : categoryUrl(category);
   const description = getCategoryDescription(category, articles.length);
 
   return {
@@ -163,18 +167,21 @@ function CategoryCard({ article, featured = false }: { article: Article; feature
   );
 }
 
-export default async function CategoryPage({ params }: CategoryPageParams) {
+export default async function CategoryPage({ params, searchParams }: CategoryPageParams) {
   const { slug } = await params;
+  const searchP = await searchParams;
+  const page = searchP?.page ? parseInt(searchP.page as string) : 1;
   const category = categoryNameFromSlug(slug);
 
   if (!category) {
     notFound();
   }
 
-  const articles = sortArticlesByFreshness(await fetchArticlesForCategory(category));
-  const featuredArticle = articles[0];
-  const otherArticles = articles.slice(1);
-  const canonicalUrl = categoryUrl(category);
+  const { articles: rawArticles, totalPages } = await fetchArticlesForCategory(category, page);
+  const articles = sortArticlesByFreshness(rawArticles);
+  const featuredArticle = page === 1 ? articles[0] : null;
+  const otherArticles = page === 1 ? articles.slice(1) : articles;
+  const canonicalUrl = page > 1 ? `${categoryUrl(category)}?page=${page}` : categoryUrl(category);
   const description = getCategoryDescription(category, articles.length);
 
   const breadcrumbJsonLd = {
@@ -266,6 +273,49 @@ export default async function CategoryPage({ params }: CategoryPageParams) {
               color: 'var(--color-ink-muted)',
             }}>
               No articles have been published in this category yet.
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 48,
+              paddingTop: 24,
+              borderTop: '1px solid var(--border-primary)',
+            }}>
+              {page > 1 ? (
+                <Link href={`/category/${slug}${page - 1 > 1 ? `?page=${page - 1}` : ''}`} style={{
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--color-ink)',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}>
+                  ← Previous Page
+                </Link>
+              ) : <div />}
+              
+              <div style={{ fontSize: 13, color: 'var(--color-ink-muted)' }}>
+                Page {page} of {totalPages}
+              </div>
+
+              {page < totalPages ? (
+                <Link href={`/category/${slug}?page=${page + 1}`} style={{
+                  padding: '8px 16px',
+                  borderRadius: 6,
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--color-ink)',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}>
+                  Next Page →
+                </Link>
+              ) : <div />}
             </div>
           )}
 

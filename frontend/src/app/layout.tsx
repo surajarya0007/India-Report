@@ -57,6 +57,9 @@ export const metadata: Metadata = {
   authors: [{ name: "India Reports Editorial Desk" }],
   alternates: {
     canonical: "/",
+    types: {
+      'application/rss+xml': `${siteUrl}/feed.xml`,
+    },
   },
   openGraph: {
     title: "India Reports - India's Autonomous News Intelligence Platform",

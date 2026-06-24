@@ -7,10 +7,13 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin'],
+        disallow: ['/admin', '/*?q=*'],
       },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
+    sitemap: [
+      `${siteUrl}/sitemap.xml`,
+      `${siteUrl}/sitemap-news.xml`
+    ],
     host: siteUrl,
   };
 }

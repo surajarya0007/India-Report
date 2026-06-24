@@ -3,6 +3,7 @@ import prisma from '../config/db';
 import redis from '../config/redis';
 import { sanitizeArticleImage } from '../utils/imageUtils';
 import { DISPLAY_LIMIT } from '../config/constants';
+import { invalidateNewsCacheByPrefixes } from '../utils/cacheInvalidation';
 
 const CACHE_TTL = 3600;
 
@@ -26,14 +27,20 @@ const LIST_SELECT = {
 export async function getRecentNews(req: Request, res: Response) {
   const category = req.query.category as string;
   const search = req.query.search as string;
-  const cacheKey = search
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 50;
+  const skip = (page - 1) * limit;
+
+  const cacheKeyBase = search
     ? `homepage:news:search:${search.toLowerCase()}`
     : category && category !== 'Home' && category !== 'undefined'
       ? `homepage:news:${category}`
       : 'homepage:news:all';
+  const cacheKey = `${cacheKeyBase}:p${page}:l${limit}`;
 
   try {
     let articles: any[] | null = null;
+    let totalCount = 0;
     let source: 'cache' | 'database' = 'database';
 
     if (redis) {
@@ -42,14 +49,20 @@ export async function getRecentNews(req: Request, res: Response) {
         if (cachedData) {
           console.log(`[NewsController] Cache hit for "${cacheKey}". Returning cached data.`);
           const parsedData = typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData;
-          const candidateArticles = Array.isArray(parsedData)
-            ? parsedData.map((a) => sanitizeArticleImage(a))
-            : parsedData;
+          
+          let candidateArticles = [];
+          if (Array.isArray(parsedData)) {
+            candidateArticles = parsedData.map((a) => sanitizeArticleImage(a));
+            totalCount = candidateArticles.length; // old cache format fallback
+          } else if (parsedData && Array.isArray(parsedData.articles)) {
+            candidateArticles = parsedData.articles.map((a: any) => sanitizeArticleImage(a));
+            totalCount = parsedData.totalCount || 0;
+          }
           
           if (Array.isArray(candidateArticles) && candidateArticles.some((a) => a.enrichmentStatus === 'pending')) {
             console.log(`[NewsController] Cache hit for "${cacheKey}" contains pending articles. Bypassing cache to get fresh status.`);
             articles = null;
-          } else {
+          } else if (candidateArticles.length > 0) {
             articles = candidateArticles;
             source = 'cache';
           }
@@ -78,18 +91,23 @@ export async function getRecentNews(req: Request, res: Response) {
         };
       }
 
-      articles = (
-        await prisma.article.findMany({
+      const [fetchedArticles, count] = await Promise.all([
+        prisma.article.findMany({
           where: whereClause,
           orderBy: { createdAt: 'desc' },
-          take: 50, // Retrieve a larger pool so we have both latest and most-viewed
+          skip,
+          take: limit,
           select: LIST_SELECT,
-        })
-      ).map((a) => sanitizeArticleImage(a));
+        }),
+        prisma.article.count({ where: whereClause })
+      ]);
+
+      articles = fetchedArticles.map((a) => sanitizeArticleImage(a));
+      totalCount = count;
 
       if (redis && articles.length > 0) {
         try {
-          await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(articles));
+          await redis.setex(cacheKey, CACHE_TTL, JSON.stringify({ articles, totalCount }));
           console.log(`[NewsController] Cached ${articles.length} articles in Redis for key "${cacheKey}".`);
         } catch (redisError) {
           console.error('[NewsController] Redis write error:', redisError);
@@ -126,6 +144,9 @@ export async function getRecentNews(req: Request, res: Response) {
       success: true,
       source,
       data: dataWithViews,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
     });
   } catch (error: any) {
     console.error('[NewsController] Critical error retrieving news:', error);
@@ -187,6 +208,49 @@ export async function getArticleById(req: Request, res: Response) {
 }
 
 /**
+ * GET /api/news/resolve/:category/:slug — resolve an article by category and headline slug.
+ */
+export async function getArticleBySlug(req: Request, res: Response) {
+  const { category, slug } = req.params;
+  try {
+    const articles = await prisma.article.findMany({
+      where: {
+        categories: {
+          has: category,
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: { id: true, headline: true, updatedAt: true },
+    });
+
+    const slugifyHeadline = (headline: string) => {
+      return headline
+        .toLowerCase()
+        .replace(/['’"]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 90) || 'article';
+    };
+
+    const match = articles.find((a) => slugifyHeadline(a.headline) === slug);
+    if (!match) {
+      return res.status(404).json({ success: false, message: 'Article not found.' });
+    }
+
+    const article = await prisma.article.findUnique({ where: { id: match.id } });
+    if (!article) {
+       return res.status(404).json({ success: false, message: 'Article not found.' });
+    }
+
+    return res.status(200).json({ success: true, data: sanitizeArticleImage(article) });
+  } catch (error: any) {
+    console.error('[NewsController] Error resolving article by slug:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
  * PATCH /api/news/:id/image — update the active cover image.
  */
 export async function updateArticleImage(req: Request, res: Response) {
@@ -203,16 +267,14 @@ export async function updateArticleImage(req: Request, res: Response) {
       data: { imageUrl }
     });
 
-    if (redis) {
-      try {
-        const cacheKeys = ['homepage:news:all', ...article.categories.map(c => `homepage:news:${c}`)];
-        for (const key of cacheKeys) {
-          await redis.del(key);
-        }
-        console.log(`[NewsController] Invalidated Redis cache for article "${id}" update.`);
-      } catch (redisError) {
-        console.error('[NewsController] Redis deletion error:', redisError);
-      }
+    try {
+      await invalidateNewsCacheByPrefixes([
+        'homepage:news:all',
+        ...article.categories.map((c) => `homepage:news:${c}`),
+      ]);
+      console.log(`[NewsController] Invalidated Redis cache for article "${id}" update.`);
+    } catch (redisError) {
+      console.error('[NewsController] Redis deletion error:', redisError);
     }
 
     return res.status(200).json({ success: true, data: sanitizeArticleImage(article) });

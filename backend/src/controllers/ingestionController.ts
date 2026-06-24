@@ -5,6 +5,7 @@ import prisma from '../config/db';
 import redis from '../config/redis';
 import { scrapeArticle } from '../services/scraperService';
 import { getCopyrightFreeImage } from '../services/imageService';
+import { invalidateNewsCacheByPrefixes } from '../utils/cacheInvalidation';
 import {
   getIngestionStatus,
   isIngestionRunning,
@@ -306,14 +307,13 @@ async function fetchArticlesForKeyword(keyword: string): Promise<{ title: string
  * Invalidate Redis Cache
  */
 async function invalidateCache(categories: string[], searchQuery?: string) {
-  if (!redis) return;
   try {
     const keys = ['homepage:news:all', ...categories.map(c => `homepage:news:${c}`)];
     if (searchQuery) {
       keys.push(`homepage:news:search:${searchQuery.toLowerCase()}`);
     }
     console.log(`[Ingestion] Invalidating Redis caches: ${keys.join(', ')}`);
-    await redis.del(...keys);
+    await invalidateNewsCacheByPrefixes(keys);
   } catch (err) {
     console.error('[Ingestion] Redis cache invalidation error:', err);
   }

@@ -3,9 +3,9 @@ import { fetchNews, triggerIngest, Article, IngestResult } from '../lib/api';
 
 const STUB_REFRESH_INTERVAL_MS = 4_000;
 
-export function useNews(category?: string, search?: string) {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+export function useNews(category?: string, search?: string, initialArticles: Article[] = []) {
+  const [articles, setArticles] = useState<Article[]>(initialArticles);
+  const [loading, setLoading] = useState<boolean>(initialArticles.length === 0);
   const [ingesting, setIngesting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -161,11 +161,18 @@ export function useNews(category?: string, search?: string) {
     [loadSearchResults, runBackgroundIngest]
   );
 
+  const hasInitialRender = useRef(false);
+
   useEffect(() => {
+    if (!hasInitialRender.current && initialArticles.length > 0) {
+      hasInitialRender.current = true;
+      return;
+    }
+    hasInitialRender.current = true;
     if (!search) {
       loadNews();
     }
-  }, [loadNews, search]);
+  }, [loadNews, search, initialArticles.length]);
 
   useEffect(() => () => stopStubPolling(), [stopStubPolling]);
 
