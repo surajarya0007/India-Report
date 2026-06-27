@@ -47,7 +47,7 @@ substitutions:
   _SERVICE: india-report-frontend
   _BACKEND_URL: https://india-report-backend-qzqmxyljqa-el.a.run.app
   _RAG_SERVICE_URL: https://india-report-rag-223906966157.asia-south1.run.app
-  _GOOGLE_CLIENT_ID: 633028594015-9bstdrg2d8j6gor52itphld4ma965opk.apps.googleusercontent.com
+  _GOOGLE_CLIENT_ID: 223906966157-l0vcmigc2v5aalitm62qo6mk4r527gu8.apps.googleusercontent.com
   _IMAGE_REPO: asia-south1-docker.pkg.dev/project-0bdd0a8e-1e7e-4477-99a/cloud-run-source-deploy/india-report-frontend
 
 options:
