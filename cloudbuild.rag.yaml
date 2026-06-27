@@ -4,10 +4,11 @@ steps:
     args:
       - build
       - -f
-      - backend/Dockerfile.rag
+      - Dockerfile.rag
       - -t
       - ${_IMAGE_REPO}:$SHORT_SHA
       - .
+    dir: backend
 
   - id: push-rag
     name: gcr.io/cloud-builders/docker
