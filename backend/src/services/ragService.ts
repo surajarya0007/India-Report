@@ -6,8 +6,10 @@ import { GEMINI_MODEL_CHAIN } from '../config/constants';
 import { articleUrl } from '../utils/seo';
 
 const CHAT_MODEL = GEMINI_MODEL_CHAIN[0];
-const RAG_SEARCH_THRESHOLD = 0.58;
+const EMBEDDING_MODEL = 'gemini-embedding-001';
+const RAG_SEARCH_THRESHOLD = 0.65;
 const EMBEDDING_DIMENSIONS = 768;
+const USE_REMOTE_EMBEDDING = true; // Set to false to run offline local hashing if out of daily Gemini quota
 
 const STOP_WORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'have',
@@ -82,6 +84,16 @@ function getChatModel(apiKey?: string) {
 
   const genAI = new GoogleGenerativeAI(key);
   return genAI.getGenerativeModel({ model: CHAT_MODEL });
+}
+
+function getEmbeddingModel(apiKey?: string) {
+  const key = apiKey || getApiKeys()[0];
+  if (!key) {
+    throw new Error('Gemini API key is not configured.');
+  }
+
+  const genAI = new GoogleGenerativeAI(key);
+  return genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
 }
 
 function hashToken(token: string): number {
@@ -177,15 +189,97 @@ export function buildArticleChunks(article: RagArticleLike): ArticleChunkDraft[]
   return chunks;
 }
 
+let isUsingLocalFallback = !USE_REMOTE_EMBEDDING;
+
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function embedTexts(texts: string[]): Promise<number[][]> {
   if (!texts.length) {
     return [];
+  }
+
+  if (USE_REMOTE_EMBEDDING) {
+    let attempts = 0;
+    const maxAttempts = 6;
+    let delay = 2000;
+
+    while (attempts < maxAttempts) {
+      try {
+        const key = getApiKeys()[0];
+        if (key) {
+          const model = getEmbeddingModel(key);
+          const result = await model.batchEmbedContents({
+            requests: texts.map((text) => ({
+              content: { role: 'user', parts: [{ text }] },
+              outputDimensionality: EMBEDDING_DIMENSIONS,
+            } as any)),
+          });
+
+          if (result.embeddings && Array.isArray(result.embeddings)) {
+            return result.embeddings.map((emb) => emb.values);
+          }
+        }
+      } catch (error: any) {
+        attempts++;
+        const isRateLimit = error?.status === 429 || String(error).includes('429') || String(error).includes('Quota exceeded');
+        if (isRateLimit && attempts < maxAttempts) {
+          console.warn(`[RAG] Batch embedding rate limited. Retrying in ${delay}ms (attempt ${attempts}/${maxAttempts})...`);
+          await sleep(delay);
+          delay *= 2.5; // exponential backoff
+          continue;
+        }
+        isUsingLocalFallback = true;
+        console.warn('[RAG] Remote batch embedding failed, falling back to local hashing:', error);
+        break;
+      }
+    }
+  } else {
+    isUsingLocalFallback = true;
   }
 
   return texts.map((text) => textToVector(text));
 }
 
 async function embedQuery(query: string): Promise<number[]> {
+  if (USE_REMOTE_EMBEDDING) {
+    let attempts = 0;
+    const maxAttempts = 4;
+    let delay = 1000;
+
+    while (attempts < maxAttempts) {
+      try {
+        const key = getApiKeys()[0];
+        if (key) {
+          const model = getEmbeddingModel(key);
+          const result = await model.embedContent({
+            content: { role: 'user', parts: [{ text: query }] },
+            outputDimensionality: EMBEDDING_DIMENSIONS,
+          } as any);
+
+          if (result.embedding && Array.isArray(result.embedding.values)) {
+            return result.embedding.values;
+          }
+        }
+      } catch (error: any) {
+        attempts++;
+        const isRateLimit = error?.status === 429 || String(error).includes('429') || String(error).includes('Quota exceeded');
+        if (isRateLimit && attempts < maxAttempts) {
+          console.warn(`[RAG] Query embedding rate limited. Retrying in ${delay}ms (attempt ${attempts}/${maxAttempts})...`);
+          await sleep(delay);
+          delay *= 2;
+          continue;
+        }
+        isUsingLocalFallback = true;
+        console.warn('[RAG] Remote query embedding failed, falling back to local hashing:', error);
+        break;
+      }
+    }
+  } else {
+    isUsingLocalFallback = true;
+  }
+
   return textToVector(query);
 }
 
@@ -364,7 +458,7 @@ export async function searchSemanticArticles(
   }
 ): Promise<RagSearchResult[]> {
   const limit = options?.limit ?? 8;
-  const threshold = options?.threshold ?? RAG_SEARCH_THRESHOLD;
+  const threshold = options?.threshold ?? (isUsingLocalFallback ? 0.45 : RAG_SEARCH_THRESHOLD);
   const category = options?.category?.trim();
   const normalizedQuery = normalizeText(query);
 
