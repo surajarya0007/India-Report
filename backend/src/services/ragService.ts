@@ -7,7 +7,7 @@ import { articleUrl } from '../utils/seo';
 
 const CHAT_MODEL = GEMINI_MODEL_CHAIN[0];
 const EMBEDDING_MODEL = 'gemini-embedding-001';
-const RAG_SEARCH_THRESHOLD = 0.65;
+const RAG_SEARCH_THRESHOLD = 0.55;
 const EMBEDDING_DIMENSIONS = 768;
 const USE_REMOTE_EMBEDDING = true; // Set to false to run offline local hashing if out of daily Gemini quota
 
