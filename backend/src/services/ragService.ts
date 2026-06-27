@@ -200,14 +200,17 @@ async function embedTexts(texts: string[]): Promise<number[][]> {
     return [];
   }
 
+  console.log(`[RAG] Generating embeddings for ${texts.length} texts (Remote mode: ${USE_REMOTE_EMBEDDING})...`);
   if (USE_REMOTE_EMBEDDING) {
+    const keys = getApiKeys();
+    let currentKeyIndex = 0;
     let attempts = 0;
-    const maxAttempts = 6;
+    const maxAttempts = Math.max(keys.length * 2, 4);
     let delay = 2000;
 
-    while (attempts < maxAttempts) {
+    while (attempts < maxAttempts && currentKeyIndex < keys.length) {
       try {
-        const key = getApiKeys()[0];
+        const key = keys[currentKeyIndex];
         if (key) {
           const model = getEmbeddingModel(key);
           const result = await model.batchEmbedContents({
@@ -218,17 +221,26 @@ async function embedTexts(texts: string[]): Promise<number[][]> {
           });
 
           if (result.embeddings && Array.isArray(result.embeddings)) {
+            console.log(`[RAG] Successfully generated ${result.embeddings.length} embeddings via Gemini (Key index: ${currentKeyIndex}).`);
             return result.embeddings.map((emb) => emb.values);
           }
         }
       } catch (error: any) {
         attempts++;
         const isRateLimit = error?.status === 429 || String(error).includes('429') || String(error).includes('Quota exceeded');
-        if (isRateLimit && attempts < maxAttempts) {
-          console.warn(`[RAG] Batch embedding rate limited. Retrying in ${delay}ms (attempt ${attempts}/${maxAttempts})...`);
-          await sleep(delay);
-          delay *= 2.5; // exponential backoff
-          continue;
+        if (isRateLimit) {
+          console.warn(`[RAG] Batch embedding key index ${currentKeyIndex} rate limited or quota exhausted. Trying fallback keys...`);
+          currentKeyIndex++;
+          if (currentKeyIndex < keys.length) {
+            continue;
+          }
+          if (attempts < maxAttempts) {
+            console.warn(`[RAG] All keys rate limited/exhausted. Retrying key index 0 in ${delay}ms...`);
+            await sleep(delay);
+            currentKeyIndex = 0;
+            delay *= 2.5; // exponential backoff
+            continue;
+          }
         }
         isUsingLocalFallback = true;
         console.warn('[RAG] Remote batch embedding failed, falling back to local hashing:', error);
@@ -239,18 +251,22 @@ async function embedTexts(texts: string[]): Promise<number[][]> {
     isUsingLocalFallback = true;
   }
 
+  console.log(`[RAG] Using local hashing fallback to generate ${texts.length} embeddings.`);
   return texts.map((text) => textToVector(text));
 }
 
 async function embedQuery(query: string): Promise<number[]> {
+  console.log(`[RAG] Embedding query: "${query}" (Remote mode: ${USE_REMOTE_EMBEDDING})...`);
   if (USE_REMOTE_EMBEDDING) {
+    const keys = getApiKeys();
+    let currentKeyIndex = 0;
     let attempts = 0;
-    const maxAttempts = 4;
+    const maxAttempts = Math.max(keys.length * 2, 4);
     let delay = 1000;
 
-    while (attempts < maxAttempts) {
+    while (attempts < maxAttempts && currentKeyIndex < keys.length) {
       try {
-        const key = getApiKeys()[0];
+        const key = keys[currentKeyIndex];
         if (key) {
           const model = getEmbeddingModel(key);
           const result = await model.embedContent({
@@ -259,17 +275,26 @@ async function embedQuery(query: string): Promise<number[]> {
           } as any);
 
           if (result.embedding && Array.isArray(result.embedding.values)) {
+            console.log(`[RAG] Successfully embedded query via Gemini (Key index: ${currentKeyIndex}).`);
             return result.embedding.values;
           }
         }
       } catch (error: any) {
         attempts++;
         const isRateLimit = error?.status === 429 || String(error).includes('429') || String(error).includes('Quota exceeded');
-        if (isRateLimit && attempts < maxAttempts) {
-          console.warn(`[RAG] Query embedding rate limited. Retrying in ${delay}ms (attempt ${attempts}/${maxAttempts})...`);
-          await sleep(delay);
-          delay *= 2;
-          continue;
+        if (isRateLimit) {
+          console.warn(`[RAG] Query embedding key index ${currentKeyIndex} rate limited or quota exhausted. Trying fallback keys...`);
+          currentKeyIndex++;
+          if (currentKeyIndex < keys.length) {
+            continue;
+          }
+          if (attempts < maxAttempts) {
+            console.warn(`[RAG] All keys rate limited/exhausted. Retrying key index 0 in ${delay}ms...`);
+            await sleep(delay);
+            currentKeyIndex = 0;
+            delay *= 2;
+            continue;
+          }
         }
         isUsingLocalFallback = true;
         console.warn('[RAG] Remote query embedding failed, falling back to local hashing:', error);
@@ -280,6 +305,7 @@ async function embedQuery(query: string): Promise<number[]> {
     isUsingLocalFallback = true;
   }
 
+  console.log(`[RAG] Using local hashing fallback to embed query.`);
   return textToVector(query);
 }
 
@@ -462,6 +488,8 @@ export async function searchSemanticArticles(
   const category = options?.category?.trim();
   const normalizedQuery = normalizeText(query);
 
+  console.log(`[RAG] Running semantic search for query: "${query}" (threshold: ${threshold}, limit: ${limit}, category: ${category || 'any'})`);
+
   if (!normalizedQuery) {
     return [];
   }
@@ -513,6 +541,7 @@ export async function searchSemanticArticles(
       LIMIT ${limit}
     `);
 
+    console.log(`[RAG] Semantic search returned ${rows.length} results.`);
     return rows.map((row) => ({
       articleId: row.articleId,
       headline: row.headline,
@@ -630,6 +659,8 @@ export async function buildRagAnswer(
     .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
     .join('\n');
 
+  console.log(`[RAG] Generating answer for query: "${query}" using ${sources.length} sources...`);
+
   const prompt = `You are the India Reports article assistant.
 Answer only from the provided India Reports sources.
 If the sources do not cover the user question well, say that clearly and suggest related internal articles.
@@ -677,6 +708,7 @@ Return ONLY valid JSON with:
 
     const text = result.response.text().trim();
     const parsed = JSON.parse(text);
+    console.log(`[RAG] Successfully generated answer via Gemini: "${(parsed.answer || '').slice(0, 80)}..."`);
     return {
       answer: typeof parsed.answer === 'string' ? parsed.answer : '',
       suggestions: Array.isArray(parsed.suggestions)

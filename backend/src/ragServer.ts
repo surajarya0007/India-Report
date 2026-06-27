@@ -14,6 +14,16 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.use(cors());
 app.use(express.json());
 
+// Custom Request Logger Middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`[RAG Server] ${req.method} ${req.originalUrl} [Status: ${res.statusCode}] - ${duration}ms`);
+  });
+  next();
+});
+
 app.get('/health', (_req, res) => {
   res.json({ success: true, service: 'india-reports-rag', status: 'healthy' });
 });
