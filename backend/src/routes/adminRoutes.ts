@@ -5,7 +5,9 @@ import {
   createArticle,
   updateArticle,
   deleteArticle,
-  clearCache
+  clearCache,
+  getRagStatus,
+  startRagBackfill,
 } from '../controllers/adminController';
 
 const router = Router();
@@ -18,5 +20,7 @@ router.post('/news', createArticle);
 router.put('/news/:id', updateArticle);
 router.delete('/news/:id', deleteArticle);
 router.post('/clear-cache', clearCache);
+router.get('/rag/status', getRagStatus);
+router.post('/rag/backfill', startRagBackfill);
 
 export default router;

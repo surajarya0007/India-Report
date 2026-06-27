@@ -8,7 +8,8 @@ import adminRoutes from './routes/adminRoutes';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT || 5000);
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Enable Cross-Origin Resource Sharing
 app.use(cors());
@@ -105,10 +106,10 @@ app.get('/', (req, res) => {
 });
 
 // Start Express Listener
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log('----------------------------------------------------');
-  console.log(` India Reports API server listening on port: ${PORT}`);
-  console.log(` Endpoint: http://localhost:${PORT}`);
+  console.log(` India Reports API server listening on ${HOST}:${PORT}`);
+  console.log(` Endpoint: http://${HOST}:${PORT}`);
   console.log('----------------------------------------------------');
 });
 export default app;

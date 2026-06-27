@@ -18,6 +18,7 @@ const DRAWER_PAGES = [
   { label: 'About Us', href: '/about', icon: <BookOpen style={{ width: 16, height: 16 }} /> },
   { label: 'Contact', href: '/contact', icon: <Mail style={{ width: 16, height: 16 }} /> },
   { label: 'E-Paper', href: '/e-paper', icon: <Newspaper style={{ width: 16, height: 16 }} /> },
+  { label: 'Chat', href: '/chat', icon: <Cpu style={{ width: 16, height: 16 }} /> },
   { label: 'Advertise', href: '/advertise', icon: <Globe style={{ width: 16, height: 16 }} /> },
   { label: 'Ethics Policy', href: '/ethics-policy', icon: <Shield style={{ width: 16, height: 16 }} /> },
   { label: 'Privacy Policy', href: '/privacy-policy', icon: <FileText style={{ width: 16, height: 16 }} /> },

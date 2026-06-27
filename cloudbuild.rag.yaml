@@ -1,20 +1,21 @@
 steps:
-  - id: build-backend
+  - id: build-rag
     name: gcr.io/cloud-builders/docker
     args:
       - build
+      - -f
+      - backend/Dockerfile.rag
       - -t
       - ${_IMAGE_REPO}:$SHORT_SHA
       - .
-    dir: backend
 
-  - id: push-backend
+  - id: push-rag
     name: gcr.io/cloud-builders/docker
     args:
       - push
       - ${_IMAGE_REPO}:$SHORT_SHA
 
-  - id: deploy-backend
+  - id: deploy-rag
     name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     entrypoint: gcloud
     args:
@@ -30,18 +31,14 @@ steps:
       - --allow-unauthenticated
       - --port
       - '8080'
-      - --update-env-vars
-      - RAG_SERVICE_URL=${_RAG_SERVICE_URL},RAG_ADMIN_EMAIL=${_RAG_ADMIN_EMAIL}
 
 images:
   - ${_IMAGE_REPO}:$SHORT_SHA
 
 substitutions:
   _REGION: asia-south1
-  _SERVICE: india-report-backend
-  _RAG_SERVICE_URL: https://india-report-rag-qzqmxyljqa-el.a.run.app
-  _RAG_ADMIN_EMAIL: aryasuraj351@gmail.com
-  _IMAGE_REPO: asia-south1-docker.pkg.dev/project-0bdd0a8e-1e7e-4477-99a/cloud-run-source-deploy/india-report-backend
+  _SERVICE: india-report-rag
+  _IMAGE_REPO: asia-south1-docker.pkg.dev/project-0bdd0a8e-1e7e-4477-99a/cloud-run-source-deploy/india-report-rag
 
 options:
   logging: CLOUD_LOGGING_ONLY

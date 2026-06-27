@@ -5,6 +5,7 @@ import prisma from '../config/db';
 import redis from '../config/redis';
 import { scrapeArticle } from '../services/scraperService';
 import { getCopyrightFreeImage } from '../services/imageService';
+import { indexArticleInRag } from '../services/ragBridge';
 import { invalidateNewsCacheByPrefixes } from '../utils/cacheInvalidation';
 import {
   getIngestionStatus,
@@ -415,6 +416,7 @@ export async function runIngestionPipeline(
       });
 
       ingestedCount++;
+      await indexArticleInRag(createdArticle);
       await invalidateCache(synthesis.categories, keyword);
 
       // Run image enrichment in the background to avoid blocking the frontend
@@ -538,7 +540,7 @@ export async function runIngestionPipeline(
             ? [cat, ...synthesis.categories.filter((c: string) => c !== cat)]
             : synthesis.categories;
           
-          await prisma.article.create({
+          const createdArticle = await prisma.article.create({
             data: {
               keyword,
               headline: synthesis.headline,
@@ -555,6 +557,7 @@ export async function runIngestionPipeline(
           });
 
           ingestedCount++;
+          await indexArticleInRag(createdArticle);
           runningExcludedKeywords.push(keyword);
           await invalidateCache(articleCats);
         } catch (keywordErr) {

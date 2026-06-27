@@ -10,6 +10,7 @@ const NAV_SECTIONS = ['India', 'World', 'Business', 'Tech', 'Sports', 'Science',
 const COMPANY_LINKS = [
   { label: 'About Us', href: '/about' },
   { label: 'Contact Us', href: '/contact' },
+  { label: 'Chat', href: '/chat' },
   { label: 'Advertise', href: '/advertise' },
   { label: 'E-Paper', href: '/e-paper' },
   { label: 'Ethics Policy', href: '/ethics-policy' },

@@ -9,6 +9,7 @@ const staticRoutes = [
   '/about',
   '/advertise',
   '/contact',
+  '/chat',
   '/e-paper',
   '/ethics-policy',
   '/privacy-policy',

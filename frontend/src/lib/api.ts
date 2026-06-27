@@ -2,6 +2,10 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : '');
 
+const RAG_API_URL =
+  process.env.NEXT_PUBLIC_RAG_API_URL ||
+  API_URL;
+
 export interface Article {
   id: string;
   keyword: string;
@@ -56,6 +60,62 @@ export interface IngestResult {
   ingestedCount: number;
   skippedCount: number;
   errorsCount: number;
+}
+
+export interface RagSearchResult {
+  articleId: string;
+  headline: string;
+  keyword: string;
+  categories: string[];
+  sentiment: 'Positive' | 'Negative' | 'Neutral' | string;
+  createdAt: string;
+  updatedAt: string;
+  articleUrl: string;
+  chunkType: 'headline' | 'summary' | 'paragraph';
+  chunkPosition: number;
+  chunkContent: string;
+  similarity: number;
+}
+
+export interface RagChatSource extends RagSearchResult {
+  snippet: string;
+}
+
+export interface RagChatResponse {
+  success: boolean;
+  query: string;
+  answer: string;
+  suggestions: string[];
+  sources: RagSearchResult[];
+}
+
+export interface RagCoverageStats {
+  totalArticles: number;
+  indexedArticles: number;
+  missingArticles: number;
+  totalChunks: number;
+  chunksByType: Record<string, number>;
+  coveragePercent: number;
+  lastIndexedAt: string | null;
+}
+
+export interface RagJobStatus {
+  status: 'idle' | 'processing' | 'complete' | 'error';
+  message: string;
+  startedAt?: string;
+  completedAt?: string;
+  indexedCount?: number;
+  skippedCount?: number;
+  errorsCount?: number;
+  totalCount?: number;
+  error?: string;
+}
+
+export interface RagStatusResponse {
+  success: boolean;
+  coverage: RagCoverageStats;
+  status: RagJobStatus;
+  running: boolean;
 }
 
 interface IngestPollOptions {
@@ -379,5 +439,88 @@ export async function clearRedisCache(adminEmail: string): Promise<boolean> {
   } catch (error) {
     console.error('[API] clearRedisCache error:', error);
     return false;
+  }
+}
+
+export async function fetchRagStatus(adminEmail: string): Promise<RagStatusResponse | null> {
+  try {
+    const response = await fetch(`${RAG_API_URL}/api/admin/rag/status`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Email': adminEmail,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`RAG status fetch failed with status ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('[API] fetchRagStatus error:', error);
+    return null;
+  }
+}
+
+export async function triggerRagBackfill(adminEmail: string, limit = 25): Promise<RagStatusResponse | null> {
+  try {
+    const response = await fetch(`${RAG_API_URL}/api/admin/rag/backfill`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Email': adminEmail,
+      },
+      body: JSON.stringify({ limit }),
+    });
+    if (!response.ok && response.status !== 202) {
+      throw new Error(`RAG backfill failed with status ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('[API] triggerRagBackfill error:', error);
+    return null;
+  }
+}
+
+export async function searchRagArticles(query: string, category?: string, limit = 8): Promise<RagSearchResult[]> {
+  try {
+    const params = new URLSearchParams();
+    params.append('q', query);
+    if (category) params.append('category', category);
+    params.append('limit', String(limit));
+    const response = await fetch(`${RAG_API_URL}/api/rag/search?${params.toString()}`, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`RAG search failed with status ${response.status}`);
+    }
+    const res = await response.json();
+    return res.success && Array.isArray(res.results) ? res.results : [];
+  } catch (error) {
+    console.error('[API] searchRagArticles error:', error);
+    return [];
+  }
+}
+
+export async function chatWithRag(options: {
+  query: string;
+  history?: { role: 'user' | 'assistant'; content: string }[];
+  category?: string;
+  limit?: number;
+}): Promise<RagChatResponse | null> {
+  try {
+    const response = await fetch(`${RAG_API_URL}/api/rag/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: options.query,
+        history: options.history || [],
+        category: options.category,
+        limit: options.limit,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`RAG chat failed with status ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('[API] chatWithRag error:', error);
+    return null;
   }
 }

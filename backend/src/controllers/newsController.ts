@@ -4,6 +4,7 @@ import redis from '../config/redis';
 import { sanitizeArticleImage } from '../utils/imageUtils';
 import { DISPLAY_LIMIT } from '../config/constants';
 import { invalidateNewsCacheByPrefixes } from '../utils/cacheInvalidation';
+import { retrieveArticlesForQuery } from '../services/ragBridge';
 
 const CACHE_TTL = 3600;
 
@@ -43,7 +44,7 @@ export async function getRecentNews(req: Request, res: Response) {
     let totalCount = 0;
     let source: 'cache' | 'database' = 'database';
 
-    if (redis) {
+    if (!search && redis) {
       try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) {
@@ -74,38 +75,55 @@ export async function getRecentNews(req: Request, res: Response) {
 
     if (!articles) {
       console.log(`[NewsController] Cache miss for "${cacheKey}". Querying database...`);
-      let whereClause = {};
       if (search) {
-        whereClause = {
-          OR: [
-            { keyword: { contains: search, mode: 'insensitive' } },
-            { categories: { has: search } },
-            { headline: { contains: search, mode: 'insensitive' } },
-          ],
-        };
-      } else if (category && category !== 'Home' && category !== 'undefined') {
-        whereClause = {
-          categories: {
-            has: category,
-          },
-        };
+        const ragResults = await retrieveArticlesForQuery(search, {
+          limit,
+          category: category && category !== 'Home' && category !== 'undefined' ? category : undefined,
+        });
+
+        if (ragResults.length > 0) {
+          const articleIds = ragResults.map((result) => result.articleId);
+          const fetchedArticles = await prisma.article.findMany({
+            where: { id: { in: articleIds } },
+            select: LIST_SELECT,
+          });
+
+          const articleMap = new Map(fetchedArticles.map((article) => [article.id, sanitizeArticleImage(article)]));
+          articles = ragResults
+            .map((result) => articleMap.get(result.articleId))
+            .filter((article): article is NonNullable<typeof article> => Boolean(article));
+          totalCount = ragResults.length;
+          source = 'database';
+        } else {
+          articles = [];
+          totalCount = 0;
+        }
+      } else {
+        let whereClause = {};
+        if (category && category !== 'Home' && category !== 'undefined') {
+          whereClause = {
+            categories: {
+              has: category,
+            },
+          };
+        }
+
+        const [fetchedArticles, count] = await Promise.all([
+          prisma.article.findMany({
+            where: whereClause,
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limit,
+            select: LIST_SELECT,
+          }),
+          prisma.article.count({ where: whereClause })
+        ]);
+
+        articles = fetchedArticles.map((a) => sanitizeArticleImage(a));
+        totalCount = count;
       }
 
-      const [fetchedArticles, count] = await Promise.all([
-        prisma.article.findMany({
-          where: whereClause,
-          orderBy: { createdAt: 'desc' },
-          skip,
-          take: limit,
-          select: LIST_SELECT,
-        }),
-        prisma.article.count({ where: whereClause })
-      ]);
-
-      articles = fetchedArticles.map((a) => sanitizeArticleImage(a));
-      totalCount = count;
-
-      if (redis && articles.length > 0) {
+      if (!search && redis && articles.length > 0) {
         try {
           await redis.setex(cacheKey, CACHE_TTL, JSON.stringify({ articles, totalCount }));
           console.log(`[NewsController] Cached ${articles.length} articles in Redis for key "${cacheKey}".`);
@@ -113,6 +131,17 @@ export async function getRecentNews(req: Request, res: Response) {
           console.error('[NewsController] Redis write error:', redisError);
         }
       }
+    }
+
+    if (!articles || articles.length === 0) {
+      return res.status(200).json({
+        success: true,
+        source,
+        data: [],
+        totalCount,
+        totalPages: 0,
+        currentPage: page,
+      });
     }
 
     // Always merge real-time 24-hour view counts

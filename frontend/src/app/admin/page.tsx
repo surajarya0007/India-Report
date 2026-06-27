@@ -14,11 +14,14 @@ import {
   updateArticle,
   deleteArticle,
   clearRedisCache,
+  fetchRagStatus,
+  triggerRagBackfill,
   fetchNews,
   triggerIngest,
   fetchIngestStatus,
   Article,
-  IngestStatusResponse
+  IngestStatusResponse,
+  RagStatusResponse
 } from '../../lib/api';
 import { articlePath } from '../../lib/seo';
 
@@ -53,6 +56,10 @@ export default function AdminDashboard() {
   // Maintenance states
   const [cacheClearing, setCacheClearing] = useState(false);
   const [cacheMsg, setCacheMsg] = useState('');
+  const [ragStatus, setRagStatus] = useState<RagStatusResponse | null>(null);
+  const [ragRefreshing, setRagRefreshing] = useState(false);
+  const [ragBackfillRunning, setRagBackfillRunning] = useState(false);
+  const [ragMsg, setRagMsg] = useState('');
 
   // 1. Authorization Gate
   const isAdmin = isLoggedIn && user?.role === 'admin';
@@ -87,6 +94,16 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  const loadRagStatus = useCallback(async () => {
+    if (!user?.email) return;
+    setRagRefreshing(true);
+    const status = await fetchRagStatus(user.email);
+    if (status) {
+      setRagStatus(status);
+    }
+    setRagRefreshing(false);
+  }, [user?.email]);
+
   useEffect(() => {
     if (!isLoggedIn) {
       // Don't redirect immediately to allow mounting and state checking
@@ -96,8 +113,9 @@ export default function AdminDashboard() {
       loadStats();
       loadArticles();
       loadIngestStatus();
+      loadRagStatus();
     }
-  }, [isLoggedIn, isAdmin, loadStats, loadArticles, loadIngestStatus]);
+  }, [isLoggedIn, isAdmin, loadStats, loadArticles, loadIngestStatus, loadRagStatus]);
 
   // Periodic polling for ingestion status if running
   useEffect(() => {
@@ -204,6 +222,22 @@ export default function AdminDashboard() {
       setCacheMsg('Failed to clear cache.');
     }
     setTimeout(() => setCacheMsg(''), 3000);
+  };
+
+  const handleRagBackfill = async () => {
+    if (!user?.email || ragBackfillRunning) return;
+    setRagBackfillRunning(true);
+    setRagMsg('Starting vector backfill...');
+    const result = await triggerRagBackfill(user.email, 25);
+    if (result) {
+      setRagStatus(result);
+      setRagMsg(result.running ? 'Vector backfill is running in the background.' : 'Vector backfill request processed.');
+      await loadRagStatus();
+      loadStats();
+    } else {
+      setRagMsg('Failed to start vector backfill.');
+    }
+    setRagBackfillRunning(false);
   };
 
   // Article Form Submit (Create or Edit)
@@ -1151,6 +1185,75 @@ export default function AdminDashboard() {
                   {cacheMsg && (
                     <div style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: cacheMsg.includes('success') ? '#10b981' : 'var(--ir-crimson)' }}>
                       {cacheMsg}
+                    </div>
+                  )}
+                </div>
+
+                {/* Vector Index Maintenance */}
+                <div style={{ padding: 20, border: '1.5px solid var(--border-primary)', borderRadius: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+                    <div>
+                      <h3 style={{ fontSize: 14, fontWeight: 800, color: 'var(--color-ink)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Vector Index Coverage</h3>
+                      <p style={{ fontSize: 12, color: 'var(--color-ink-muted)', lineHeight: 1.5, marginTop: 4, maxWidth: 520 }}>
+                        Unified article chunks power semantic search and the closed-domain chat surface. Use the backfill action after a database reset or whenever older articles need embeddings.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={loadRagStatus}
+                        disabled={ragRefreshing}
+                        className="ir-login-btn"
+                        style={{ width: 'auto', padding: '10px 16px', borderRadius: 6, cursor: 'pointer' }}
+                      >
+                        {ragRefreshing ? 'Refreshing...' : 'Refresh Status'}
+                      </button>
+                      <button
+                        onClick={handleRagBackfill}
+                        disabled={ragBackfillRunning}
+                        className="ir-btn-primary"
+                        style={{ width: 'auto', padding: '10px 20px', borderRadius: 6, background: 'var(--ir-crimson)', color: '#fff', cursor: 'pointer' }}
+                      >
+                        {ragBackfillRunning ? 'Backfilling...' : 'Backfill Missing Vectors'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginTop: 18 }}>
+                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-ink-faint)' }}>Coverage</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--color-ink)', marginTop: 4 }}>{ragStatus?.coverage?.coveragePercent ?? stats?.ragCoverage?.coveragePercent ?? 0}%</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-ink-faint)' }}>Indexed Articles</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--color-ink)', marginTop: 4 }}>{ragStatus?.coverage?.indexedArticles ?? stats?.ragCoverage?.indexedArticles ?? 0}</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-ink-faint)' }}>Missing Articles</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--color-ink)', marginTop: 4 }}>{ragStatus?.coverage?.missingArticles ?? stats?.ragCoverage?.missingArticles ?? 0}</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 6, padding: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-ink-faint)' }}>Total Chunks</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--color-ink)', marginTop: 4 }}>{ragStatus?.coverage?.totalChunks ?? stats?.ragCoverage?.totalChunks ?? 0}</div>
+                    </div>
+                  </div>
+
+                  {ragStatus?.coverage?.chunksByType && (
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14, fontSize: 11, fontWeight: 700, color: 'var(--color-ink-muted)' }}>
+                      {Object.entries(ragStatus.coverage.chunksByType).map(([type, count]) => (
+                        <span key={type} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: 999, padding: '4px 10px' }}>
+                          {type}: {count}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {ragStatus?.status && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: 'var(--color-ink-muted)', marginTop: 12 }}>
+                      <div>Vector job status: <strong style={{ color: 'var(--color-ink)' }}>{ragStatus.status.status}</strong></div>
+                      <div>{ragStatus.status.message}</div>
+                      {ragStatus.status.startedAt && <div>Started: <span style={{ color: 'var(--color-ink)' }}>{new Date(ragStatus.status.startedAt).toLocaleString('en-IN')}</span></div>}
+                      {ragStatus.status.completedAt && <div>Completed: <span style={{ color: 'var(--color-ink)' }}>{new Date(ragStatus.status.completedAt).toLocaleString('en-IN')}</span></div>}
+                      {ragMsg && <div style={{ color: ragMsg.toLowerCase().includes('fail') ? 'var(--ir-crimson)' : 'var(--color-ink-muted)' }}>{ragMsg}</div>}
                     </div>
                   )}
                 </div>

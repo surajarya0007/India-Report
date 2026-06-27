@@ -1,6 +1,12 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import redis from '../config/redis';
+import {
+  getRagCoverageStats,
+  getRagJobState,
+  indexArticleInRag,
+  startRagBackfill as startRemoteRagBackfill,
+} from '../services/ragBridge';
 
 /**
  * GET /api/admin/stats
@@ -108,6 +114,8 @@ export async function getAdminStats(req: Request, res: Response) {
       .map(([date, count]) => ({ date, count }))
       .reverse(); // chronological
 
+    const ragCoverage = await getRagCoverageStats();
+
     return res.status(200).json({
       success: true,
       stats: {
@@ -117,7 +125,8 @@ export async function getAdminStats(req: Request, res: Response) {
         sentimentBreakdown,
         categoryBreakdown,
         topArticles,
-        viewsOverTime
+        viewsOverTime,
+        ragCoverage,
       }
     });
   } catch (error: any) {
@@ -162,6 +171,8 @@ export async function createArticle(req: Request, res: Response) {
         enrichmentStatus: 'complete'
       }
     });
+
+    await indexArticleInRag(article);
 
     // Invalidate Redis caches
     await invalidateNewsCaches(categories);
@@ -213,6 +224,8 @@ export async function updateArticle(req: Request, res: Response) {
       }
     });
 
+    await indexArticleInRag(updated);
+
     // Invalidate Redis caches
     const allCategories = Array.from(new Set([...existing.categories, ...updated.categories]));
     await invalidateNewsCaches(allCategories);
@@ -262,6 +275,40 @@ export async function clearCache(req: Request, res: Response) {
   } catch (error: any) {
     console.error('[AdminController] Flush cache error:', error);
     return res.status(500).json({ success: false, message: 'Failed to flush Redis cache.' });
+  }
+}
+
+/**
+ * GET /api/admin/rag/status
+ */
+export async function getRagStatus(_req: Request, res: Response) {
+  try {
+    const [coverage, state] = await Promise.all([getRagCoverageStats(), getRagJobState()]);
+
+    return res.status(200).json({
+      success: true,
+      coverage,
+      status: state,
+      running: state.status === 'processing',
+    });
+  } catch (error: any) {
+    console.error('[AdminController] RAG status error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to retrieve vector index status.' });
+  }
+}
+
+/**
+ * POST /api/admin/rag/backfill
+ */
+export async function startRagBackfill(req: Request, res: Response) {
+  const limit = Number(req.body?.limit || 25);
+
+  try {
+    const result = await startRemoteRagBackfill(limit);
+    return res.status(result.running ? 202 : 200).json(result);
+  } catch (error: any) {
+    console.error('[AdminController] RAG backfill error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to start vector backfill.' });
   }
 }
 
