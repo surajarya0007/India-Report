@@ -285,8 +285,9 @@ export default function Layout({
               style={{
                 position: 'fixed',
                 bottom: '92px',
-                right: '24px',
-                width: '380px',
+                right: '16px',
+                width: 'calc(100% - 32px)',
+                maxWidth: '380px',
                 height: '500px',
                 maxHeight: 'calc(100vh - 120px)',
                 background: 'var(--bg-primary)',

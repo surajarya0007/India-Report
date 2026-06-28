@@ -152,8 +152,47 @@ export default function ChatClient() {
       color: 'var(--color-ink)',
       overflow: 'hidden',
     }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .chat-input-container {
+            padding: 6px 8px 6px 12px !important;
+          }
+          .chat-welcome-title {
+            font-size: 26px !important;
+          }
+          .chat-welcome-desc {
+            font-size: 13px !important;
+          }
+          .chat-scroll-area {
+            padding: 16px 12px 140px !important;
+          }
+          .chat-input-dock {
+            padding: 16px 16px 24px !important;
+          }
+          .suggestion-cards-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .user-message-bubble {
+            max-width: 85% !important;
+          }
+          .chat-back-text {
+            display: none !important;
+          }
+          .chat-logo-text {
+            display: none !important;
+          }
+          .chat-logo-badge {
+            font-size: 9px !important;
+            padding: 1px 4px !important;
+            margin-left: 2px !important;
+          }
+          .chat-header {
+            padding: 0 12px !important;
+          }
+        }
+      `}</style>
       {/* Custom Minimal Header */}
-      <header style={{
+      <header className="chat-header" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -175,7 +214,7 @@ export default function ChatClient() {
             fontWeight: 500,
           }} className="hover-opacity">
             <ArrowLeft style={{ width: 16, height: 16 }} />
-            <span>Home</span>
+            <span className="chat-back-text">Home</span>
           </Link>
         </div>
 
@@ -200,7 +239,7 @@ export default function ChatClient() {
             ))}
           </div>
 
-          <span style={{
+          <span className="chat-logo-text" style={{
             fontFamily: 'var(--font-serif)',
             fontSize: 20,
             fontWeight: 900,
@@ -210,7 +249,7 @@ export default function ChatClient() {
           }}>
             INDIA REPORTS
           </span>
-          <span style={{
+          <span className="chat-logo-badge" style={{
             fontSize: 10,
             fontWeight: 700,
             background: 'var(--ir-crimson)',
@@ -281,7 +320,7 @@ export default function ChatClient() {
               }}>
                 <Sparkles style={{ width: 28, height: 28 }} />
               </div>
-              <h1 style={{
+              <h1 className="chat-welcome-title" style={{
                 margin: 0,
                 fontSize: 32,
                 fontWeight: 900,
@@ -291,7 +330,7 @@ export default function ChatClient() {
               }}>
                 What's on the agenda today?
               </h1>
-              <p style={{
+              <p className="chat-welcome-desc" style={{
                 margin: '12px 0 0',
                 fontSize: 14,
                 color: 'var(--color-ink-muted)',
@@ -375,7 +414,7 @@ export default function ChatClient() {
               }}>
                 Suggested Topics
               </div>
-              <div style={{
+              <div className="suggestion-cards-grid" style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: 12,
@@ -416,7 +455,7 @@ export default function ChatClient() {
             width: '100%',
           }}>
             {/* Messages Scroll Area */}
-            <div style={{
+            <div className="chat-scroll-area" style={{
               flex: 1,
               overflowY: 'auto',
               padding: '24px 24px 120px',
@@ -447,6 +486,7 @@ export default function ChatClient() {
                     >
                       {/* Message Content Container */}
                       <div
+                        className="user-message-bubble"
                         style={{
                           maxWidth: isUser ? '75%' : '100%',
                           borderRadius: isUser ? '20px 20px 4px 20px' : '0',
@@ -568,7 +608,7 @@ export default function ChatClient() {
             </div>
 
             {/* Bottom Docked Input Form */}
-            <div style={{
+            <div className="chat-input-dock" style={{
               position: 'absolute',
               bottom: 0,
               left: 0,
