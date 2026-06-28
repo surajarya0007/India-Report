@@ -42,6 +42,7 @@ if [[ ${#BACKEND_ENV_ARGS[@]} -gt 0 ]]; then
     --source "${ROOT_DIR}/backend" \
     --command "node" \
     --args "dist/cron/runIngestion.js" \
+    --task-timeout "45m" \
     "${BACKEND_ENV_ARGS[@]}"
 else
   gcloud run jobs deploy "${INGESTION_JOB}" \
@@ -49,7 +50,8 @@ else
     --region "${REGION}" \
     --source "${ROOT_DIR}/backend" \
     --command "node" \
-    --args "dist/cron/runIngestion.js"
+    --args "dist/cron/runIngestion.js" \
+    --task-timeout "45m"
 fi
 
 BACKEND_URL="$(gcloud run services describe "${BACKEND_SERVICE}" \

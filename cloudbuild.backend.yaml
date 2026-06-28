@@ -49,6 +49,8 @@ steps:
       - node
       - --args
       - dist/cron/runIngestion.js
+      - --task-timeout
+      - 45m
       - --update-env-vars
       - RAG_SERVICE_URL=${_RAG_SERVICE_URL},RAG_ADMIN_EMAIL=${_RAG_ADMIN_EMAIL}
 
