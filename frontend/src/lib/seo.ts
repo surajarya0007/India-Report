@@ -215,15 +215,23 @@ export function optimizeImageUrl(url?: string, width = 640): string {
   if (url.startsWith('https://upload.wikimedia.org/wikipedia/commons/')) {
     if (url.includes('/thumb/')) return url;
     
+    // Snapping to standard Wikimedia thumbnail widths: 120, 250, 500, 960, 1280
+    let standardWidth = 500;
+    if (width <= 120) standardWidth = 120;
+    else if (width <= 250) standardWidth = 250;
+    else if (width <= 500) standardWidth = 500;
+    else if (width <= 960) standardWidth = 960;
+    else standardWidth = 1280;
+
     const parts = url.split('/');
     const filename = parts[parts.length - 1];
     let thumbUrl = url.replace('/wikipedia/commons/', '/wikipedia/commons/thumb/');
     const ext = filename.split('.').pop()?.toLowerCase();
     
     if (ext === 'svg') {
-      thumbUrl = `${thumbUrl}/${width}px-${filename}.png`;
+      thumbUrl = `${thumbUrl}/${standardWidth}px-${filename}.png`;
     } else {
-      thumbUrl = `${thumbUrl}/${width}px-${filename}`;
+      thumbUrl = `${thumbUrl}/${standardWidth}px-${filename}`;
     }
     return thumbUrl;
   }
