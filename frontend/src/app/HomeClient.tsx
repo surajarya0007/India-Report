@@ -98,7 +98,7 @@ function ImgBox({ article, height = 180, style = {}, priority = false }: { artic
       ...style,
     }}>
       <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 48, fontWeight: 900, lineHeight: 1, fontFamily: 'var(--font-serif)' }}>IR</span>
-      <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 }}>{cat || 'News'}</span>
+      <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 }}>{cat || 'News'}</span>
     </div>
   );
 }
@@ -111,7 +111,7 @@ function CatTag({ cat }: { cat?: string }) {
     <span style={{
       display: 'inline-block',
       background: catColor(cat),
-      color: '#fff', fontSize: 9, fontWeight: 800,
+      color: '#fff', fontSize: 12, fontWeight: 800,
       letterSpacing: '0.12em', textTransform: 'uppercase',
       padding: '2px 7px', borderRadius: 2, flexShrink: 0,
     }}>
@@ -124,7 +124,7 @@ function EnrichingBadge() {
   return (
     <span style={{
       display: 'inline-block', marginLeft: 6,
-      background: '#fff8e1', color: '#f57f17', fontSize: 8, fontWeight: 800,
+      background: '#fff8e1', color: '#f57f17', fontSize: 12, fontWeight: 800,
       letterSpacing: '0.08em', textTransform: 'uppercase',
       padding: '2px 6px', borderRadius: 2, border: '1px solid #ffe082',
     }}>
@@ -144,7 +144,7 @@ function BreakingTicker({ articles }: { articles: Article[] }) {
     <div style={{ display: 'flex', background: 'var(--ticker-bg)', overflow: 'hidden', borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
       <div style={{
         flexShrink: 0, display: 'flex', alignItems: 'center', padding: '0 14px',
-        background: 'var(--ticker-label-bg)', color: '#fff', fontSize: 10, fontWeight: 800,
+        background: 'var(--ticker-label-bg)', color: '#fff', fontSize: 12, fontWeight: 800,
         letterSpacing: '0.15em', textTransform: 'uppercase', whiteSpace: 'nowrap',
         borderRight: '2px solid rgba(0,0,0,0.15)', gap: 6, height: 36,
       }}>

@@ -12,7 +12,6 @@ import {
   siteUrl,
 } from '../../../lib/seo';
 
-export const dynamic = 'force-dynamic';
 export const revalidate = 900;
 
 type ArticlePageParams = {

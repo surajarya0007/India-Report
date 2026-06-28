@@ -134,10 +134,12 @@ export default function Header({
                onClick={() => setDrawerOpen(!drawerOpen)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                padding: '8px 10px', borderRadius: 4, display: 'flex',
-                alignItems: 'center', color: 'var(--color-ink)',
+                borderRadius: 4, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', color: 'var(--color-ink)',
+                minWidth: 44, minHeight: 44, padding: 0
               }}
               title="Menu"
+              aria-label="Menu"
             >
               {drawerOpen ? <X style={{ width: 24, height: 24 }} /> : <Menu style={{ width: 24, height: 24 }} />}
             </button>
@@ -215,12 +217,14 @@ export default function Header({
                   onClick={clearSearch}
                   tabIndex={searchOpen ? 0 : -1}
                   style={{
-                    position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                    position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
                     background: 'none', border: 'none', cursor: 'pointer',
-                    padding: 4, color: 'var(--color-ink-muted)', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center'
+                    color: 'var(--color-ink-muted)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    width: 32, height: 32
                   }}
                   title="Close Search"
+                  aria-label="Clear Search"
                 >
                   <X style={{ width: 14, height: 14 }} />
                 </button>
@@ -230,17 +234,20 @@ export default function Header({
                 onClick={() => setSearchOpen(true)}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  padding: 8, color: 'var(--color-ink)',
+                  color: 'var(--color-ink)',
                   display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   opacity: searchOpen ? 0 : 1,
                   pointerEvents: searchOpen ? 'none' : 'auto',
-                  width: searchOpen ? 0 : 36,
-                  paddingLeft: searchOpen ? 0 : 8,
-                  paddingRight: searchOpen ? 0 : 8,
+                  width: searchOpen ? 0 : 44,
+                  height: searchOpen ? 0 : 44,
+                  padding: 0,
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   overflow: 'hidden',
                 }}
                 title="Search"
+                aria-label="Search"
               >
                 <Search style={{ width: 20, height: 20 }} />
               </button>
@@ -255,7 +262,7 @@ export default function Header({
               style={{
                 color: 'var(--color-ink)', background: 'none', border: 'none',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: 8, transition: 'transform 0.2s', width: 36, height: 36,
+                padding: 0, transition: 'transform 0.2s', width: 44, height: 44,
               }}
               onMouseEnter={e => e.currentTarget.style.transform = 'rotate(15deg)'}
               onMouseLeave={e => e.currentTarget.style.transform = 'rotate(0deg)'}
@@ -382,12 +389,14 @@ export default function Header({
               onClick={clearSearch}
               tabIndex={searchOpen ? 0 : -1}
               style={{
-                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
                 background: 'none', border: 'none', cursor: 'pointer',
-                padding: 6, color: 'var(--color-ink-muted)', display: 'flex',
-                alignItems: 'center', justifyContent: 'center'
+                color: 'var(--color-ink-muted)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                width: 44, height: 44
               }}
               title="Close Search"
+              aria-label="Clear Search"
             >
               <X style={{ width: 18, height: 18 }} />
             </button>

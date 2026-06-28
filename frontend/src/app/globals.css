@@ -13,9 +13,9 @@
   /* ── Neutral Palette ─────────────────────────────────────────────────────── */
   --color-ink: #111111;
   --color-ink-secondary: #333333;
-  --color-ink-muted: #666666;
-  --color-ink-faint: #999999;
-  --color-ink-ghost: #bbbbbb;
+  --color-ink-muted: #595959;
+  --color-ink-faint: #757575;
+  --color-ink-ghost: #757575;
 
   /* ── Surface & Background ────────────────────────────────────────────────── */
   --bg-primary: #ffffff;
@@ -65,8 +65,8 @@
   --spacing-xl: 36px;
   --spacing-xxl: 48px;
 
-  --fs-xs: 10px;
-  --fs-sm: 12px;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
   --fs-base: 14px;
   --fs-md: 16px;
   --fs-lg: 18px;
@@ -108,9 +108,9 @@
 [data-theme="dark"] {
   --color-ink: #e8e8e8;
   --color-ink-secondary: #cccccc;
-  --color-ink-muted: #999999;
-  --color-ink-faint: #777777;
-  --color-ink-ghost: #555555;
+  --color-ink-muted: #a0a0a0;
+  --color-ink-faint: #909090;
+  --color-ink-ghost: #909090;
 
   --bg-primary: #0d0d0d;
   --bg-secondary: #161616;

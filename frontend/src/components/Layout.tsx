@@ -39,7 +39,7 @@ function BreakingTicker({ articles = [] }: { articles?: Article[] }) {
     <div style={{ display: 'flex', background: 'var(--ticker-bg)', overflow: 'hidden', borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
       <div style={{
         flexShrink: 0, display: 'flex', alignItems: 'center', padding: '0 14px',
-        background: 'var(--ticker-label-bg)', color: '#fff', fontSize: 10, fontWeight: 800,
+        background: 'var(--ticker-label-bg)', color: '#fff', fontSize: 12, fontWeight: 800,
         letterSpacing: '0.15em', textTransform: 'uppercase', whiteSpace: 'nowrap',
         borderRight: '2px solid rgba(0,0,0,0.15)', gap: 6, height: 36,
       }}>

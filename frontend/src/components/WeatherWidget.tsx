@@ -272,7 +272,7 @@ export default function WeatherWidget() {
   };
 
   // Helper to run IP Geolocation detection
-  const fetchLocalWeather = async () => {
+  const fetchLocalWeather = async (forceHTML5: boolean = false) => {
     let lat = 28.6139; // Delhi coordinates
     let lon = 77.2090;
     let city = 'New Delhi';
@@ -300,8 +300,8 @@ export default function WeatherWidget() {
       return null;
     };
 
-    // Try HTML5 geolocation first (fast, accurate) if supported
-    if (typeof window !== 'undefined' && navigator.geolocation) {
+    // Try HTML5 geolocation first (fast, accurate) if supported and explicitly requested by user
+    if (forceHTML5 && typeof window !== 'undefined' && navigator.geolocation) {
       const getPosition = () => {
         return new Promise<GeolocationPosition>((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -434,7 +434,7 @@ export default function WeatherWidget() {
     localStorage.removeItem('weather_custom_location');
     setIsCustomLoc(false);
     setErrorMsg('');
-    await fetchLocalWeather();
+    await fetchLocalWeather(true);
   };
 
   // Close popup on outside click
@@ -463,12 +463,14 @@ export default function WeatherWidget() {
           color: 'inherit',
           fontSize: 13,
           fontWeight: 600,
-          padding: '6px 8px',
+          padding: '6px 12px',
+          minHeight: 44,
           borderRadius: 4,
           transition: 'background 0.15s',
           fontFamily: 'var(--font-sans)',
         }}
         title="Click for weather details"
+        aria-label="Weather details"
       >
         {getWeatherIcon(weather.icon, 16)}
         <span>{convertTemp(weather.temp)}</span>
@@ -514,7 +516,8 @@ export default function WeatherWidget() {
               border: 'none',
               cursor: 'pointer',
               color: '#ffffff',
-              padding: 6,
+              width: 44,
+              height: 44,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -524,6 +527,7 @@ export default function WeatherWidget() {
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'}
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
             title="Close dialog"
+            aria-label="Close dialog"
           >
             <X style={{ width: 16, height: 16 }} />
           </button>
@@ -538,7 +542,8 @@ export default function WeatherWidget() {
                 border: 'none',
                 cursor: 'pointer',
                 color: '#ffffff',
-                padding: 6,
+                width: 44,
+                height: 44,
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
@@ -548,6 +553,7 @@ export default function WeatherWidget() {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'}
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
               title="Refresh weather"
+              aria-label="Refresh weather"
             >
               <RefreshCw style={{ width: 12, height: 12, animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
             </button>
@@ -558,9 +564,11 @@ export default function WeatherWidget() {
                 border: 'none',
                 cursor: 'pointer',
                 color: '#ffffff',
-                padding: '3px 8px',
+                minWidth: 44,
+                minHeight: 44,
+                padding: '4px 10px',
                 borderRadius: 12,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 700,
                 display: 'flex',
                 alignItems: 'center',
@@ -571,6 +579,7 @@ export default function WeatherWidget() {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)'}
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)'}
               title={`Switch to ${isCelsius ? 'Fahrenheit' : 'Celsius'}`}
+              aria-label="Toggle temperature unit"
             >
               {isCelsius ? '°F' : '°C'}
             </button>
@@ -620,17 +629,20 @@ export default function WeatherWidget() {
                 disabled={loadingSearch}
                 style={{
                   position: 'absolute',
-                  right: 10,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 44,
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  padding: 0,
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   color: 'var(--color-ink-muted)',
                 }}
+                title="Search city"
+                aria-label="Search city"
               >
                 {loadingSearch ? (
                   <Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
@@ -646,8 +658,8 @@ export default function WeatherWidget() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 38,
-                height: 38,
+                width: 44,
+                height: 44,
                 background: isCustomLoc ? 'var(--bg-tertiary)' : 'var(--ir-crimson-bg)',
                 border: '1px solid var(--border-primary)',
                 borderRadius: 8,
@@ -656,6 +668,7 @@ export default function WeatherWidget() {
                 flexShrink: 0
               }}
               title="Detect my current location"
+              aria-label="Detect current location"
             >
               <MapPin style={{ width: 16, height: 16 }} />
             </button>
@@ -670,13 +683,13 @@ export default function WeatherWidget() {
           {/* Recent Cities Bar */}
           {recentCities.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-ink-faint)', letterSpacing: '0.04em' }}>Recents:</span>
+              <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-ink-faint)', letterSpacing: '0.04em' }}>Recents:</span>
               {recentCities.map((c, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleSearch(c.city)}
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 600,
                     padding: '3px 8px',
                     borderRadius: 12,
@@ -731,7 +744,7 @@ export default function WeatherWidget() {
                   {item.icon}
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--color-ink-faint)', textTransform: 'uppercase', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-ink-faint)', textTransform: 'uppercase', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.label}
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-ink)' }}>
@@ -766,12 +779,12 @@ export default function WeatherWidget() {
                   padding: '8px 4px',
                   textAlign: 'center'
                 }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-ink-muted)' }}>{h.time}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-ink-muted)' }}>{h.time}</span>
                   <div style={{ margin: '6px 0', color: 'var(--ir-crimson)' }}>
                     {getWeatherIcon(h.icon, 20)}
                   </div>
                   <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--color-ink)' }}>{convertTemp(h.temp)}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 700, color: '#0284c7', marginTop: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 12, fontWeight: 700, color: '#0284c7', marginTop: 4 }}>
                     <Droplets style={{ width: 8, height: 8 }} />
                     <span>{h.precipProb}%</span>
                   </div>
@@ -802,10 +815,10 @@ export default function WeatherWidget() {
                     <div style={{ color: 'var(--ir-crimson)' }}>
                       {getWeatherIcon(day.icon, 18)}
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-ink-muted)' }}>{day.condition}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-ink-muted)' }}>{day.condition}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', width: 90 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-ink-faint)' }}>{convertTemp(day.tempMin)}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-ink-faint)' }}>{convertTemp(day.tempMin)}</span>
                     <div style={{ width: 40, height: 4, background: 'var(--border-primary)', borderRadius: 2, position: 'relative' }}>
                       <div style={{
                         position: 'absolute',
@@ -816,7 +829,7 @@ export default function WeatherWidget() {
                         borderRadius: 2
                       }} />
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-ink)' }}>{convertTemp(day.tempMax)}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-ink)' }}>{convertTemp(day.tempMax)}</span>
                   </div>
                 </div>
               ))}

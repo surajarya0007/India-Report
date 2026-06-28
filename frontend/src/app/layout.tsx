@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display, Source_Serif_4 } from "next/font/google";
-import { cookies } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "../context/ThemeContext";
 import { AuthProvider } from "../context/AuthContext";
@@ -81,16 +80,19 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const theme = cookieStore.get('ir-theme')?.value || 'light';
-
   return (
-    <html lang="en" data-theme={theme} suppressHydrationWarning className={`${inter.variable} ${playfair.variable} ${sourceSerif.variable}`}>
+    <html lang="en" data-theme="light" suppressHydrationWarning className={`${inter.variable} ${playfair.variable} ${sourceSerif.variable}`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="google-site-verification" content="33Py6xfPlW7GFKro5pRaEFVKRdLp-22ejIpY24euPl4" />
         <meta name="color-scheme" content="light dark" />
         <link rel="icon" href="/favicon.ico" />
+        {process.env.NEXT_PUBLIC_API_URL && (
+          <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_URL} />
+        )}
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://upload.wikimedia.org" />
+        <link rel="preconnect" href="https://live.staticflickr.com" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

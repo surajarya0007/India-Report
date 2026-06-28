@@ -10,8 +10,7 @@ import {
 } from '../../../lib/seo';
 import HomeClient from '../../HomeClient';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 900;
+export const revalidate = 60;
 
 type CategoryPageParams = {
   params: Promise<{ slug: string }>;
