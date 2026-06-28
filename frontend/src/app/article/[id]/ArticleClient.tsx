@@ -508,6 +508,30 @@ export default function ArticleClient({
     return () => { active = false; };
   }, [id, initialArticle, initialRelated, initialMoreStories]);
 
+  // Poll for image/enrichment updates if article is pending
+  useEffect(() => {
+    if (!id || !article || article.enrichmentStatus !== 'pending') return;
+
+    let active = true;
+    const interval = setInterval(async () => {
+      try {
+        const latestArticle = await fetchArticleById(id);
+        if (!active) return;
+        if (latestArticle && latestArticle.enrichmentStatus !== 'pending') {
+          setArticle(latestArticle);
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.error('Failed to poll article updates:', err);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [id, article?.enrichmentStatus]);
+
   const handleShare = () => {
     setShareOpen(true);
   };
