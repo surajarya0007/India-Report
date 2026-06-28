@@ -72,13 +72,16 @@ export async function chatWithArticles(req: Request, res: Response) {
     let sources = await retrieveArticlesForQuery(query, { limit, category });
     let answer = await buildRagAnswer(query, sanitizedHistory, sources);
 
-    // If Gemini specifies that we need ingestion and provides a search keyword
-    if (answer.needsIngestion && answer.searchKeyword) {
-      console.log(`[RAG] Inline ingestion triggered for keyword: "${answer.searchKeyword}"`);
-      markIngestionStarted('search', answer.searchKeyword);
+    const needsIngestion = answer.needsIngestion || sources.length === 0;
+    const searchKeyword = answer.searchKeyword || query.slice(0, 40);
+
+    // If Gemini specifies that we need ingestion or there are 0 database sources
+    if (needsIngestion && searchKeyword) {
+      console.log(`[RAG] Inline ingestion triggered for keyword: "${searchKeyword}"`);
+      markIngestionStarted('search', searchKeyword);
       
       try {
-        const ingestRes = await runIngestionPipeline(undefined, undefined, answer.searchKeyword, 'search');
+        const ingestRes = await runIngestionPipeline(undefined, undefined, searchKeyword, 'search');
         
         markIngestionComplete('search', {
           ingestedCount: ingestRes.ingestedCount,
@@ -90,11 +93,19 @@ export async function chatWithArticles(req: Request, res: Response) {
           console.log(`[RAG] Ingestion successful. Re-querying vector index for: "${query}"`);
           sources = await retrieveArticlesForQuery(query, { limit, category });
           answer = await buildRagAnswer(query, sanitizedHistory, sources);
+        } else {
+          console.log(`[RAG] Ingestion found no matching news articles for: "${searchKeyword}"`);
+          answer.answer = `I searched Google News for "${searchKeyword}" but couldn't find any recent articles or updates. Consequently, I don't have enough verified information in my database to answer your question about "${query}".`;
         }
       } catch (ingestError: any) {
         console.error(`[RAG] Inline ingestion failed:`, ingestError);
         markIngestionError('search', ingestError.message || String(ingestError));
+        answer.answer = `I attempted to search Google News and update my database for your query, but encountered an error. Please try again in a moment.`;
       }
+    }
+
+    if (!answer.answer || answer.answer.trim() === '') {
+      answer.answer = `I couldn't find any matching coverage in India Reports for "${query}", and no live news updates were found on Google News.`;
     }
 
     return res.status(200).json({

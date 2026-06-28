@@ -4,6 +4,12 @@ const backendUrl = (
   ''
 ).replace(/\/$/, '');
 
+const ragApiUrl = (
+  process.env.RAG_API_URL ||
+  process.env.NEXT_PUBLIC_RAG_API_URL ||
+  backendUrl
+).replace(/\/$/, '');
+
 type ProxyContext = {
   params: Promise<{ path: string[] }>;
 };
@@ -16,16 +22,19 @@ function getForwardHeaders(request: Request) {
 }
 
 async function proxyRequest(request: Request, context: ProxyContext) {
-  if (!backendUrl) {
+  const params = await context.params;
+  const isRag = params.path[0] === 'rag' || (params.path[0] === 'admin' && params.path[1] === 'rag');
+  const targetBase = isRag ? ragApiUrl : backendUrl;
+
+  if (!targetBase) {
     return Response.json(
-      { success: false, message: 'BACKEND_URL is not configured.' },
+      { success: false, message: 'Backend URL is not configured.' },
       { status: 500 }
     );
   }
 
-  const params = await context.params;
   const sourceUrl = new URL(request.url);
-  const targetUrl = `${backendUrl}/api/${params.path.join('/')}${sourceUrl.search}`;
+  const targetUrl = `${targetBase}/api/${params.path.join('/')}${sourceUrl.search}`;
   const method = request.method.toUpperCase();
 
   const init: RequestInit = {

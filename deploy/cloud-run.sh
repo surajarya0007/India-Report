@@ -25,14 +25,16 @@ if [[ ${#BACKEND_ENV_ARGS[@]} -gt 0 ]]; then
     --allow-unauthenticated \
     --port 8080 \
     "${BACKEND_ENV_ARGS[@]}"
-else
-  gcloud run deploy "${BACKEND_SERVICE}" \
-    --project "${PROJECT_ID}" \
-    --region "${REGION}" \
-    --source "${ROOT_DIR}/backend" \
-    --allow-unauthenticated \
-    --port 8080
 fi
+
+echo "Deploying RAG service: india-report-rag"
+gcloud builds submit "${ROOT_DIR}" \
+  --project "${PROJECT_ID}" \
+  --config "${ROOT_DIR}/cloudbuild.rag.yaml" \
+  --substitutions SHORT_SHA=latest
+
+
+
 
 echo "Deploying ingestion job: ${INGESTION_JOB}"
 if [[ ${#BACKEND_ENV_ARGS[@]} -gt 0 ]]; then
@@ -59,7 +61,13 @@ BACKEND_URL="$(gcloud run services describe "${BACKEND_SERVICE}" \
   --region "${REGION}" \
   --format 'value(status.url)')"
 
+RAG_URL="$(gcloud run services describe "india-report-rag" \
+  --project "${PROJECT_ID}" \
+  --region "${REGION}" \
+  --format 'value(status.url)')"
+
 echo "Backend URL: ${BACKEND_URL}"
+echo "RAG URL: ${RAG_URL}"
 echo "Deploying frontend service: ${FRONTEND_SERVICE}"
 gcloud run deploy "${FRONTEND_SERVICE}" \
   --project "${PROJECT_ID}" \
@@ -67,7 +75,7 @@ gcloud run deploy "${FRONTEND_SERVICE}" \
   --source "${ROOT_DIR}/frontend" \
   --allow-unauthenticated \
   --port 8080 \
-  --set-env-vars "BACKEND_URL=${BACKEND_URL}"
+  --set-env-vars "BACKEND_URL=${BACKEND_URL},RAG_API_URL=${RAG_URL}"
 
 FRONTEND_URL="$(gcloud run services describe "${FRONTEND_SERVICE}" \
   --project "${PROJECT_ID}" \
@@ -75,3 +83,4 @@ FRONTEND_URL="$(gcloud run services describe "${FRONTEND_SERVICE}" \
   --format 'value(status.url)')"
 
 echo "Frontend URL: ${FRONTEND_URL}"
+
