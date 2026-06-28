@@ -52,13 +52,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.style.colorScheme = theme;
     localStorage.setItem('ir-theme', theme);
     // Sync to cookie for Server-Side Rendering (SSR)
     document.cookie = `ir-theme=${theme}; path=/; max-age=31536000; SameSite=Lax`;
-  }, [theme, mounted]);
+  }, [theme]);
 
   const toggleTheme = useCallback(() => {
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));

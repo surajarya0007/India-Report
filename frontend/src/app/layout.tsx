@@ -81,7 +81,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="light" suppressHydrationWarning className={`${inter.variable} ${playfair.variable} ${sourceSerif.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${playfair.variable} ${sourceSerif.variable}`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="google-site-verification" content="33Py6xfPlW7GFKro5pRaEFVKRdLp-22ejIpY24euPl4" />
