@@ -58,11 +58,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Sync to cookie for Server-Side Rendering (SSR)
     document.cookie = `ir-theme=${theme}; path=/; max-age=31536000; SameSite=Lax`;
 
-    // Remove the temporary preloader style tag once client state is ready
+    // Disconnect the MutationObserver once client state is ready and mounted
     try {
-      const preloadStyle = document.getElementById('ir-theme-preload');
-      if (preloadStyle) {
-        preloadStyle.remove();
+      if (typeof window !== 'undefined' && (window as any).__themeObserver) {
+        (window as any).__themeObserver.disconnect();
+        delete (window as any).__themeObserver;
       }
     } catch (e) {}
   }, [theme]);

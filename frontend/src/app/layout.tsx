@@ -104,12 +104,23 @@ export default async function RootLayout({
                     : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                   document.documentElement.setAttribute('data-theme', theme);
                   document.documentElement.style.colorScheme = theme;
-                  if (theme === 'dark') {
-                    var style = document.createElement('style');
-                    style.id = 'ir-theme-preload';
-                    style.innerHTML = 'html, body { background-color: #0d0d0d !important; color: #e8e8e8 !important; }';
-                    document.head.appendChild(style);
-                  }
+
+                  // Lock the data-theme attribute using MutationObserver to prevent hydration resets
+                  var observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                      if (mutation.attributeName === 'data-theme') {
+                        var current = document.documentElement.getAttribute('data-theme');
+                        if (current !== theme) {
+                          observer.disconnect();
+                          document.documentElement.setAttribute('data-theme', theme);
+                          document.documentElement.style.colorScheme = theme;
+                          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+                        }
+                      }
+                    });
+                  });
+                  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+                  window.__themeObserver = observer;
                 } catch (e) {}
               })();
             `,
