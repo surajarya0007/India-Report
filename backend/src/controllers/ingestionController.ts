@@ -581,9 +581,17 @@ export function getIngestionStatusHandler(_req: Request, res: Response) {
   const search = _req.query.search as string | undefined;
   const scope: IngestionScope = search && search.trim() ? 'search' : 'general';
 
+  let status = getIngestionStatus(scope);
+  if (scope === 'general' && status.status === 'idle') {
+    const searchStatus = getIngestionStatus('search');
+    if (searchStatus.status === 'processing' || searchStatus.status === 'scraping') {
+      status = searchStatus;
+    }
+  }
+
   res.status(200).json({
     success: true,
-    ...getIngestionStatus(scope),
+    ...status,
   });
 }
 

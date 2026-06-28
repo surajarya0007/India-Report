@@ -118,8 +118,9 @@ export interface RagStatusResponse {
   running: boolean;
 }
 
-interface IngestPollOptions {
+export interface IngestPollOptions {
   search?: string;
+  useRagApi?: boolean;
 }
 
 const POLL_INTERVAL_MS = 4_000;
@@ -135,10 +136,11 @@ function sleep(ms: number): Promise<void> {
 export async function fetchNews(category?: string, search?: string): Promise<Article[]> {
   try {
     const params = new URLSearchParams();
+    if (category && category !== 'Home') {
+      params.append('category', category);
+    }
     if (search) {
       params.append('search', search);
-    } else if (category && category !== 'Home') {
-      params.append('category', category);
     }
     const queryString = params.toString();
     const url = queryString ? `${API_URL}/api/news?${queryString}` : `${API_URL}/api/news`;
@@ -146,8 +148,8 @@ export async function fetchNews(category?: string, search?: string): Promise<Art
     if (!response.ok) {
       throw new Error(`API error: ${response.statusText}`);
     }
-    const res: FetchNewsResponse = await response.json();
-    return res.success ? res.data : [];
+    const result = await response.json();
+    return result.data || [];
   } catch (error) {
     console.error('[API] fetchNews error:', error);
     return [];
@@ -161,11 +163,14 @@ export async function pollIngestStatus(
   options?: IngestPollOptions,
   onTick?: (status: IngestStatusResponse) => void
 ): Promise<IngestResult> {
-  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  const startTime = Date.now();
 
-  while (Date.now() < deadline) {
+  while (Date.now() - startTime < POLL_TIMEOUT_MS) {
     const status = await fetchIngestStatus(options);
-    onTick?.(status);
+    
+    if (onTick) {
+      onTick(status);
+    }
 
     if (status.status === 'complete') {
       return {
@@ -180,7 +185,7 @@ export async function pollIngestStatus(
     if (status.status === 'error') {
       return {
         success: false,
-        message: status.error || status.message,
+        message: status.message || 'Ingestion failed.',
         ingestedCount: status.ingestedCount ?? 0,
         skippedCount: status.skippedCount ?? 0,
         errorsCount: status.errorsCount ?? 0,
@@ -206,9 +211,10 @@ export async function fetchIngestStatus(options?: IngestPollOptions): Promise<In
       params.append('search', options.search);
     }
     const queryString = params.toString();
+    const baseUrl = options?.useRagApi ? RAG_API_URL : API_URL;
     const url = queryString
-      ? `${API_URL}/api/news/ingest/status?${queryString}`
-      : `${API_URL}/api/news/ingest/status`;
+      ? `${baseUrl}/api/news/ingest/status?${queryString}`
+      : `${baseUrl}/api/news/ingest/status`;
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`API error: ${response.statusText}`);

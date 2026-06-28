@@ -644,7 +644,7 @@ export async function buildRagAnswer(
   query: string,
   history: RagChatHistoryMessage[],
   sources: RagSearchResult[]
-): Promise<{ answer: string; suggestions: string[] }> {
+): Promise<{ answer: string; suggestions: string[]; needsIngestion?: boolean; searchKeyword?: string | null }> {
   const sourceLines = sources.length
     ? sources
         .map(
@@ -663,9 +663,10 @@ export async function buildRagAnswer(
 
   const prompt = `You are the India Reports article assistant.
 Answer only from the provided India Reports sources.
-If the sources do not cover the user question well, say that clearly and suggest related internal articles.
+If the sources do not cover the user question well or do not contain relevant information, set "needsIngestion" to true, and set "searchKeyword" to a concise 2-4 word search term optimized for Google News search to fetch articles about this event (e.g. "Modi Qatar gas explosion").
+If the sources DO cover the user question well, set "needsIngestion" to false and "searchKeyword" to null.
 Do not browse the web. Do not invent facts.
-Keep the answer concise, useful, and grounded in the article snippets.
+Provide a detailed, comprehensive, and well-structured answer (2-4 paragraphs if needed) that thoroughly explains the key events, background, context, and outcomes described in the sources.
 
 Conversation:
 ${historyText || 'No prior conversation.'}
@@ -679,7 +680,9 @@ ${sourceLines}
 Return ONLY valid JSON with:
 {
   "answer": string,
-  "suggestions": string[]
+  "suggestions": string[],
+  "needsIngestion": boolean,
+  "searchKeyword": string | null
 }
 `;
 
@@ -689,6 +692,8 @@ Return ONLY valid JSON with:
         ? `I found ${sources.length} relevant article${sources.length === 1 ? '' : 's'} in India Reports, but the assistant model is not configured.`
         : 'I could not find enough matching coverage in India Reports right now.',
       suggestions: sources.slice(0, 3).map((source) => source.headline),
+      needsIngestion: sources.length === 0,
+      searchKeyword: query.slice(0, 40),
     };
   }
 
@@ -714,6 +719,8 @@ Return ONLY valid JSON with:
       suggestions: Array.isArray(parsed.suggestions)
         ? parsed.suggestions.filter((item: unknown): item is string => typeof item === 'string')
         : [],
+      needsIngestion: Boolean(parsed.needsIngestion),
+      searchKeyword: typeof parsed.searchKeyword === 'string' ? parsed.searchKeyword : null,
     };
   } catch (error) {
     console.error('[RAG] Answer generation failed:', error);
@@ -722,6 +729,8 @@ Return ONLY valid JSON with:
         ? `I found matching coverage in India Reports for "${query}", but I could not generate a polished answer just now.`
         : `I could not find enough matching coverage in India Reports for "${query}".`,
       suggestions: sources.slice(0, 3).map((source) => source.headline),
+      needsIngestion: sources.length === 0,
+      searchKeyword: query.slice(0, 40),
     };
   }
 }

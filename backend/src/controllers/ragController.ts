@@ -7,6 +7,13 @@ import {
   type RagArticleLike,
 } from '../services/ragService';
 
+import { runIngestionPipeline } from './ingestionController';
+import {
+  markIngestionStarted,
+  markIngestionComplete,
+  markIngestionError,
+} from '../services/ingestionStatus';
+
 function parseLimit(value: unknown, fallback = 8): number {
   const limit = Number(value);
   if (!Number.isFinite(limit) || limit <= 0) {
@@ -62,8 +69,33 @@ export async function chatWithArticles(req: Request, res: Response) {
     }));
 
   try {
-    const sources = await retrieveArticlesForQuery(query, { limit, category });
-    const answer = await buildRagAnswer(query, sanitizedHistory, sources);
+    let sources = await retrieveArticlesForQuery(query, { limit, category });
+    let answer = await buildRagAnswer(query, sanitizedHistory, sources);
+
+    // If Gemini specifies that we need ingestion and provides a search keyword
+    if (answer.needsIngestion && answer.searchKeyword) {
+      console.log(`[RAG] Inline ingestion triggered for keyword: "${answer.searchKeyword}"`);
+      markIngestionStarted('search', answer.searchKeyword);
+      
+      try {
+        const ingestRes = await runIngestionPipeline(undefined, undefined, answer.searchKeyword, 'search');
+        
+        markIngestionComplete('search', {
+          ingestedCount: ingestRes.ingestedCount,
+          skippedCount: ingestRes.skippedCount,
+          errorsCount: ingestRes.errorsCount,
+        });
+
+        if (ingestRes.ingestedCount > 0) {
+          console.log(`[RAG] Ingestion successful. Re-querying vector index for: "${query}"`);
+          sources = await retrieveArticlesForQuery(query, { limit, category });
+          answer = await buildRagAnswer(query, sanitizedHistory, sources);
+        }
+      } catch (ingestError: any) {
+        console.error(`[RAG] Inline ingestion failed:`, ingestError);
+        markIngestionError('search', ingestError.message || String(ingestError));
+      }
+    }
 
     return res.status(200).json({
       success: true,

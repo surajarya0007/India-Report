@@ -8,7 +8,7 @@ import { requireAdmin } from './middleware/auth';
 dotenv.config();
 
 const app = express();
-const PORT = Number(process.env.PORT || 8080);
+const PORT = Number(process.env.RAG_PORT || (process.env.PORT === '5000' ? '8080' : process.env.PORT) || 8080);
 const HOST = process.env.HOST || '0.0.0.0';
 
 app.use(cors());
@@ -28,6 +28,9 @@ app.get('/health', (_req, res) => {
   res.json({ success: true, service: 'india-reports-rag', status: 'healthy' });
 });
 
+import { getIngestionStatusHandler } from './controllers/ingestionController';
+
+app.get('/api/news/ingest/status', getIngestionStatusHandler);
 app.get('/api/rag/search', searchRagArticles);
 app.post('/api/rag/chat', chatWithArticles);
 app.post('/api/rag/index', indexArticle);

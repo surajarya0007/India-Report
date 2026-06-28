@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 export default function ChatPage() {
   return (
-    <Layout showNav={false} showBreakingTicker={false}>
+    <Layout showNav={false} showBreakingTicker={false} hideHeader={true} hideFooter={true}>
       <ChatClient />
     </Layout>
   );
