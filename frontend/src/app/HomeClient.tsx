@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useNews } from '../hooks/useNews';
 import { Article } from '../lib/api';
-import { articlePath, categoryPath } from '../lib/seo';
+import { articlePath, categoryPath, optimizeImageUrl } from '../lib/seo';
 import { Clock, RefreshCw, ChevronRight } from 'lucide-react';
 import Layout from '../components/Layout';
 import ShareDialog from '../components/ShareDialog';
@@ -61,6 +61,13 @@ function ImgBox({ article, height = 180, style = {}, priority = false }: { artic
   }
 
   if (hasImage) {
+    let targetWidth = 640;
+    if (height <= 80) targetWidth = 150;
+    else if (height <= 150) targetWidth = 400;
+    else targetWidth = 800;
+
+    const optimizedUrl = optimizeImageUrl(article.imageUrl, targetWidth);
+
     return (
       <div style={{
         height,
@@ -71,7 +78,7 @@ function ImgBox({ article, height = 180, style = {}, priority = false }: { artic
         ...style,
       }}>
         <Image
-          src={article.imageUrl!}
+          src={optimizedUrl}
           alt={article.headline}
           fill
           sizes="(max-width: 768px) 100vw, 640px"
@@ -303,7 +310,7 @@ function SidebarItem({ article, rank, index = 0 }: { article: Article; rank: num
         animationDelay: `${index * 50}ms`,
       }}
     >
-      <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 900, color: 'var(--border-primary)', fontFamily: 'Georgia, serif', lineHeight: 1, flexShrink: 0, minWidth: 26, textAlign: 'right' }}>
+      <span style={{ fontSize: 'var(--fs-xl)', fontWeight: 900, color: 'var(--color-ink-faint)', fontFamily: 'Georgia, serif', lineHeight: 1, flexShrink: 0, minWidth: 26, textAlign: 'right' }}>
         {String(rank).padStart(2, '0')}
       </span>
       <div style={{ minWidth: 0 }}>

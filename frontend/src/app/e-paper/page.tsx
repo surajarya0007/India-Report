@@ -6,6 +6,7 @@ import Layout from '../../components/Layout';
 import { fetchNews, Article } from '../../lib/api';
 import { Clock, BookOpen, Printer } from 'lucide-react';
 import ImageSourceBadge from '../../components/ImageSourceBadge';
+import { optimizeImageUrl } from '../../lib/seo';
 
 export default function EPaperPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -180,7 +181,7 @@ export default function EPaperPage() {
                     {articles[0].imageUrl && (
                       <div style={{ position: 'relative', aspectRatio: '4 / 3', overflow: 'hidden' }}>
                         <Image
-                          src={articles[0].imageUrl}
+                          src={optimizeImageUrl(articles[0].imageUrl, 400)}
                           alt="Lead image"
                           fill
                           sizes="(max-width: 768px) 100vw, 400px"

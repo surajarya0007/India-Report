@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fetchArticleById, fetchNews, updateArticleImage, recordArticleView, Article } from '../../../lib/api';
-import { articlePath, categoryPath } from '../../../lib/seo';
+import { articlePath, categoryPath, optimizeImageUrl } from '../../../lib/seo';
 import { 
   Clock, 
   ChevronLeft, 
@@ -73,7 +73,7 @@ function SideCard({ article }: { article: Article }) {
         {hasImage ? (
           <>
             <Image
-              src={article.imageUrl!}
+              src={optimizeImageUrl(article.imageUrl, 150)}
               alt={article.headline}
               fill
               sizes="80px"
@@ -154,7 +154,7 @@ function MoreStoriesCard({ article }: { article: Article }) {
         {hasImage ? (
           <>
             <Image
-              src={article.imageUrl!}
+              src={optimizeImageUrl(article.imageUrl, 400)}
               alt={article.headline}
               fill
               sizes="(max-width: 768px) 100vw, 300px"
@@ -696,7 +696,7 @@ export default function ArticleClient({
               {article.imageUrl ? (
                 <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '16 / 9', maxHeight: 520 }}>
                   <Image
-                    src={article.imageUrl!}
+                    src={optimizeImageUrl(article.imageUrl, 800)}
                     alt={article.headline}
                     fill
                     priority

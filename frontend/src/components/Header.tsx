@@ -342,6 +342,7 @@ export default function Header({
               <button
                 onClick={() => setLoginOpen(true)}
                 className="ir-login-btn"
+                aria-label="Login"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   border: '1.5px solid var(--border-primary)',
@@ -454,7 +455,11 @@ export default function Header({
           </div>
           <button
             onClick={() => setDrawerOpen(false)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-ink)', padding: 4 }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-ink)',
+              minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0
+            }}
+            aria-label="Close menu"
           >
             <X style={{ width: 20, height: 20 }} />
           </button>

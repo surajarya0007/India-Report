@@ -207,3 +207,49 @@ export async function fetchHomeArticles(): Promise<Article[]> {
     return [];
   }
 }
+
+export function optimizeImageUrl(url?: string, width = 640): string {
+  if (!url) return '';
+  
+  // 1. Wikimedia Commons
+  if (url.startsWith('https://upload.wikimedia.org/wikipedia/commons/')) {
+    if (url.includes('/thumb/')) return url;
+    
+    const parts = url.split('/');
+    const filename = parts[parts.length - 1];
+    let thumbUrl = url.replace('/wikipedia/commons/', '/wikipedia/commons/thumb/');
+    const ext = filename.split('.').pop()?.toLowerCase();
+    
+    if (ext === 'svg') {
+      thumbUrl = `${thumbUrl}/${width}px-${filename}.png`;
+    } else {
+      thumbUrl = `${thumbUrl}/${width}px-${filename}`;
+    }
+    return thumbUrl;
+  }
+  
+  // 2. Unsplash
+  if (url.includes('images.unsplash.com')) {
+    const cleanUrl = url.split('?')[0];
+    return `${cleanUrl}?w=${width}&q=80&fm=webp&fit=crop`;
+  }
+  
+  // 3. Flickr
+  if (url.includes('staticflickr.com')) {
+    const parts = url.split('.');
+    const ext = parts.pop();
+    let base = parts.join('.');
+    base = base.replace(/_[sqtmnzcb]$/, '');
+    
+    let suffix = 'z';
+    if (width <= 150) suffix = 'q';
+    else if (width <= 320) suffix = 'n';
+    else if (width <= 640) suffix = 'z';
+    else if (width <= 800) suffix = 'c';
+    else suffix = 'b';
+    
+    return `${base}_${suffix}.${ext || 'jpg'}`;
+  }
+  
+  return url;
+}
