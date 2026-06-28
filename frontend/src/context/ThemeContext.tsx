@@ -57,6 +57,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('ir-theme', theme);
     // Sync to cookie for Server-Side Rendering (SSR)
     document.cookie = `ir-theme=${theme}; path=/; max-age=31536000; SameSite=Lax`;
+
+    // Remove the temporary preloader style tag once client state is ready
+    try {
+      const preloadStyle = document.getElementById('ir-theme-preload');
+      if (preloadStyle) {
+        preloadStyle.remove();
+      }
+    } catch (e) {}
   }, [theme]);
 
   const toggleTheme = useCallback(() => {

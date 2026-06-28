@@ -104,6 +104,12 @@ export default async function RootLayout({
                     : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                   document.documentElement.setAttribute('data-theme', theme);
                   document.documentElement.style.colorScheme = theme;
+                  if (theme === 'dark') {
+                    var style = document.createElement('style');
+                    style.id = 'ir-theme-preload';
+                    style.innerHTML = 'html, body { background-color: #0d0d0d !important; color: #e8e8e8 !important; }';
+                    document.head.appendChild(style);
+                  }
                 } catch (e) {}
               })();
             `,
