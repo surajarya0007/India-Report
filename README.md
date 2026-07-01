@@ -24,8 +24,8 @@ flowchart TD
     Start[Ingestion Triggered] --> Feeds[Fetch Google News RSS Feeds]
     Feeds --> GeminiTrend[Gemini 1.5 Flash: Extract Top 5 Trending Topics]
     GeminiTrend --> Dedup[Prisma Deduplication Check vs Last 24 Hours]
-    Dedup -- Existing topic -- Skip[Skip Topic]
-    Dedup -- New topic -- Search[Search Google News for Topic URLs]
+    Dedup -->|Existing topic| Skip[Skip Topic]
+    Dedup -->|New topic| Search[Search Google News for Topic URLs]
     Search --> Crawl[Scrape Content clean Markdown via Firecrawl]
     Crawl --> GeminiSynth[Gemini 1.5 Flash: Synthesize News Dossier]
     GeminiSynth --> DBStore[Store Structured Article in Supabase]
@@ -66,13 +66,13 @@ The platform provides a smart search experience on the homepage. Instead of stan
 ```mermaid
 flowchart TD
     A[User Enters Search Query] --> B{Is Search Query Empty?}
-    B -- Yes -- C[Check Redis Cache]
-    C -- Cache Hit -- D[Return Cached Articles]
-    C -- Cache Miss -- E[Query DB: Get Latest Articles]
+    B -->|Yes| C[Check Redis Cache]
+    C -->|Cache Hit| D[Return Cached Articles]
+    C -->|Cache Miss| E[Query DB: Get Latest Articles]
     E --> F[Cache Result in Redis]
     F --> G[Display Articles on Homepage]
     
-    B -- No -- H[Bypass Redis Cache Check]
+    B -->|No| H[Bypass Redis Cache Check]
     H --> I[Generate Query Embedding via Gemini]
     I --> J[Query pgvector for Matching Chunks]
     J --> K[Map Chunk IDs to Parent Articles]
@@ -102,14 +102,14 @@ flowchart TD
     B --> C[Gemini RAG Builder Evaluates Context Relevance]
     C --> D{Does Query Lack DB Coverage?}
     
-    D -- Yes (Context gap detected) -- E[Trigger Live Google News Ingestion for Topic]
+    D -->|"Yes (Context gap detected)"| E[Trigger Live Google News Ingestion for Topic]
     E --> F[Crawl & Scrape Articles via Firecrawl]
     F --> G[Synthesize News Dossier via Gemini 1.5 Flash]
     G --> H[Store in DB & Generate Embeddings]
     H --> I[Re-query Vector DB for Updated Context]
     I --> J[Gemini Synthesizes Grounded Answer with Citations]
     
-    D -- No (Sufficient context exists) -- J
+    D -->|"No (Sufficient context exists)"| J
     J --> K[Return Response & Follow-up Suggestions to User]
 ```
 
