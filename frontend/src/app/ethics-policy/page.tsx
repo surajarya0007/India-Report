@@ -64,7 +64,7 @@ export default function EthicsPolicy() {
             If a summarized report contains inaccuracies or misrepresentations due to synthesis errors, we encourage readers and publishers to contact us. Upon review, we will manually trigger article updates or remove reports when needed.
           </p>
           <p style={{ fontWeight: 600 }}>
-            Contact: bharatnewsnarratives@gmail.com
+            Contact: aryasuraj351@gmail.com
           </p>
         </ScrollReveal>
       </div>

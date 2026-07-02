@@ -11,6 +11,7 @@ const staticRoutes = [
   '/contact',
   '/chat',
   '/e-paper',
+  '/disclaimer',
   '/ethics-policy',
   '/privacy-policy',
   '/terms',

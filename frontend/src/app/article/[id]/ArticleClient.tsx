@@ -656,10 +656,10 @@ export default function ArticleClient({
               background: 'var(--color-ink)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0
             }}>
-              <span style={{ color: 'var(--bg-primary)', fontSize: 13, fontWeight: 900, fontFamily: 'Georgia, serif' }}>IR</span>
+              <span style={{ color: 'var(--bg-primary)', fontSize: 13, fontWeight: 900, fontFamily: 'Georgia, serif' }}>DNI</span>
             </div>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-ink)' }}>India Reports Editorial Desk</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-ink)' }}>Daily News Insights Editorial Desk</div>
               <div style={{ fontSize: 10, color: 'var(--color-ink-muted)', fontWeight: 500, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Clock style={{ width: 10, height: 10 }} />
                 <span>{formatDate(article.createdAt)}</span>
@@ -732,7 +732,7 @@ export default function ArticleClient({
                 textAlign: 'right', fontSize: 10, color: 'var(--color-ink-muted)', 
                 marginTop: 6, fontStyle: 'italic', letterSpacing: '0.04em' 
               }}>
-                IMAGE: INDIA REPORTS / GOOGLE NEWS INGEST
+                IMAGE: DAILY NEWS INSIGHTS / NEWS DATA LABS
               </div>
             </div>
 
@@ -902,11 +902,11 @@ export default function ArticleClient({
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
                 <AlertCircle style={{ width: 14, height: 14, color: categoryColorHex }} />
                 <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--color-ink)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  AI Dossier Synthesis
+                  Editorial Note & Quality Control
                 </span>
               </div>
               <p style={{ fontSize: 11.5, color: 'var(--color-ink-muted)', lineHeight: 1.6, margin: 0 }}>
-                This report is compiled programmatically from multiple verified news publications. Raw articles are parsed via Firecrawl and structured analysis is synthesized dynamically using Gemini AI models.
+                Editorial Note: This briefing is programmatically compiled from verified media feeds and formally reviewed, verified, and authorized by the Daily News Insights editorial desk to maintain strict factual and contextual integrity.
               </p>
             </div>
             

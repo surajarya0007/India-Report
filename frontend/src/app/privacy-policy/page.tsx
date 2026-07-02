@@ -4,8 +4,8 @@ import Layout from '../../components/Layout';
 import ScrollReveal from '../../components/ScrollReveal';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | India Reports',
-  description: 'Read how India Reports collects, stores, and protects user data across the platform.',
+  title: 'Privacy Policy | Daily News Insights',
+  description: 'Read how Daily News Insights collects, stores, and protects user data across the platform.',
 };
 
 export default function PrivacyPolicy() {
@@ -24,7 +24,7 @@ export default function PrivacyPolicy() {
             1. Introduction
           </p>
           <p>
-            Welcome to India Reports (“Company”, “we”, “our”, “us”). We respect your privacy and are committed to protecting your personal data. Because our platform serves a global audience, we process personal data in accordance with applicable data protection laws, including the Digital Personal Data Protection Act, 2023 (DPDP Act) in India, the General Data Protection Regulation (GDPR) in the European Union/UK, and the California Consumer Privacy Act (CCPA/CPRA) in the United States.
+            Welcome to Daily News Insights (“Company”, “we”, “our”, “us”). We respect your privacy and are committed to protecting your personal data. Because our platform serves a global audience, we process personal data in accordance with applicable data protection laws, including the Digital Personal Data Protection Act, 2023 (DPDP Act) in India, the General Data Protection Regulation (GDPR) in the European Union/UK, and the California Consumer Privacy Act (CCPA/CPRA) in the United States.
           </p>
         </ScrollReveal>
 
@@ -166,7 +166,7 @@ export default function PrivacyPolicy() {
             Email: <a href="mailto:aryasuraj351@gmail.com" style={{ color: 'var(--ir-crimson)', textDecoration: 'underline' }}>aryasuraj351@gmail.com</a>
           </p>
           <p style={{ margin: '8px 0 0 0' }}>
-            Website: <a href="https://india-reports.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ir-crimson)', textDecoration: 'underline' }}>india-reports.com</a>
+            Website: <a href="https://dailynewsinsights.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ir-crimson)', textDecoration: 'underline' }}>dailynewsinsights.com</a>
           </p>
         </ScrollReveal>
       </div>

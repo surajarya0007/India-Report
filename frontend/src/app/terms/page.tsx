@@ -4,8 +4,8 @@ import Layout from '../../components/Layout';
 import ScrollReveal from '../../components/ScrollReveal';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | India Reports',
-  description: 'Review the terms that govern your use of India Reports and our automated news platform.',
+  title: 'Terms of Service | Daily News Insights',
+  description: 'Review the terms that govern your use of Daily News Insights and our automated news platform.',
 };
 
 export default function TermsOfService() {
@@ -15,7 +15,7 @@ export default function TermsOfService() {
         <ScrollReveal>
           <h1>Terms of Service</h1>
           <p className="page-subtitle" style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-ink-muted)', marginBottom: 32 }}>
-            BHARAT NEWS NARRATIVES &bull; Effective Date: June 20, 2026 | Last Updated: June 20, 2026
+            Effective Date: June 20, 2026 | Last Updated: June 20, 2026
           </p>
         </ScrollReveal>
 
@@ -24,7 +24,7 @@ export default function TermsOfService() {
             1. Acceptance of Terms
           </p>
           <p>
-            Welcome to India Reports ("Platform", "we", "our", "us"). By accessing or using this website, you agree to be bound by these Terms of Service ("Terms"). If you do not agree with these Terms, please discontinue use of the Platform immediately.
+            Welcome to Daily News Insights ("Platform", "we", "our", "us"). By accessing or using this website, you agree to be bound by these Terms of Service ("Terms"). If you do not agree with these Terms, please discontinue use of the Platform immediately.
           </p>
         </ScrollReveal>
 
@@ -33,7 +33,7 @@ export default function TermsOfService() {
             2. Description of Service
           </p>
           <p>
-            India Reports is an automated, AI-powered news aggregation and synthesis platform. Our technology programmatically clusters trending topics and utilizes artificial intelligence to generate objective, multi-source informational briefings. We reserve the right to modify, suspend, or discontinue any part of the Platform at any time without prior notice.
+            Daily News Insights is an automated, AI-powered news aggregation and synthesis platform. Our technology programmatically clusters trending topics and utilizes artificial intelligence to generate objective, multi-source informational briefings. We reserve the right to modify, suspend, or discontinue any part of the Platform at any time without prior notice.
           </p>
         </ScrollReveal>
 
@@ -49,7 +49,7 @@ export default function TermsOfService() {
               <strong>No Guarantee of Accuracy:</strong> While we program our systems to prioritize factual reporting, AI can occasionally generate incorrect information ("hallucinations"). We do not guarantee the completeness, reliability, or real-time accuracy of any synthesized article.
             </li>
             <li style={{ marginBottom: 12 }}>
-              <strong>Not Professional Advice:</strong> Content on India Reports should not be considered professional, legal, medical, financial, or investment advice. All content is intended for general informational and entertainment purposes only.
+              <strong>Not Professional Advice:</strong> Content on Daily News Insights should not be considered professional, legal, medical, financial, or investment advice. All content is intended for general informational and entertainment purposes only.
             </li>
           </ul>
         </ScrollReveal>
@@ -59,23 +59,23 @@ export default function TermsOfService() {
             4. Intellectual Property & DMCA Safe Harbor
           </p>
           <p>
-            India Reports respects the intellectual property rights of others. Our automated systems generate content by analyzing publicly available information.
+            Daily News Insights respects the intellectual property rights of others. Our automated systems generate content by analyzing publicly available information.
           </p>
           <ul style={{ listStyleType: 'none', paddingLeft: 0, marginBottom: 18 }}>
             <li style={{ marginBottom: 16 }}>
-              <strong>A. Platform IP:</strong> Unless otherwise stated, the website design, branding, logos, and the unique synthesis algorithms of India Reports are owned by the Platform. Unauthorized manual or automated reproduction of our synthesized content is prohibited.
+              <strong>A. Platform IP:</strong> Unless otherwise stated, the website design, branding, logos, and the unique synthesis algorithms of Daily News Insights are owned by the Platform. Unauthorized manual or automated reproduction of our synthesized content is prohibited.
             </li>
             <li style={{ marginBottom: 16 }}>
               <strong>B. Copyright & DMCA Takedown Notice:</strong> If you are a publisher or copyright owner and believe that our automated ingestion systems have improperly utilized your copyrighted material beyond the scope of Fair Use, you may submit a takedown request under the Digital Millennium Copyright Act (DMCA). Please provide our Designated Copyright Agent with the following:
               <ul style={{ listStyleType: 'circle', paddingLeft: 20, marginTop: 8 }}>
                 <li style={{ marginBottom: 6 }}>A physical or electronic signature of the copyright owner.</li>
                 <li style={{ marginBottom: 6 }}>Identification of the copyrighted work claimed to have been infringed.</li>
-                <li style={{ marginBottom: 6 }}>The specific URL on India Reports containing the allegedly infringing material.</li>
+                <li style={{ marginBottom: 6 }}>The specific URL on Daily News Insights containing the allegedly infringing material.</li>
                 <li style={{ marginBottom: 6 }}>Your contact information (email address and phone number).</li>
                 <li style={{ marginBottom: 6 }}>A statement of good faith belief that the use is unauthorized, and a statement under penalty of perjury that the information is accurate.</li>
               </ul>
               <p style={{ marginTop: 12 }}>
-                Please send takedown notices to: <a href="mailto:bharatnewsnarratives@gmail.com" style={{ color: 'var(--ir-crimson)', textDecoration: 'underline' }}>bharatnewsnarratives@gmail.com</a>
+                Please send takedown notices to: <a href="mailto:aryasuraj351@gmail.com" style={{ color: 'var(--ir-crimson)', textDecoration: 'underline' }}>aryasuraj351@gmail.com</a>
               </p>
             </li>
           </ul>
@@ -110,7 +110,7 @@ export default function TermsOfService() {
             7. Limitation of Liability
           </p>
           <p>
-            To the fullest extent permitted by applicable law, India Reports, its developers, and operators shall not be liable for any direct, indirect, incidental, consequential, or special damages arising from:
+            To the fullest extent permitted by applicable law, Daily News Insights, its developers, and operators shall not be liable for any direct, indirect, incidental, consequential, or special damages arising from:
           </p>
           <ul style={{ listStyleType: 'disc', paddingLeft: 20, marginBottom: 18 }}>
             <li style={{ marginBottom: 8 }}>Your use of or inability to use the Platform.</li>
@@ -124,7 +124,7 @@ export default function TermsOfService() {
             8. Indemnification
           </p>
           <p>
-            You agree to indemnify, defend, and hold harmless India Reports and its operators from any claims, damages, losses, or liabilities (including legal fees) arising out of your use of the Platform, your violation of these Terms, or your infringement of any third-party rights.
+            You agree to indemnify, defend, and hold harmless Daily News Insights and its operators from any claims, damages, losses, or liabilities (including legal fees) arising out of your use of the Platform, your violation of these Terms, or your infringement of any third-party rights.
           </p>
         </ScrollReveal>
 
@@ -133,7 +133,7 @@ export default function TermsOfService() {
             9. Governing Law and Jurisdiction
           </p>
           <p>
-            These Terms shall be governed by and interpreted in accordance with the laws of India. Any disputes arising under these Terms shall be subject to the exclusive jurisdiction of the courts located in Agra, Uttar Pradesh, India.
+            These Terms shall be governed by and interpreted in accordance with the laws of India. Any disputes arising under these Terms shall be subject to the exclusive jurisdiction of the courts located in Aligarh, Uttar Pradesh, India.
           </p>
         </ScrollReveal>
 

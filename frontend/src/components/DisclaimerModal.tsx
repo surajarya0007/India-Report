@@ -18,7 +18,7 @@ export default function DisclaimerModal({ isOpen, onClose }: DisclaimerModalProp
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.4)',
+        background: 'var(--bg-overlay)',
         backdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'center',
@@ -57,7 +57,7 @@ export default function DisclaimerModal({ isOpen, onClose }: DisclaimerModalProp
             fontFamily: 'var(--font-sans)',
             fontSize: 16,
             fontWeight: 800,
-            color: '#1565c0', // Royal blue as in user screenshot
+            color: 'var(--ir-crimson)',
             letterSpacing: '0.05em',
             margin: 0,
             textTransform: 'uppercase',
@@ -98,19 +98,19 @@ export default function DisclaimerModal({ isOpen, onClose }: DisclaimerModalProp
           gap: 16,
         }}>
           <p style={{ margin: 0 }}>
-            The content published on this website is generated and/or assisted entirely by artificial intelligence and is provided for informational purposes only. While we make reasonable efforts to ensure the correctness, accuracy, and timeliness of the information presented, we do not guarantee the completeness, reliability, or current validity of any content.
+            The content published on Daily News Insights is generated and assisted by artificial intelligence and is provided for informational purposes only. While we make reasonable efforts to ensure the correctness, accuracy, and timeliness of the information presented, we do not guarantee the completeness, reliability, or current validity of any content.
+          </p>
+          <p style={{ margin: 0, fontWeight: 600, fontStyle: 'italic', borderLeft: '3px solid var(--ir-crimson)', paddingLeft: 12 }}>
+            While Daily News Insights utilizes AI-assisted technologies to aggregate and structure data, all final content is curated, reviewed, and authorized by our editorial team.
           </p>
           <p style={{ margin: 0 }}>
             The information provided on this website should not be considered professional, legal, financial, or investment advice. Users are strongly encouraged to independently verify information before making any decisions based on the content available here.
           </p>
           <p style={{ margin: 0 }}>
-            All images displayed on this website are selected from publicly available sources on the internet. We do not claim ownership or copyright over any third-party images unless explicitly stated. All rights belong to their respective owners. If you believe any image infringes upon your copyright, please contact us for prompt review and appropriate action.
+            All images displayed on this website are selected from publicly available sources on the internet. We do not claim ownership or copyright over any third-party images. All rights belong to their respective owners. If you believe any image infringes upon your copyright, please contact us at <a href="mailto:aryasuraj351@gmail.com" style={{ color: 'var(--ir-crimson)', textDecoration: 'underline' }}>aryasuraj351@gmail.com</a> for prompt review and action.
           </p>
           <p style={{ margin: 0 }}>
-            All content on this platform is AI-generated and is not intended to harm, defame, misrepresent, or offend any individual, organization, community, or group within society. Any resemblance to real events, persons, or entities is purely coincidental and unintentional.
-          </p>
-          <p style={{ margin: 0 }}>
-            We shall not be held responsible for any losses, damages, or actions taken based on the information provided on this website.
+            All content on this platform is synthesized and is not intended to harm, defame, misrepresent, or offend any individual, organization, community, or group within society. Any resemblance to real events, persons, or entities is purely coincidental and unintentional.
           </p>
         </div>
 
@@ -125,7 +125,7 @@ export default function DisclaimerModal({ isOpen, onClose }: DisclaimerModalProp
           <button
             onClick={onClose}
             style={{
-              background: '#1565c0', // Blue button as in screenshot
+              background: 'var(--ir-crimson)',
               color: '#fff',
               border: 'none',
               borderRadius: 4,
@@ -137,8 +137,8 @@ export default function DisclaimerModal({ isOpen, onClose }: DisclaimerModalProp
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = '#0d47a1'}
-            onMouseLeave={e => e.currentTarget.style.background = '#1565c0'}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--ir-crimson-dark)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--ir-crimson)'}
           >
             Close
           </button>

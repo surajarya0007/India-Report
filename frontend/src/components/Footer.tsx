@@ -160,21 +160,26 @@ export default function Footer({ onNavChange, onDisclaimerClick }: FooterProps) 
                 {LEGAL_LINKS.map(link => {
                   if (link.label === 'Disclaimer') {
                     return (
-                      <button
+                      <a
                         key={link.label}
-                        onClick={onDisclaimerClick}
+                        href="/disclaimer"
+                        onClick={(e) => {
+                          if (onDisclaimerClick) {
+                            e.preventDefault();
+                            onDisclaimerClick();
+                          }
+                        }}
                         className="ir-footer-link"
                         style={{
-                          background: 'none',
-                          border: 'none',
                           textAlign: 'left',
                           cursor: 'pointer',
                           padding: '5px 0',
                           fontFamily: 'var(--font-sans)',
+                          display: 'inline-block',
                         }}
                       >
                         <span className="ir-footer-link-inner">{link.label}</span>
-                      </button>
+                      </a>
                     );
                   }
                   return (
@@ -201,12 +206,16 @@ export default function Footer({ onNavChange, onDisclaimerClick }: FooterProps) 
           }}>
             <span>© 2026 Daily News Insights. All Rights Reserved.</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <button
-                onClick={onDisclaimerClick}
+              <a
+                href="/disclaimer"
+                onClick={(e) => {
+                  if (onDisclaimerClick) {
+                    e.preventDefault();
+                    onDisclaimerClick();
+                  }
+                }}
                 className="ir-footer-link"
                 style={{
-                  background: 'none',
-                  border: 'none',
                   fontSize: 12,
                   padding: 0,
                   cursor: 'pointer',
@@ -214,7 +223,7 @@ export default function Footer({ onNavChange, onDisclaimerClick }: FooterProps) 
                 }}
               >
                 <span className="ir-footer-link-inner">Disclaimer</span>
-              </button>
+              </a>
               <a href="/privacy-policy" className="ir-footer-link" style={{ fontSize: 12, padding: 0 }}>
                 <span className="ir-footer-link-inner">Privacy Policy</span>
               </a>
