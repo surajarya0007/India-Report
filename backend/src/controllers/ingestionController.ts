@@ -159,6 +159,7 @@ Write a detailed, professional, multi-section article. Your output MUST follow t
 2. SUMMARY: Write exactly 5 distinct, factual bullet points. Each bullet must be a full, complete sentence (minimum 20 words). Cover different angles: what happened, who is involved, what the impact is, what experts/officials say, and what happens next. Do NOT use markdown in summary.
 3. CONTENT BLOCKS: Write exactly 8 complete paragraphs in English. Each paragraph must be at least 80 words. The first paragraph is the lead paragraph.
    * Use double-asterisk markdown (e.g. **Google** or **7,000mAh**) to bold ONLY the most critical entities, key figures, or statistics. Cap it to a maximum of 2-3 short key terms per paragraph. Do not over-bold or bold common words, as it looks cluttered.
+   * CRITICAL JOURNALISTIC TONE RULE: Avoid typical AI writing patterns and clichés. Do NOT start paragraphs with transitions like "it is worth noting," "furthermore," "in conclusion," or "consequently." Avoid flowery AI filler phrases such as "testament to," "beacon of," "delves into," or "symphony of." The prose must read like natural, authoritative, human-written journalism.
 4. SECTION HEADINGS: Write exactly 4 section headings (short, bold editorial titles, 3-6 words each) that will appear before paragraphs 2, 4, 6, and 8 respectively. Do NOT use markdown formatting here.
 5. HIGHLIGHTED FACTS: Extract exactly 4 standalone key statistics, quotes, or notable facts that can be displayed as pull-quotes or callout boxes. Each must be a single compelling sentence. Do NOT use markdown.
 6. SENTIMENT: Choose the overall tone: Positive, Negative, or Neutral.
@@ -398,13 +399,34 @@ export async function runIngestionPipeline(
       markIngestionScraping(scope);
       const crawled = await crawlSources(items);
       const synthesis = await synthesizeTrendDossier(keyword, crawled);
+
+      // Extract domains of sources to cite
+      const sourceDomains = Array.from(
+        new Set(
+          items
+            .map((item) => {
+              try {
+                const urlObj = new URL(item.url);
+                return urlObj.hostname.replace('www.', '');
+              } catch {
+                return '';
+              }
+            })
+            .filter((domain) => domain && !domain.includes('google.com'))
+        )
+      ).slice(0, 4);
+
+      const finalContentBlocks = [...synthesis.contentBlocks];
+      if (sourceDomains.length > 0) {
+        finalContentBlocks.push(`Sources Cited: ${sourceDomains.join(', ')}`);
+      }
       
       const createdArticle = await prisma.article.create({
         data: {
           keyword,
           headline: synthesis.headline,
           summary: synthesis.summary,
-          contentBlocks: synthesis.contentBlocks,
+          contentBlocks: finalContentBlocks,
           sectionHeadings: synthesis.sectionHeadings || [],
           highlightedFacts: synthesis.highlightedFacts || [],
           sentiment: synthesis.sentiment,
@@ -526,6 +548,27 @@ export async function runIngestionPipeline(
           markIngestionScraping(scope);
           const crawled = await crawlSources(searchItems);
           const synthesis = await synthesizeTrendDossier(keyword, crawled);
+
+          // Extract domains of sources to cite
+          const sourceDomains = Array.from(
+            new Set(
+              searchItems
+                .map((item) => {
+                  try {
+                    const urlObj = new URL(item.url);
+                    return urlObj.hostname.replace('www.', '');
+                  } catch {
+                    return '';
+                  }
+                })
+                .filter((domain) => domain && !domain.includes('google.com'))
+            )
+          ).slice(0, 4);
+
+          const finalContentBlocks = [...synthesis.contentBlocks];
+          if (sourceDomains.length > 0) {
+            finalContentBlocks.push(`Sources Cited: ${sourceDomains.join(', ')}`);
+          }
           
           const imageResult = await getCopyrightFreeImage(
             synthesis.imageSearchQuery,
@@ -545,7 +588,7 @@ export async function runIngestionPipeline(
               keyword,
               headline: synthesis.headline,
               summary: synthesis.summary,
-              contentBlocks: synthesis.contentBlocks,
+              contentBlocks: finalContentBlocks,
               sectionHeadings: synthesis.sectionHeadings || [],
               highlightedFacts: synthesis.highlightedFacts || [],
               sentiment: synthesis.sentiment,

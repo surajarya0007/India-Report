@@ -309,6 +309,27 @@ function ArticleBody({
   return (
     <div>
       {contentBlocks.map((para, i) => {
+        if (para.startsWith('Sources Cited:')) {
+          const sourcesList = para.replace('Sources Cited:', '').trim();
+          return (
+            <div key={i} style={{
+              marginTop: 28,
+              paddingTop: 16,
+              borderTop: '1px dashed var(--border-primary)',
+              fontSize: 12,
+              color: 'var(--color-ink-muted)',
+              fontFamily: 'var(--font-sans)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              flexWrap: 'wrap'
+            }}>
+              <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: 10, letterSpacing: '0.04em', color: color }}>Sources Referenced:</span>
+              <span style={{ fontStyle: 'italic' }}>{sourcesList}</span>
+            </div>
+          );
+        }
+
         const isFirst = i === 0;
         const pContent = renderTextWithBold(para, isFirst);
 
