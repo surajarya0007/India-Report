@@ -5,13 +5,13 @@ import { SITE_NAME, siteUrl } from '../../lib/seo';
 
 export const metadata: Metadata = {
   title: `Chat | ${SITE_NAME}`,
-  description: 'Ask questions and get grounded answers from India Reports articles.',
+  description: 'Ask questions and get grounded answers from Daily News Insights articles.',
   alternates: {
     canonical: '/chat',
   },
   openGraph: {
     title: `Chat | ${SITE_NAME}`,
-    description: 'Closed-domain article chat for India Reports.',
+    description: 'Closed-domain article chat for Daily News Insights.',
     url: `${siteUrl}/chat`,
     type: 'website',
     siteName: SITE_NAME,

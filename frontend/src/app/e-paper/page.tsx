@@ -64,7 +64,7 @@ export default function EPaperPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <BookOpen style={{ width: 18, height: 18, color: 'var(--ir-crimson)' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ink)' }}>India Reports Autonomous E-Paper Edition</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ink)' }}>Daily News Insights Autonomous E-Paper Edition</span>
         </div>
         <button
           onClick={handlePrint}
@@ -110,7 +110,7 @@ export default function EPaperPage() {
             margin: '0 0 10px 0',
             letterSpacing: '-0.03em',
           }}>
-            INDIA REPORTS
+            DAILY NEWS INSIGHTS
           </h1>
           <div style={{
             display: 'flex',

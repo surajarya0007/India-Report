@@ -661,8 +661,8 @@ export async function buildRagAnswer(
 
   console.log(`[RAG] Generating answer for query: "${query}" using ${sources.length} sources...`);
 
-  const prompt = `You are the India Reports article assistant.
-Answer only from the provided India Reports sources.
+  const prompt = `You are the Daily News Insights (DNI) article assistant.
+Answer only from the provided Daily News Insights sources.
 If the sources do not cover the user question well or do not contain relevant information, set "needsIngestion" to true, and set "searchKeyword" to a concise 2-4 word search term optimized for Google News search to fetch articles about this event (e.g. "Modi Qatar gas explosion").
 If the sources DO cover the user question well, set "needsIngestion" to false and "searchKeyword" to null.
 Do not browse the web. Do not invent facts.
@@ -689,8 +689,8 @@ Return ONLY valid JSON with:
   if (!hasGeminiApiKey()) {
     return {
       answer: sources.length
-        ? `I found ${sources.length} relevant article${sources.length === 1 ? '' : 's'} in India Reports, but the assistant model is not configured.`
-        : 'I could not find enough matching coverage in India Reports right now.',
+        ? `I found ${sources.length} relevant article${sources.length === 1 ? '' : 's'} in Daily News Insights, but the assistant model is not configured.`
+        : 'I could not find enough matching coverage in Daily News Insights right now.',
       suggestions: sources.slice(0, 3).map((source) => source.headline),
       needsIngestion: sources.length === 0,
       searchKeyword: query.slice(0, 40),
@@ -726,8 +726,8 @@ Return ONLY valid JSON with:
     console.error('[RAG] Answer generation failed:', error);
     return {
       answer: sources.length
-        ? `I found matching coverage in India Reports for "${query}", but I could not generate a polished answer just now.`
-        : `I could not find enough matching coverage in India Reports for "${query}".`,
+        ? `I found matching coverage in Daily News Insights for "${query}", but I could not generate a polished answer just now.`
+        : `I could not find enough matching coverage in Daily News Insights for "${query}".`,
       suggestions: sources.slice(0, 3).map((source) => source.headline),
       needsIngestion: sources.length === 0,
       searchKeyword: query.slice(0, 40),

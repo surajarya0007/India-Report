@@ -23,6 +23,9 @@ export default function AdBanner({
   // Default fallback slot IDs if not provided in props or env
   const slotId = adSlot || process.env.NEXT_PUBLIC_ADSENSE_DEFAULT_SLOT;
 
+  // Temporarily disable manual ad slots to avoid showing empty layout blocks
+  return null;
+
   useEffect(() => {
     // Only push if we are on client side and adsbygoogle is available
     if (typeof window !== 'undefined') {

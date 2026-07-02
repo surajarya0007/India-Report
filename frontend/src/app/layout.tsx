@@ -27,7 +27,7 @@ const sourceSerif = Source_Serif_4({
 const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "India Reports",
+  name: "Daily News Insights",
   url: siteUrl,
   potentialAction: {
     "@type": "SearchAction",
@@ -39,7 +39,7 @@ const websiteJsonLd = {
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "NewsMediaOrganization",
-  name: "India Reports",
+  name: "Daily News Insights",
   url: siteUrl,
   logo: {
     "@type": "ImageObject",
@@ -50,11 +50,11 @@ const organizationJsonLd = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "India Reports - India's Autonomous News Intelligence Platform",
+  title: "Daily News Insights - Autonomous News Intelligence Platform",
   description:
-    "India Reports delivers AI-synthesized news covering India, World, Business, Tech, Science, Health and more. Updated every 4 hours with real-time intelligence.",
-  keywords: "India news, AI news, autonomous news, India Reports, breaking news, world news, business news, technology news",
-  authors: [{ name: "India Reports Editorial Desk" }],
+    "Daily News Insights (DNI) delivers AI-synthesized news covering India, World, Business, Tech, Science, Health and more. Updated every 4 hours with real-time intelligence.",
+  keywords: "news insights, AI news, autonomous news, Daily News Insights, DNI, breaking news, world news, business news, technology news",
+  authors: [{ name: "Daily News Insights Editorial Desk" }],
   alternates: {
     canonical: "/",
     types: {
@@ -62,17 +62,17 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "India Reports - India's Autonomous News Intelligence Platform",
+    title: "Daily News Insights - Autonomous News Intelligence Platform",
     description: "AI-synthesized news covering India, World, Business, Tech, Science, Health and more.",
     url: "/",
     type: "website",
     locale: "en_IN",
-    siteName: "India Reports",
+    siteName: "Daily News Insights",
   },
   twitter: {
     card: "summary_large_image",
-    title: "India Reports",
-    description: "India's Autonomous News Intelligence Platform",
+    title: "Daily News Insights",
+    description: "Daily News Insights - Autonomous News Intelligence Platform",
   },
 };
 

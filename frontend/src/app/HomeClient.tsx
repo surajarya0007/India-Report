@@ -145,7 +145,7 @@ function EnrichingBadge() {
 function BreakingTicker({ articles }: { articles: Article[] }) {
   const texts = articles.length > 0
     ? [...articles, ...articles].map(a => a.headline)
-    : ['India Reports: AI-Powered News Platform — Updated On Demand', 'Breaking coverage from India and the world, synthesized by Gemini 1.5 Flash', 'Live pipeline: Firecrawl extraction • Supabase storage • Upstash caching'];
+    : ['Daily News Insights: AI-Powered News Platform — Updated On Demand', 'Breaking coverage from India and the world, synthesized by Gemini 1.5 Flash', 'Live pipeline: Firecrawl extraction • Supabase storage • Upstash caching'];
 
   return (
     <div style={{ display: 'flex', background: 'var(--ticker-bg)', overflow: 'hidden', borderBottom: '1px solid rgba(0,0,0,0.15)' }}>

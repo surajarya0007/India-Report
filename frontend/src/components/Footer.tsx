@@ -64,7 +64,7 @@ export default function Footer({ onNavChange, onDisclaimerClick }: FooterProps) 
             {/* Column 1: Brand */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 16 }}>
-                {['I', 'R'].map((l, i) => (
+                {['D', 'N', 'I'].map((l, i) => (
                   <span key={i} style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     width: 28, height: 28, background: '#fff', color: '#111',
@@ -76,7 +76,7 @@ export default function Footer({ onNavChange, onDisclaimerClick }: FooterProps) 
                   fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em',
                   color: '#fff', marginLeft: 8,
                 }}>
-                  INDIA REPORTS
+                  DAILY NEWS INSIGHTS
                 </span>
               </div>
               <p style={{
@@ -199,7 +199,7 @@ export default function Footer({ onNavChange, onDisclaimerClick }: FooterProps) 
             fontSize: 12,
             color: '#555',
           }}>
-            <span>© 2026 India Reports. All Rights Reserved.</span>
+            <span>© 2026 Daily News Insights. All Rights Reserved.</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
               <button
                 onClick={onDisclaimerClick}

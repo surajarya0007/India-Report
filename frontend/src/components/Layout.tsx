@@ -30,7 +30,7 @@ function BreakingTicker({ articles = [] }: { articles?: Article[] }) {
   const items = articles.length > 0
     ? [...articles, ...articles]
     : [
-        { id: '', headline: 'India Reports: AI-Powered News Platform — Updated On Demand' },
+        { id: '', headline: 'Daily News Insights: AI-Powered News Platform — Updated On Demand' },
         { id: '', headline: 'Breaking coverage from India and the world, synthesized by Gemini 1.5 Flash' },
         { id: '', headline: 'Live pipeline: Firecrawl extraction • Supabase storage • Upstash caching' }
       ];
@@ -313,7 +313,7 @@ export default function Layout({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Sparkles style={{ width: 16, height: 16, color: 'var(--ir-crimson)' }} />
                   <span style={{ fontWeight: 800, fontSize: 14, fontFamily: 'var(--font-serif)', color: 'var(--color-ink)' }}>
-                    India Reports Assistant
+                    Daily News Insights Assistant
                   </span>
                 </div>
                 <button

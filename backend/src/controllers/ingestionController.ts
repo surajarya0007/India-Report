@@ -149,7 +149,7 @@ async function synthesizeTrendDossier(topic: string, sources: { headline: string
 
   const sourcesText = sources.map((s, i) => `Source ${i + 1}: ${s.headline}\nContent:\n${s.content.slice(0, 2500)}`).join('\n\n---\n\n');
 
-  const prompt = `You are a senior journalist at a premium news publication writing a comprehensive editorial dossier for "India Reports".
+  const prompt = `You are a senior journalist at a premium news publication writing a comprehensive editorial dossier for "Daily News Insights".
 Your article must match the depth, structure, and length of high-quality publications like BBC, The Hindu, or Reuters.
 
 Topic: "${topic}"

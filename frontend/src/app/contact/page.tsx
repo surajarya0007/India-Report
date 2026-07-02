@@ -5,8 +5,8 @@ import ScrollReveal from '../../components/ScrollReveal';
 import { Mail, Phone, MapPin, Newspaper, DollarSign, Shield } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Contact Us | India Reports',
-  description: 'Reach the India Reports editorial desk, advertising team, or file DMCA correction notices.',
+  title: 'Contact Us | Daily News Insights',
+  description: 'Reach the Daily News Insights editorial desk, advertising team, or file DMCA correction notices.',
 };
 
 const CONTACT_CARDS = [

@@ -1,7 +1,7 @@
 import type { Article } from './api';
 
-export const SITE_NAME = 'India Reports';
-export const PUBLISHER_NAME = 'India Reports Editorial Desk';
+export const SITE_NAME = 'Daily News Insights';
+export const PUBLISHER_NAME = 'Daily News Insights Editorial Desk';
 export const DEFAULT_SITE_URL = 'https://dailynewsinsights.com';
 export const CATEGORY_NAMES = [
   'India',

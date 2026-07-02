@@ -161,7 +161,7 @@ export default function Header({
             position: 'absolute', left: '50%', transform: 'translateX(-50%)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {['I', 'R'].map((l, i) => (
+              {['D', 'N', 'I'].map((l, i) => (
                 <span key={i} style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   width: 'var(--logo-box-size)', height: 'var(--logo-box-size)', background: 'var(--color-ink)', color: 'var(--bg-primary)',
@@ -169,13 +169,6 @@ export default function Header({
                   letterSpacing: '-0.02em',
                 }}>{l}</span>
               ))}
-              <span style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: 24, fontWeight: 900, letterSpacing: '-0.03em',
-                color: 'var(--color-ink)', marginLeft: 8,
-              }} className="hide-mobile">
-                INDIA REPORTS
-              </span>
             </div>
           </a>
 
@@ -439,19 +432,13 @@ export default function Header({
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {['I', 'R'].map((l, i) => (
+            {['D', 'N', 'I'].map((l, i) => (
               <span key={i} style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 24, height: 24, background: 'var(--color-ink)', color: 'var(--bg-primary)',
                 fontWeight: 900, fontSize: 13, fontFamily: 'Georgia, serif',
               }}>{l}</span>
             ))}
-            <span style={{
-              fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 900,
-              color: 'var(--color-ink)', marginLeft: 6,
-            }}>
-              INDIA REPORTS
-            </span>
           </div>
           <button
             onClick={() => setDrawerOpen(false)}

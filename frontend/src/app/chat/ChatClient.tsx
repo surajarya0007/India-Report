@@ -19,7 +19,7 @@ interface ChatMessage {
 const initialMessage: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
-  content: 'Ask me about anything covered by India Reports and I will answer using our internal articles only.',
+  content: 'Ask me about anything covered by Daily News Insights and I will answer using our internal articles only.',
 };
 
 export default function ChatClient() {
@@ -229,7 +229,7 @@ export default function ChatClient() {
         }}>
           {/* Logo Blocks */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {['I', 'R'].map((l, i) => (
+            {['D', 'N', 'I'].map((l, i) => (
               <span key={i} style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 'var(--logo-box-size)', height: 'var(--logo-box-size)', background: 'var(--color-ink)', color: 'var(--bg-primary)',
@@ -238,17 +238,6 @@ export default function ChatClient() {
               }}>{l}</span>
             ))}
           </div>
-
-          <span className="chat-logo-text" style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: 20,
-            fontWeight: 900,
-            letterSpacing: '-0.03em',
-            color: 'var(--color-ink)',
-            marginLeft: 4,
-          }}>
-            INDIA REPORTS
-          </span>
           <span className="chat-logo-badge" style={{
             fontSize: 10,
             fontWeight: 700,
@@ -258,7 +247,6 @@ export default function ChatClient() {
             borderRadius: 4,
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
-            marginLeft: 4,
           }}>
             Chat
           </span>
@@ -367,7 +355,7 @@ export default function ChatClient() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Ask anything covered by India Reports..."
+                  placeholder="Ask anything covered by Daily News Insights..."
                   style={{
                     flex: 1,
                     background: 'none',
@@ -680,7 +668,7 @@ export default function ChatClient() {
                   color: 'var(--color-ink-faint)',
                   marginTop: 10,
                 }}>
-                  India Reports Chat can make mistakes. Verify important details.
+                  Daily News Insights Chat can make mistakes. Verify important details.
                 </div>
               </form>
             </div>

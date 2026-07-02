@@ -59,7 +59,7 @@ const RESPONSE_SCHEMA = {
   required: ['headline', 'summary', 'content', 'sentiment', 'categories'],
 };
 
-const SYSTEM_PROMPT_BASE = `You are a professional journalist and AI news assistant for "India Reports", an autonomous self-updating news platform.
+const SYSTEM_PROMPT_BASE = `You are a professional journalist and AI news assistant for "Daily News Insights (DNI)", an autonomous self-updating news platform.
 Your task is to analyze the provided scraped article text and output a JSON object.`;
 
 const SEARCH_INSTRUCTIONS = `Use the Google Search tool to:
