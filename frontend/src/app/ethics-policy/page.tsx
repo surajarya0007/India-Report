@@ -4,7 +4,7 @@ import Layout from '../../components/Layout';
 import ScrollReveal from '../../components/ScrollReveal';
 
 export const metadata: Metadata = {
-  title: 'Ethics & Editorial Policy | India Reports',
+  title: 'Ethics & Editorial Policy | Daily News Insights',
   description: 'Read our principles of news transparency, neutrality, source verification, and AI accountability.',
 };
 
@@ -45,7 +45,7 @@ export default function EthicsPolicy() {
           <h2>2. AI Transparency Statement</h2>
           <div className="divider-accent" />
           <p>
-            India Reports is openly powered by Large Language Models. We do not try to pass AI-generated summaries as human-written investigative journalism. All dossiers clearly highlight "AI Dossier Synthesis" to ensure readers are aware of the processing mechanisms used.
+            Daily News Insights is openly powered by Large Language Models. We do not try to pass AI-generated summaries as human-written investigative journalism. All dossiers clearly highlight "AI Dossier Synthesis" to ensure readers are aware of the processing mechanisms used.
           </p>
         </ScrollReveal>
 

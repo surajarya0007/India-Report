@@ -43,7 +43,7 @@ export async function searchRagArticles(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('[RAGController] Search error:', error);
-    return res.status(500).json({ success: false, message: 'Failed to search India Reports content.' });
+    return res.status(500).json({ success: false, message: 'Failed to search Daily News Insights content.' });
   }
 }
 
@@ -105,7 +105,7 @@ export async function chatWithArticles(req: Request, res: Response) {
     }
 
     if (!answer.answer || answer.answer.trim() === '') {
-      answer.answer = `I couldn't find any matching coverage in India Reports for "${query}", and no live news updates were found on Google News.`;
+      answer.answer = `I couldn't find any matching coverage in Daily News Insights for "${query}", and no live news updates were found on Google News.`;
     }
 
     return res.status(200).json({

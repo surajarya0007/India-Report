@@ -1,7 +1,7 @@
 {
   "name": "india-reports-backend",
   "version": "1.0.0",
-  "description": "Backend for India Reports autonomous self-updating news platform",
+  "description": "Backend for Daily News Insights autonomous self-updating news platform",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

@@ -236,7 +236,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
             {mode === 'login' ? 'Welcome Back' : 'Create Account'}
           </h2>
           <p style={{ fontSize: 13, color: 'var(--color-ink-muted)' }}>
-            {mode === 'login' ? 'Access your India Reports dashboard' : 'Join India Reports today'}
+            {mode === 'login' ? 'Access your Daily News Insights dashboard' : 'Join Daily News Insights today'}
           </p>
         </div>
 

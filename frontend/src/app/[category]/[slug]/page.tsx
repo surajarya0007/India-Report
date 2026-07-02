@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: ArticlePageParams): Promise<M
     keywords: [
       article.keyword,
       ...(article.categories || []),
-      'India Reports',
+      'Daily News Insights',
       'India news',
     ].filter(Boolean),
     openGraph: {

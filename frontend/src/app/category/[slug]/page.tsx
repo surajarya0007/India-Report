@@ -19,10 +19,10 @@ type CategoryPageParams = {
 
 function getCategoryDescription(category: string, articleCount: number) {
   if (!articleCount) {
-    return `Latest ${category} coverage from India Reports.`;
+    return `Latest ${category} coverage from Daily News Insights.`;
   }
 
-  return `Latest ${category} coverage from India Reports, including ${articleCount} recent article${articleCount === 1 ? '' : 's'} and ongoing updates.`;
+  return `Latest ${category} coverage from Daily News Insights, including ${articleCount} recent article${articleCount === 1 ? '' : 's'} and ongoing updates.`;
 }
 
 export async function generateMetadata({ params, searchParams }: CategoryPageParams): Promise<Metadata> {

@@ -40,7 +40,7 @@ app.post('/api/admin/rag/backfill', requireAdmin, startRagBackfill);
 
 app.get('/', (_req, res) => {
   res.json({
-    name: 'India Reports RAG Service',
+    name: 'Daily News Insights RAG Service',
     status: 'healthy',
     time: new Date().toISOString(),
   });
@@ -48,7 +48,7 @@ app.get('/', (_req, res) => {
 
 app.listen(PORT, HOST, () => {
   console.log('----------------------------------------------------');
-  console.log(` India Reports RAG server listening on ${HOST}:${PORT}`);
+  console.log(` Daily News Insights RAG server listening on ${HOST}:${PORT}`);
   console.log(` Endpoint: http://${HOST}:${PORT}`);
   console.log('----------------------------------------------------');
 });

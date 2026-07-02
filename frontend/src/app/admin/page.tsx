@@ -433,7 +433,7 @@ export default function AdminDashboard() {
             System Dashboard
           </h1>
           <p style={{ fontSize: 13, color: 'var(--color-ink-muted)', marginTop: 4, fontFamily: 'var(--font-sans)', fontWeight: 500 }}>
-            India Reports Management Portal &bull; Logged in as: <strong style={{ color: 'var(--color-ink)' }}>{user?.displayName} (Admin)</strong>
+            Daily News Insights Management Portal &bull; Logged in as: <strong style={{ color: 'var(--color-ink)' }}>{user?.displayName} (Admin)</strong>
           </p>
         </div>
         <button

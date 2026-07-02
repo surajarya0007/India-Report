@@ -1,6 +1,6 @@
-# India Reports 🇮🇳
+# Daily News Insights 📰
 
-India Reports is a fully autonomous, self-updating news platform that runs on an event-driven pipeline without manual intervention. The platform monitors major tech, business, and political sources, retrieves the latest articles, scrapes full contents using Firecrawl, synthesizes summaries and sentiment using Gemini 1.5 Flash, generates semantic vector embeddings, and caches the results using Upstash Redis. Users can interact with the articles database through a Retrieval-Augmented Generation (RAG) conversational agent.
+Daily News Insights is a fully autonomous, self-updating news platform that runs on an event-driven pipeline without manual intervention. The platform monitors major tech, business, and political sources, retrieves the latest articles, scrapes full contents using a fast native scraping engine (with Firecrawl fallback), synthesizes summaries and sentiment using Gemini 1.5 Flash, generates semantic vector embeddings, and caches the results using Upstash Redis. Users can interact with the articles database through a Retrieval-Augmented Generation (RAG) conversational agent.
 
 ---
 
@@ -8,7 +8,7 @@ India Reports is a fully autonomous, self-updating news platform that runs on an
 
 The project is structured as a Monorepo containing:
 
-- **`/backend`**: Node.js, Express, TypeScript, Prisma ORM (Supabase PostgreSQL with `pgvector`), Upstash Redis (`ioredis`), Currents API, and Google Gen AI (Gemini 1.5 Flash / `gemini-embedding-001`).
+- **`/backend`**: Node.js, Express, TypeScript, Prisma ORM (Supabase PostgreSQL with `pgvector`), Upstash Redis (`ioredis`), Google News RSS, and Google Gen AI (Gemini 1.5 Flash / `gemini-embedding-001`).
   - **Main API Server (`src/index.ts`)**: Handles core routes, location proxying, user authentication, and admin tasks.
   - **RAG Server (`src/ragServer.ts`)**: A dedicated microservice dedicated to similarity searches, chat sessions, and document chunk indexing.
 - **`/frontend`**: Next.js (App Router, React, TypeScript), Tailwind CSS (v4), and Lucide React. Features a clean, responsive newspaper layout, real-time tickers, sentiment tags, and an interactive RAG chat interface.
@@ -26,7 +26,7 @@ flowchart TD
     GeminiTrend --> Dedup[Prisma Deduplication Check vs Last 24 Hours]
     Dedup -->|Existing topic| Skip[Skip Topic]
     Dedup -->|New topic| Search[Search Google News for Topic URLs]
-    Search --> Crawl[Scrape Content clean Markdown via Firecrawl]
+    Search --> Crawl[Scrape Content: Native Fetch with Firecrawl Fallback]
     Crawl --> GeminiSynth[Gemini 1.5 Flash: Synthesize News Dossier]
     GeminiSynth --> DBStore[Store Structured Article in Supabase]
     DBStore --> RAGIndex[Chunk Dossier & Generate Embeddings]
@@ -44,7 +44,7 @@ flowchart TD
 1. **RSS Feed Aggregation**: The pipeline fetches active Google News RSS feeds for ten target categories: `Tech`, `Business`, `Science`, `Health`, `Entertainment`, `Sports`, `World`, `India`, `Finance`, and `Politics`.
 2. **AI Trend Extraction**: Headlines from the feeds are passed to Gemini 1.5 Flash. It acts as an editorial discovery engine, extracting the top 5 distinct, highly descriptive, event-driven queries representing the actual news stories.
 3. **Deduplication Check**: The system extracts a unique semantic keyword for each story and queries PostgreSQL to ensure this topic has not been covered in the last 24 hours.
-4. **Content Scraping**: For each approved keyword, the system fetches search result links from Google News and scrapes the clean, main-text Markdown using Firecrawl.
+4. **Content Scraping**: For each approved keyword, the system fetches search result links from Google News and scrapes the clean, main-text Markdown using a fast native fetch scraper (falling back to Firecrawl if the native scraper is blocked or fails).
 5. **Editorial Synthesis**: Gemini 1.5 Flash synthesizes the raw scraped articles into a single, high-quality, professional editorial dossier featuring:
    - A highly engaging headline matching the overall tone.
    - Exactly 5 key bullet points (minimum 20 words each).
@@ -103,7 +103,7 @@ flowchart TD
     C --> D{Does Query Lack DB Coverage?}
     
     D -->|"Yes (Context gap detected)"| E[Trigger Live Google News Ingestion for Topic]
-    E --> F[Crawl & Scrape Articles via Firecrawl]
+    E --> F[Crawl & Scrape Articles: Native with Firecrawl Fallback]
     F --> G[Synthesize News Dossier via Gemini 1.5 Flash]
     G --> H[Store in DB & Generate Embeddings]
     H --> I[Re-query Vector DB for Updated Context]
@@ -123,8 +123,8 @@ india-report/
 │   ├── src/
 │   │   ├── config/           # Database & Redis client initializations
 │   │   ├── controllers/      # Ingestion pipeline, news API, and RAG controllers
-│   │   ├── cron/             # Node-cron scheduler & CLI ingestion runner
-│   │   ├── middleware/       # JWT auth & route protection middlewares
+│   │   ├── cron/             # CLI Ingestion runner & Node-cron scheduler
+│   │   ├── middleware/       # Route protection & admin verification middlewares
 │   │   ├── routes/           # Routing definitions for main API and RAG API
 │   │   ├── services/         # Third-party integrations (Firecrawl, LLM, Image Search, RAG)
 │   │   ├── utils/            # Geolocation helpers, caching & SEO helpers
@@ -169,16 +169,18 @@ PORT=5000
 RAG_PORT=8080
 DATABASE_URL="postgresql://postgres:password@db.supabase.co:5432/postgres"
 REDIS_URL="rediss://default:password@upstash.io:6379"
-NEWS_API_KEY="your_currents_api_key"
-FIRECRAWL_API_KEY="your_firecrawl_api_key"
+FIRECRAWL_API_KEY="your_firecrawl_api_key" # Optional fallback scraper
 GEMINI_API_KEY="your_gemini_api_key" # Support comma-separated keys for automatic rotation
-JWT_SECRET="your_jwt_secret"
+UNSPLASH_ACCESS_KEY="your_unsplash_access_key" # Used for image search enrichment
 ```
 
 #### Frontend (`/frontend/.env.local`):
 ```env
 NEXT_PUBLIC_API_URL="http://localhost:5000"
 NEXT_PUBLIC_RAG_API_URL="http://localhost:8080"
+NEXT_PUBLIC_GOOGLE_CLIENT_ID="your_google_client_id"
+NEXT_PUBLIC_ADSENSE_CLIENT_ID="your_adsense_client_id"
+NEXT_PUBLIC_ADSENSE_DEFAULT_SLOT=""
 ```
 
 > [!NOTE]

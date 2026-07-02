@@ -99,7 +99,7 @@ app.use('/api/admin', adminRoutes);
 // Health check endpoint
 app.get('/', (req, res) => {
   res.json({
-    name: 'India Reports Backend API',
+    name: 'Daily News Insights Backend API',
     status: 'healthy',
     time: new Date().toISOString()
   });
@@ -108,7 +108,7 @@ app.get('/', (req, res) => {
 // Start Express Listener
 app.listen(PORT, HOST, () => {
   console.log('----------------------------------------------------');
-  console.log(` India Reports API server listening on ${HOST}:${PORT}`);
+  console.log(` Daily News Insights API server listening on ${HOST}:${PORT}`);
   console.log(` Endpoint: http://${HOST}:${PORT}`);
   console.log('----------------------------------------------------');
 });

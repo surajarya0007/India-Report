@@ -5,8 +5,8 @@ import ScrollReveal from '../../components/ScrollReveal';
 import { DollarSign, Eye, Award, Megaphone } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Advertise | India Reports',
-  description: 'Reach the India Reports audience with premium placements and native advertising opportunities.',
+  title: 'Advertise | Daily News Insights',
+  description: 'Reach the Daily News Insights audience with premium placements and native advertising opportunities.',
 };
 
 const METRICS = [

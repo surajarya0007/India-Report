@@ -31,7 +31,7 @@ export default function ShareDialog({ isOpen, onClose, url, title }: ShareDialog
     }
   }, [url]);
 
-  const shareTitle = title || 'Check out this article on India Reports';
+  const shareTitle = title || 'Check out this article on Daily News Insights';
 
   const handleCopy = async () => {
     try {

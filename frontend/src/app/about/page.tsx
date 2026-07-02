@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 const PIPELINE_STEPS = [
   { icon: <Globe style={{ width: 24, height: 24 }} />, title: 'Discover', desc: 'We continuously scan Google News RSS feeds across 10+ categories to discover breaking stories from India and the world.' },
-  { icon: <Cpu style={{ width: 24, height: 24 }} />, title: 'Extract', desc: 'Firecrawl scrapes full article text from source publications, extracting clean content, images, and metadata.' },
+  { icon: <Cpu style={{ width: 24, height: 24 }} />, title: 'Extract', desc: 'A fast native scraping engine (with Firecrawl fallback) extracts clean content, images, and metadata from source publications.' },
   { icon: <Zap style={{ width: 24, height: 24 }} />, title: 'Synthesize', desc: 'Google Gemini 1.5 Flash analyzes each article, generating structured summaries, key facts, sentiment analysis, and editorial sections.' },
   { icon: <Database style={{ width: 24, height: 24 }} />, title: 'Publish', desc: 'Enriched stories are stored in Supabase (PostgreSQL) and cached via Upstash Redis, then delivered instantly to your screen.' },
 ];
