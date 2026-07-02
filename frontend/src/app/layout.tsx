@@ -99,11 +99,10 @@ export default async function RootLayout({
         
         {/* Google AdSense */}
         <meta name="google-adsense-account" content="ca-pub-7269654171240753" />
-        <Script
+        <script
           async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClientId}`}
           crossOrigin="anonymous"
-          strategy="afterInteractive"
         />
         <script
           dangerouslySetInnerHTML={{
