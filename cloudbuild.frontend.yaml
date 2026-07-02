@@ -9,6 +9,8 @@ steps:
       - NEXT_PUBLIC_RAG_API_URL=${_RAG_SERVICE_URL}
       - --build-arg
       - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID}
+      - --build-arg
+      - NEXT_PUBLIC_ADSENSE_CLIENT_ID=${_ADSENSE_CLIENT_ID}
       - -t
       - ${_IMAGE_REPO}:$SHORT_SHA
       - .
@@ -37,7 +39,7 @@ steps:
       - --port
       - '8080'
       - --update-env-vars
-      - BACKEND_URL=${_BACKEND_URL},NEXT_PUBLIC_API_URL=${_BACKEND_URL},NEXT_PUBLIC_RAG_API_URL=${_RAG_SERVICE_URL},NEXT_PUBLIC_GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID}
+      - BACKEND_URL=${_BACKEND_URL},NEXT_PUBLIC_API_URL=${_BACKEND_URL},NEXT_PUBLIC_RAG_API_URL=${_RAG_SERVICE_URL},NEXT_PUBLIC_GOOGLE_CLIENT_ID=${_GOOGLE_CLIENT_ID},NEXT_PUBLIC_ADSENSE_CLIENT_ID=${_ADSENSE_CLIENT_ID}
 
 images:
   - ${_IMAGE_REPO}:$SHORT_SHA
@@ -48,6 +50,7 @@ substitutions:
   _BACKEND_URL: https://india-report-backend-qzqmxyljqa-el.a.run.app
   _RAG_SERVICE_URL: https://india-report-rag-223906966157.asia-south1.run.app
   _GOOGLE_CLIENT_ID: 223906966157-l0vcmigc2v5aalitm62qo6mk4r527gu8.apps.googleusercontent.com
+  _ADSENSE_CLIENT_ID: ca-pub-7269654171240753
   _IMAGE_REPO: asia-south1-docker.pkg.dev/project-0bdd0a8e-1e7e-4477-99a/cloud-run-source-deploy/india-report-frontend
 
 options:

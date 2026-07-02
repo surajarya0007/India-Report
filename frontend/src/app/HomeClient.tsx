@@ -11,8 +11,8 @@ import { Clock, RefreshCw, ChevronRight } from 'lucide-react';
 import Layout from '../components/Layout';
 import ShareDialog from '../components/ShareDialog';
 import ScrollReveal from '../components/ScrollReveal';
-
 import ImageSourceBadge from '../components/ImageSourceBadge';
+import AdBanner from '../components/AdBanner';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -657,6 +657,7 @@ export default function HomeClient({ initialArticles, initialNav = 'Home' }: { i
         ) : (
           (topStories.length > 0 || bottomStories.length > 0) && (
             <>
+            <AdBanner adSlot={process.env.NEXT_PUBLIC_ADSENSE_HOMEPAGE_SLOT} adFormat="horizontal" />
             {/* 3-column grid */}
             {topStories.length > 0 && (
               <div className="ir-home-grid" style={{ marginBottom: 36, gridTemplateColumns: gridTemplateColumns || undefined }}>
@@ -701,14 +702,18 @@ export default function HomeClient({ initialArticles, initialNav = 'Home' }: { i
 
             {/* Section row: more stories */}
             {bottomStories.length > 0 && (
-              <ScrollReveal>
-                <section style={{ marginBottom: 36 }}>
-                  <SectionHead title={sectionTitle} />
-                  <div className="ir-more-stories-grid">
-                    {bottomStories.slice(0, 4).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
-                  </div>
-                </section>
-              </ScrollReveal>
+              <>
+                <ScrollReveal>
+                  <section style={{ marginBottom: 36 }}>
+                    <SectionHead title={sectionTitle} />
+                    <div className="ir-more-stories-grid">
+                      {bottomStories.slice(0, 4).map((a, i) => <GridCard key={a.id} article={a} index={i} />)}
+                    </div>
+                  </section>
+                </ScrollReveal>
+                
+                <AdBanner adSlot={process.env.NEXT_PUBLIC_ADSENSE_HOMEPAGE_SLOT} adFormat="horizontal" />
+              </>
             )}
 
             {/* Extra stories */}

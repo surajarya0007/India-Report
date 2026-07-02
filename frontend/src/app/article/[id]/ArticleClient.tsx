@@ -20,6 +20,7 @@ import {
 import Layout from '../../../components/Layout';
 import ShareDialog from '../../../components/ShareDialog';
 import ImageSourceBadge from '../../../components/ImageSourceBadge';
+import AdBanner from '../../../components/AdBanner';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -622,6 +623,9 @@ export default function ArticleClient({
           )}
         </div>
 
+        {/* Top Ad banner */}
+        <AdBanner adSlot={process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT} adFormat="horizontal" />
+
         {/* Headline */}
         <h1 style={{
           fontFamily: 'var(--font-serif)',
@@ -905,6 +909,9 @@ export default function ArticleClient({
                 This report is compiled programmatically from multiple verified news publications. Raw articles are parsed via Firecrawl and structured analysis is synthesized dynamically using Gemini AI models.
               </p>
             </div>
+            
+            {/* Sidebar Ad banner */}
+            <AdBanner adSlot={process.env.NEXT_PUBLIC_ADSENSE_ARTICLE_SLOT} adFormat="vertical" />
           </aside>
         </div>
 
