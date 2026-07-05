@@ -228,15 +228,19 @@ export default function ChatClient() {
           gap: 6,
         }}>
           {/* Logo Blocks */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {['D', 'N', 'I'].map((l, i) => (
-              <span key={i} style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 'var(--logo-box-size)', height: 'var(--logo-box-size)', background: 'var(--color-ink)', color: 'var(--bg-primary)',
-                fontWeight: 900, fontSize: 'var(--logo-box-fs)', fontFamily: 'Georgia, serif',
-                letterSpacing: '-0.02em',
-              }}>{l}</span>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', height: 'var(--logo-box-size)' }}>
+            <img 
+              src="/logo.png" 
+              alt="Daily News Insights Logo" 
+              className="theme-logo-light"
+              style={{ height: '100%', width: 'auto', display: 'block' }} 
+            />
+            <img 
+              src="/logo-dark.png" 
+              alt="Daily News Insights Logo" 
+              className="theme-logo-dark"
+              style={{ height: '100%', width: 'auto', display: 'block' }} 
+            />
           </div>
           <span className="chat-logo-badge" style={{
             fontSize: 10,

@@ -37,14 +37,12 @@ export default function AboutPage() {
         textAlign: 'center',
       }}>
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginBottom: 20 }}>
-            {['D', 'N', 'I'].map((l, i) => (
-              <span key={i} style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 48, height: 48, background: '#fff', color: '#111',
-                fontWeight: 900, fontSize: 24, fontFamily: 'Georgia, serif',
-              }}>{l}</span>
-            ))}
+          <div style={{ display: 'inline-flex', alignItems: 'center', height: 48, marginBottom: 20 }}>
+            <img 
+              src="/logo-dark.png" 
+              alt="Daily News Insights Logo" 
+              style={{ height: '100%', width: 'auto', display: 'block' }} 
+            />
           </div>
           <h1 style={{
             fontFamily: 'var(--font-serif)',

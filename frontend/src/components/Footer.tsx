@@ -63,14 +63,12 @@ export default function Footer({ onNavChange, onDisclaimerClick }: FooterProps) 
           }}>
             {/* Column 1: Brand */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 16 }}>
-                {['D', 'N', 'I'].map((l, i) => (
-                  <span key={i} style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 28, height: 28, background: '#fff', color: '#111',
-                    fontWeight: 900, fontSize: 15, fontFamily: 'Georgia, serif',
-                  }}>{l}</span>
-                ))}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, height: 28 }}>
+                <img 
+                  src="/logo-dark.png" 
+                  alt="Daily News Insights Logo" 
+                  style={{ height: '100%', width: 'auto', display: 'block' }} 
+                />
                 <span style={{
                   fontFamily: 'var(--font-serif)',
                   fontSize: 20, fontWeight: 900, letterSpacing: '-0.02em',

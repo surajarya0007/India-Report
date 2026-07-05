@@ -1452,3 +1452,18 @@ img {
   }
 }
 
+/* ── Theme-Responsive Site Logo ───────────────────────────────────────────── */
+.theme-logo-light {
+  display: block !important;
+}
+.theme-logo-dark {
+  display: none !important;
+}
+
+[data-theme="dark"] .theme-logo-light {
+  display: none !important;
+}
+[data-theme="dark"] .theme-logo-dark {
+  display: block !important;
+}
+

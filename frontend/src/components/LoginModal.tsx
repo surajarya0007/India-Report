@@ -216,15 +216,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
         {/* Logo and Header */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginBottom: 12 }}>
-            {['D', 'N', 'I'].map((l, i) => (
-              <span key={i} style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 32, height: 32, background: 'var(--color-ink)', color: 'var(--bg-primary)',
-                fontWeight: 900, fontSize: 17, fontFamily: 'Georgia, serif',
-                borderRadius: 4,
-              }}>{l}</span>
-            ))}
+          <div style={{ display: 'inline-flex', alignItems: 'center', height: 32, marginBottom: 12 }}>
+            <img 
+              src="/logo.png" 
+              alt="Daily News Insights Logo" 
+              className="theme-logo-light"
+              style={{ height: '100%', width: 'auto', display: 'block' }} 
+            />
+            <img 
+              src="/logo-dark.png" 
+              alt="Daily News Insights Logo" 
+              className="theme-logo-dark"
+              style={{ height: '100%', width: 'auto', display: 'block' }} 
+            />
           </div>
           <h2 style={{
             fontFamily: 'var(--font-serif)',

@@ -160,15 +160,19 @@ export default function Header({
             textDecoration: 'none',
             position: 'absolute', left: '50%', transform: 'translateX(-50%)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {['D', 'N', 'I'].map((l, i) => (
-                <span key={i} style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 'var(--logo-box-size)', height: 'var(--logo-box-size)', background: 'var(--color-ink)', color: 'var(--bg-primary)',
-                  fontWeight: 900, fontSize: 'var(--logo-box-fs)', fontFamily: 'Georgia, serif',
-                  letterSpacing: '-0.02em',
-                }}>{l}</span>
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', height: 'var(--logo-box-size)' }}>
+              <img 
+                src="/logo.png" 
+                alt="Daily News Insights Logo" 
+                className="theme-logo-light"
+                style={{ height: '100%', width: 'auto', display: 'block' }} 
+              />
+              <img 
+                src="/logo-dark.png" 
+                alt="Daily News Insights Logo" 
+                className="theme-logo-dark"
+                style={{ height: '100%', width: 'auto', display: 'block' }} 
+              />
             </div>
           </a>
 
@@ -431,14 +435,19 @@ export default function Header({
           borderBottom: '1px solid var(--border-secondary)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {['D', 'N', 'I'].map((l, i) => (
-              <span key={i} style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 24, height: 24, background: 'var(--color-ink)', color: 'var(--bg-primary)',
-                fontWeight: 900, fontSize: 13, fontFamily: 'Georgia, serif',
-              }}>{l}</span>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', height: 24 }}>
+            <img 
+              src="/logo.png" 
+              alt="Daily News Insights Logo" 
+              className="theme-logo-light"
+              style={{ height: '100%', width: 'auto', display: 'block' }} 
+            />
+            <img 
+              src="/logo-dark.png" 
+              alt="Daily News Insights Logo" 
+              className="theme-logo-dark"
+              style={{ height: '100%', width: 'auto', display: 'block' }} 
+            />
           </div>
           <button
             onClick={() => setDrawerOpen(false)}
