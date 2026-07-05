@@ -168,24 +168,18 @@ export async function fetchArticlesForCategory(category: string, page: number = 
 
 export async function fetchRelatedArticlesForSeo(article: Article): Promise<Article[]> {
   try {
-    const response = await fetch(apiUrl('/api/news'), {
+    const searchQuery = article.keyword || article.headline;
+    const response = await fetch(apiUrl(`/api/news?search=${encodeURIComponent(searchQuery)}`), {
       next: { revalidate: 300 },
     });
 
     if (!response.ok) return [];
 
     const result = await response.json();
-    const allArticles: Article[] = result.success && Array.isArray(result.data) ? result.data : [];
-    const categories = article.categories || [];
+    const related: Article[] = result.success && Array.isArray(result.data) ? result.data : [];
 
-    return allArticles
-      .filter((candidate) => candidate.id !== article.id)
-      .sort((a, b) => {
-        const aMatches = a.categories?.some((category) => categories.includes(category)) ? 1 : 0;
-        const bMatches = b.categories?.some((category) => categories.includes(category)) ? 1 : 0;
-        if (bMatches !== aMatches) return bMatches - aMatches;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
+    // Filter out the current article
+    return related.filter((candidate) => candidate.id !== article.id);
   } catch (error) {
     console.error('[SEO] Failed to fetch related articles:', error);
     return [];

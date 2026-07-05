@@ -137,7 +137,7 @@ export default function ShareDialog({ isOpen, onClose, url, title }: ShareDialog
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '8px 14px',
               background: copied ? '#16a34a' : 'var(--color-ink)',
-              color: '#fff',
+              color: copied ? '#fff' : 'var(--bg-primary)',
               border: 'none',
               borderRadius: 6,
               fontSize: 11,

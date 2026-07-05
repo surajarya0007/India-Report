@@ -217,7 +217,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
         {/* Logo and Header */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginBottom: 12 }}>
-            {['I', 'R'].map((l, i) => (
+            {['D', 'N', 'I'].map((l, i) => (
               <span key={i} style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 32, height: 32, background: 'var(--color-ink)', color: 'var(--bg-primary)',

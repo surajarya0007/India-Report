@@ -104,7 +104,7 @@ function ImgBox({ article, height = 180, style = {}, priority = false }: { artic
       overflow: 'hidden', flexShrink: 0,
       ...style,
     }}>
-      <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 48, fontWeight: 900, lineHeight: 1, fontFamily: 'var(--font-serif)' }}>IR</span>
+      <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 48, fontWeight: 900, lineHeight: 1, fontFamily: 'var(--font-serif)' }}>DNI</span>
       <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 }}>{cat || 'News'}</span>
     </div>
   );

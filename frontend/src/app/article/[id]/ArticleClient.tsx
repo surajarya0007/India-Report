@@ -85,7 +85,7 @@ function SideCard({ article }: { article: Article }) {
             <ImageSourceBadge imageUrl={article.imageUrl} style={{ bottom: '3px', right: '3px', padding: '1px 4px', fontSize: '7px', borderRadius: '3px' }} />
           </>
         ) : (
-          <span style={{ color: bg, fontSize: 16, fontWeight: 900, fontFamily: 'var(--font-serif)', opacity: 0.3 }}>IR</span>
+          <span style={{ color: bg, fontSize: 16, fontWeight: 900, fontFamily: 'var(--font-serif)', opacity: 0.3 }}>DNI</span>
         )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -167,7 +167,7 @@ function MoreStoriesCard({ article }: { article: Article }) {
           </>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-            <span style={{ color: bg, fontSize: 32, fontWeight: 900, fontFamily: 'var(--font-serif)', opacity: 0.2 }}>IR</span>
+            <span style={{ color: bg, fontSize: 32, fontWeight: 900, fontFamily: 'var(--font-serif)', opacity: 0.2 }}>DNI</span>
           </div>
         )}
       </div>
@@ -452,6 +452,12 @@ export default function ArticleClient({
   const [related, setRelated] = useState<Article[]>(initialRelated);
   const [moreStories, setMoreStories] = useState<Article[]>(initialMoreStories);
   const [loading, setLoading] = useState(!initialArticle);
+  const [relatedLoading, setRelatedLoading] = useState(
+    !(initialRelated && initialRelated.length > 0)
+  );
+  const [moreStoriesLoading, setMoreStoriesLoading] = useState(
+    !(initialMoreStories && initialMoreStories.length > 0)
+  );
   const [shareOpen, setShareOpen] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
 
@@ -483,47 +489,62 @@ export default function ArticleClient({
 
     recordArticleView(id);
 
-    if (initialArticle?.id === id) {
+    if (initialArticle?.id === id && initialRelated && initialRelated.length > 0 && initialMoreStories && initialMoreStories.length > 0) {
       setArticle(initialArticle);
       setRelated(initialRelated);
       setMoreStories(initialMoreStories);
+      setRelatedLoading(false);
+      setMoreStoriesLoading(false);
       setLoading(false);
       return () => { active = false; };
     }
 
-    setLoading(true);
+    setLoading(false);
+    setRelatedLoading(true);
+    setMoreStoriesLoading(true);
 
-    Promise.all([fetchArticleById(id), fetchNews()]).then(([art, all]) => {
+    fetchArticleById(id).then(async (art) => {
       if (!active) return;
       setArticle(art);
-      setLoading(false);
 
       if (art) {
-        const cats = art.categories || [];
-        
-        // All articles sharing at least one category with the current one
-        const categoryMatching = all.filter(a => a.id !== id && a.categories?.some(c => cats.includes(c)));
-        
-        // 1. Sidebar: Related Stories (up to 5)
-        const rel = categoryMatching.slice(0, 5);
-        const relatedArticles = rel.length > 0 ? rel : all.filter(a => a.id !== id).slice(0, 5);
-        setRelated(relatedArticles);
+        const primaryCategory = art.categories?.[0];
+        const searchQuery = art.keyword || art.headline;
 
-        // 2. Bottom: More Stories (up to 4)
-        // Prefer matching category articles that are not already shown in the sidebar
-        const remainingCategoryMatching = categoryMatching.filter(a => !relatedArticles.some(r => r.id === a.id));
-        
-        // If we don't have enough remaining matching category articles, fill with other articles
-        let bottomStories = remainingCategoryMatching.slice(0, 4);
-        if (bottomStories.length < 4) {
-          const otherArticles = all.filter(a => 
-            a.id !== id && 
-            !relatedArticles.some(r => r.id === a.id) && 
-            !bottomStories.some(b => b.id === a.id)
-          );
-          bottomStories = [...bottomStories, ...otherArticles].slice(0, 4);
-        }
-        setMoreStories(bottomStories);
+        // Fetch category stories (runs concurrently, very fast)
+        const categoryPromise = primaryCategory 
+          ? fetchNews(primaryCategory) 
+          : Promise.resolve([]);
+
+        // Handle category stories load immediately (instant display)
+        categoryPromise.then((categoryArticles) => {
+          if (!active) return;
+          const filtered = categoryArticles.filter(a => a.id !== id);
+          setMoreStories(filtered.slice(0, 8));
+          setMoreStoriesLoading(false);
+        });
+
+        // Fetch related search stories (slower due to Gemini API call)
+        const searchPromise = fetchNews(undefined, searchQuery);
+
+        // Wait for both search and category promises to compile final sidebar related stories (including fallback)
+        Promise.all([searchPromise, categoryPromise]).then(([relatedSearch, categoryArticles]) => {
+          if (!active) return;
+
+          // 1. Sidebar: Related Stories
+          let relatedArticles = relatedSearch.filter(a => a.id !== id);
+          
+          // Fallback to category articles if less than 5 related articles found
+          if (relatedArticles.length < 5) {
+            const fill = categoryArticles.filter(
+              a => a.id !== id && !relatedArticles.some(r => r.id === a.id)
+            );
+            relatedArticles = [...relatedArticles, ...fill];
+          }
+          const finalRelated = relatedArticles.slice(0, 5);
+          setRelated(finalRelated);
+          setRelatedLoading(false);
+        });
       }
     });
 
@@ -745,7 +766,7 @@ export default function ArticleClient({
                   {article.enrichmentStatus === 'pending' ? (
                     <span style={{ color: 'var(--color-ink-faint)', fontSize: 16, fontWeight: 600, opacity: 0.7 }}>Loading Editorial Image...</span>
                   ) : (
-                    <span style={{ color: categoryColorHex, fontSize: 72, fontWeight: 900, fontFamily: 'var(--font-serif)', opacity: 0.15 }}>IR</span>
+                    <span style={{ color: categoryColorHex, fontSize: 72, fontWeight: 900, fontFamily: 'var(--font-serif)', opacity: 0.15 }}>DNI</span>
                   )}
                 </div>
               )}
@@ -770,7 +791,7 @@ export default function ArticleClient({
                   fontSize: 'var(--fs-sm)', fontWeight: 900, letterSpacing: '0.15em',
                   textTransform: 'uppercase', margin: '0 0 14px 0', color: categoryColorHex 
                 }}>
-                  IR SUMMARY — KEY POINTS
+                  DNI SUMMARY — KEY POINTS
                 </h4>
                 <ul style={{ 
                   margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)',
@@ -880,43 +901,42 @@ export default function ArticleClient({
             )}
 
             {/* Related News List */}
-            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-              <div style={{ 
-                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
-                paddingBottom: 10, borderBottom: `2.5px solid ${categoryColorHex}` 
-              }}>
-                <h3 style={{ 
-                  fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 900,
-                  color: 'var(--color-ink)', letterSpacing: '0.12em', margin: 0, textTransform: 'uppercase'
+            {!relatedLoading && related.length > 0 && (
+              <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                <div style={{ 
+                  display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16,
+                  paddingBottom: 10, borderBottom: `2.5px solid ${categoryColorHex}` 
                 }}>
-                  Related Stories
-                </h3>
+                  <h3 style={{ 
+                    fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 900,
+                    color: 'var(--color-ink)', letterSpacing: '0.12em', margin: 0, textTransform: 'uppercase'
+                  }}>
+                    Related Stories
+                  </h3>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {related.map(a => <SideCard key={a.id} article={a} />)}
+                </div>
               </div>
-              
-              {related.length === 0 && (
-                <p style={{ fontSize: 12, color: 'var(--color-ink-ghost)' }}>No related stories found.</p>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {related.map(a => <SideCard key={a.id} article={a} />)}
-              </div>
+            )}
 
-              {/* Back to Home Button */}
-              <button 
-                onClick={() => router.push('/')}
-                style={{
-                  width: '100%', marginTop: 20, padding: '12px',
-                  background: categoryColorHex, color: '#fff', border: 'none',
-                  fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', cursor: 'pointer',
-                  transition: 'opacity 0.2s', textTransform: 'uppercase',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  borderRadius: '8px'
-                }}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-              >
-                ◀ BACK TO HOME
-              </button>
-            </div>
+            {/* Back to Home Button */}
+            <button 
+              onClick={() => router.push('/')}
+              style={{
+                width: '100%', marginTop: 20, marginBottom: 'var(--spacing-lg)', padding: '12px',
+                background: categoryColorHex, color: '#fff', border: 'none',
+                fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', cursor: 'pointer',
+                transition: 'opacity 0.2s', textTransform: 'uppercase',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                borderRadius: '8px'
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              ◀ BACK TO HOME
+            </button>
 
             {/* AI assisted notice */}
             <div style={{ background: 'var(--bg-secondary)', padding: 'var(--spacing-md)', border: '1px solid var(--border-primary)', borderRadius: '8px' }}>
@@ -937,29 +957,31 @@ export default function ArticleClient({
         </div>
 
         {/* More Stories Grid Section */}
-        <div style={{ marginTop: 56, paddingTop: 32, borderTop: '1px solid var(--border-primary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-            <div style={{ width: 4, height: 18, background: 'var(--ir-crimson)', borderRadius: 2 }} />
-            <h3 style={{
-              fontFamily: 'var(--font-serif)',
-              fontSize: 18,
-              fontWeight: 900,
-              color: 'var(--color-ink)',
-              margin: 0
+        {!moreStoriesLoading && moreStories.length > 0 && (
+          <div style={{ marginTop: 56, paddingTop: 32, borderTop: '1px solid var(--border-primary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+              <div style={{ width: 4, height: 18, background: 'var(--ir-crimson)', borderRadius: 2 }} />
+              <h3 style={{
+                fontFamily: 'var(--font-serif)',
+                fontSize: 18,
+                fontWeight: 900,
+                color: 'var(--color-ink)',
+                margin: 0
+              }}>
+                More Stories
+              </h3>
+            </div>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
+              gap: 24 
             }}>
-              More Stories
-            </h3>
+              {moreStories.map((story) => (
+                <MoreStoriesCard key={story.id} article={story} />
+              ))}
+            </div>
           </div>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
-            gap: 24 
-          }}>
-            {moreStories.map((story) => (
-              <MoreStoriesCard key={story.id} article={story} />
-            ))}
-          </div>
-        </div>
+        )}
       </main>
 
       {/* Share Dialog */}

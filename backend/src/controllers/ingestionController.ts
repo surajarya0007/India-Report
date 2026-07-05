@@ -310,7 +310,7 @@ async function fetchArticlesForKeyword(keyword: string): Promise<{ title: string
  */
 async function invalidateCache(categories: string[], searchQuery?: string) {
   try {
-    const keys = ['homepage:news:all', ...categories.map(c => `homepage:news:${c}`)];
+    const keys = ['homepage:news:all', 'homepage:news:search:', ...categories.map(c => `homepage:news:${c}`)];
     if (searchQuery) {
       keys.push(`homepage:news:search:${searchQuery.toLowerCase()}`);
     }

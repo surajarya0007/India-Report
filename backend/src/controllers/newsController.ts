@@ -44,7 +44,7 @@ export async function getRecentNews(req: Request, res: Response) {
     let totalCount = 0;
     let source: 'cache' | 'database' = 'database';
 
-    if (!search && redis) {
+    if (redis) {
       try {
         const cachedData = await redis.get(cacheKey);
         if (cachedData) {
@@ -123,7 +123,7 @@ export async function getRecentNews(req: Request, res: Response) {
         totalCount = count;
       }
 
-      if (!search && redis && articles.length > 0) {
+      if (redis && articles.length > 0) {
         try {
           await redis.setex(cacheKey, CACHE_TTL, JSON.stringify({ articles, totalCount }));
           console.log(`[NewsController] Cached ${articles.length} articles in Redis for key "${cacheKey}".`);
