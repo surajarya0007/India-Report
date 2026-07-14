@@ -8,6 +8,33 @@ import {
   SocialPostPayload
 } from '../services/socialMediaService';
 import { enqueueSocialPostTask } from '../services/taskService';
+import { triggerVideoGeneration } from '../services/videoService';
+
+/**
+ * Controller to trigger the start of the social posting pipeline.
+ * Called by the main backend ingestion controller.
+ */
+export async function startSocialPipeline(req: Request, res: Response): Promise<void> {
+  const { articleId, prompt } = req.body;
+
+  if (!articleId || !prompt) {
+    res.status(400).json({ error: 'Missing articleId or prompt' });
+    return;
+  }
+
+  try {
+    // Fire and forget - trigger Fal.ai video generation asynchronously
+    void triggerVideoGeneration(articleId, prompt);
+
+    res.status(202).json({
+      success: true,
+      message: 'Social posting pipeline started. Video generation triggered.'
+    });
+  } catch (error: any) {
+    console.error(`[SocialController] Failed to start social pipeline for article ${articleId}:`, error);
+    res.status(500).json({ error: 'Failed to start social pipeline' });
+  }
+}
 
 /**
  * Controller to handle social media publishing queue requests.

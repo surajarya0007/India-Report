@@ -16,6 +16,35 @@ if [[ -n "${BACKEND_ENV_FILE}" ]]; then
   BACKEND_ENV_ARGS=(--env-vars-file "${BACKEND_ENV_FILE}")
 fi
 
+echo "Deploying Social service: india-report-social"
+gcloud builds submit "${ROOT_DIR}" \
+  --project "${PROJECT_ID}" \
+  --config "${ROOT_DIR}/cloudbuild.social.yaml" \
+  --substitutions SHORT_SHA=latest
+
+SOCIAL_URL="$(gcloud run services describe "india-report-social" \
+  --project "${PROJECT_ID}" \
+  --region "${REGION}" \
+  --format 'value(status.url)')"
+
+echo "Social service URL: ${SOCIAL_URL}"
+
+echo "Deploying RAG service: india-report-rag"
+gcloud builds submit "${ROOT_DIR}" \
+  --project "${PROJECT_ID}" \
+  --config "${ROOT_DIR}/cloudbuild.rag.yaml" \
+  --substitutions SHORT_SHA=latest
+
+RAG_URL="$(gcloud run services describe "india-report-rag" \
+  --project "${PROJECT_ID}" \
+  --region "${REGION}" \
+  --format 'value(status.url)')"
+
+echo "RAG service URL: ${RAG_URL}"
+
+# Merge dynamic environment variables for backend deployment
+BACKEND_DYNAMIC_ENV="SOCIAL_SERVICE_URL=${SOCIAL_URL},RAG_SERVICE_URL=${RAG_URL}"
+
 echo "Deploying backend service: ${BACKEND_SERVICE}"
 if [[ ${#BACKEND_ENV_ARGS[@]} -gt 0 ]]; then
   gcloud run deploy "${BACKEND_SERVICE}" \
@@ -24,17 +53,15 @@ if [[ ${#BACKEND_ENV_ARGS[@]} -gt 0 ]]; then
     --source "${ROOT_DIR}/backend" \
     --allow-unauthenticated \
     --port 8080 \
+    --set-env-vars "${BACKEND_DYNAMIC_ENV}" \
     "${BACKEND_ENV_ARGS[@]}"
+else
+  # Update existing service env variables if source deploy is skipped
+  gcloud run services update "${BACKEND_SERVICE}" \
+    --project "${PROJECT_ID}" \
+    --region "${REGION}" \
+    --update-env-vars "${BACKEND_DYNAMIC_ENV}"
 fi
-
-echo "Deploying RAG service: india-report-rag"
-gcloud builds submit "${ROOT_DIR}" \
-  --project "${PROJECT_ID}" \
-  --config "${ROOT_DIR}/cloudbuild.rag.yaml" \
-  --substitutions SHORT_SHA=latest
-
-
-
 
 echo "Deploying ingestion job: ${INGESTION_JOB}"
 if [[ ${#BACKEND_ENV_ARGS[@]} -gt 0 ]]; then
@@ -45,15 +72,13 @@ if [[ ${#BACKEND_ENV_ARGS[@]} -gt 0 ]]; then
     --command "node" \
     --args "dist/cron/runIngestion.js" \
     --task-timeout "45m" \
+    --set-env-vars "SOCIAL_SERVICE_URL=${SOCIAL_URL}" \
     "${BACKEND_ENV_ARGS[@]}"
 else
-  gcloud run jobs deploy "${INGESTION_JOB}" \
+  gcloud run jobs update "${INGESTION_JOB}" \
     --project "${PROJECT_ID}" \
     --region "${REGION}" \
-    --source "${ROOT_DIR}/backend" \
-    --command "node" \
-    --args "dist/cron/runIngestion.js" \
-    --task-timeout "45m"
+    --update-env-vars "SOCIAL_SERVICE_URL=${SOCIAL_URL}"
 fi
 
 BACKEND_URL="$(gcloud run services describe "${BACKEND_SERVICE}" \
@@ -61,13 +86,7 @@ BACKEND_URL="$(gcloud run services describe "${BACKEND_SERVICE}" \
   --region "${REGION}" \
   --format 'value(status.url)')"
 
-RAG_URL="$(gcloud run services describe "india-report-rag" \
-  --project "${PROJECT_ID}" \
-  --region "${REGION}" \
-  --format 'value(status.url)')"
-
 echo "Backend URL: ${BACKEND_URL}"
-echo "RAG URL: ${RAG_URL}"
 echo "Deploying frontend service: ${FRONTEND_SERVICE}"
 gcloud run deploy "${FRONTEND_SERVICE}" \
   --project "${PROJECT_ID}" \
@@ -83,4 +102,5 @@ FRONTEND_URL="$(gcloud run services describe "${FRONTEND_SERVICE}" \
   --format 'value(status.url)')"
 
 echo "Frontend URL: ${FRONTEND_URL}"
+
 

@@ -53,7 +53,7 @@ export async function enqueueSocialPostTask(articleId: string): Promise<void> {
  * Simulates a task queue locally by invoking the backend endpoint asynchronously.
  */
 function triggerLocalMockTask(articleId: string) {
-  const port = process.env.PORT || '5000';
+  const port = process.env.SOCIAL_PORT || '8090';
   const localUrl = `http://localhost:${port}/api/social/publish-article`;
 
   // Run asynchronously without blocking the current thread

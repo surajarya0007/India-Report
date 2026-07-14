@@ -7,7 +7,7 @@ import { scrapeArticle } from '../services/scraperService';
 import { getCopyrightFreeImage } from '../services/imageService';
 import { indexArticleInRag } from '../services/ragBridge';
 import { invalidateNewsCacheByPrefixes } from '../utils/cacheInvalidation';
-import { triggerVideoGeneration } from '../services/videoService';
+// Removed local triggerVideoGeneration import as it now runs on a separate microservice
 import {
   getIngestionStatus,
   isIngestionRunning,
@@ -359,6 +359,31 @@ async function crawlSources(sources: { title: string; url: string; description: 
 }
 
 /**
+ * Helper to notify the social media microservice to start posting pipeline
+ */
+async function triggerSocialPostingPipeline(articleId: string, prompt: string) {
+  const socialUrl = process.env.SOCIAL_SERVICE_URL || 'http://localhost:8090';
+  const url = `${socialUrl}/api/social/start`;
+  try {
+    console.log(`[Ingestion] Triggering social microservice at: ${url}`);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ articleId, prompt })
+    });
+    if (!response.ok) {
+      console.error(`[Ingestion] Social microservice returned error status: ${response.status}`);
+    } else {
+      console.log(`[Ingestion] Social microservice pipeline triggered successfully.`);
+    }
+  } catch (err) {
+    console.error('[Ingestion] Failed to contact social microservice:', err);
+  }
+}
+
+/**
  * Ingestion runner
  */
 export async function runIngestionPipeline(
@@ -442,8 +467,8 @@ export async function runIngestionPipeline(
       await indexArticleInRag(createdArticle);
       await invalidateCache(synthesis.categories, keyword);
       
-      // Trigger AI video generation (asynchronous, fires webhook when ready)
-      void triggerVideoGeneration(createdArticle.id, synthesis.aiImagePrompt);
+      // Trigger the Social Posting microservice (fire and forget)
+      void triggerSocialPostingPipeline(createdArticle.id, synthesis.aiImagePrompt);
 
       void getCopyrightFreeImage(
         synthesis.imageSearchQuery,
@@ -607,8 +632,8 @@ export async function runIngestionPipeline(
           runningExcludedKeywords.push(keyword);
           await invalidateCache(articleCats);
           
-          // Trigger AI video generation (asynchronous, fires webhook when ready)
-          void triggerVideoGeneration(createdArticle.id, synthesis.aiImagePrompt);
+          // Trigger the Social Posting microservice (fire and forget)
+          void triggerSocialPostingPipeline(createdArticle.id, synthesis.aiImagePrompt);
         } catch (keywordErr) {
           console.error(`[Ingestion] Failed synthesis for topic "${keyword}":`, keywordErr);
           errorsCount++;

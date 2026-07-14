@@ -4,7 +4,6 @@ import dotenv from 'dotenv';
 import newsRoutes from './routes/newsRoutes';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
-import socialRoutes from './routes/socialRoutes';
 
 dotenv.config();
 
@@ -96,9 +95,6 @@ app.use('/api/news', newsRoutes);
 // Mount Auth and Admin API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
-
-// Mount Social Media Queue API routes
-app.use('/api/social', socialRoutes);
 
 // Health check endpoint
 app.get('/', (req, res) => {

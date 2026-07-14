@@ -54,7 +54,7 @@ export async function triggerVideoGeneration(articleId: string, prompt: string):
  * Simulates a Fal.ai webhook callback locally.
  */
 function triggerLocalMockWebhook(articleId: string) {
-  const port = process.env.PORT || '5000';
+  const port = process.env.SOCIAL_PORT || '8090';
   const localWebhookUrl = `http://localhost:${port}/api/social/fal-webhook?articleId=${articleId}`;
 
   setTimeout(async () => {

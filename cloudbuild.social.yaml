@@ -1,0 +1,45 @@
+steps:
+  - id: build-social
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.social
+      - -t
+      - ${_IMAGE_REPO}:$SHORT_SHA
+      - .
+    dir: backend
+
+  - id: push-social
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_IMAGE_REPO}:$SHORT_SHA
+
+  - id: deploy-social
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image
+      - ${_IMAGE_REPO}:$SHORT_SHA
+      - --region
+      - ${_REGION}
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --port
+      - '8080'
+
+images:
+  - ${_IMAGE_REPO}:$SHORT_SHA
+
+substitutions:
+  _REGION: asia-south1
+  _SERVICE: india-report-social
+  _IMAGE_REPO: asia-south1-docker.pkg.dev/project-0bdd0a8e-1e7e-4477-99a/cloud-run-source-deploy/india-report-social
+
+options:
+  logging: CLOUD_LOGGING_ONLY
