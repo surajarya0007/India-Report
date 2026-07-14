@@ -12,6 +12,7 @@
     "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
+    "@google-cloud/tasks": "^6.2.3",
     "@google/generative-ai": "^0.21.0",
     "@prisma/client": "^5.14.0",
     "@types/pg": "^8.20.0",

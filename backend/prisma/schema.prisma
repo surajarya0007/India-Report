@@ -19,15 +19,34 @@ model Article {
   categories        String[] // ["Tech", "Business", "Science", "Health", "Entertainment", "Finance"]
   imageUrl          String?  // og:image extracted from the article page
   imageUrls         String[] // All scraped image URLs from the articles
+  videoUrl          String?  // Stores the AI-generated MP4 video URL
   enrichmentStatus  String   @default("complete") // "pending" | "complete"
   createdAt         DateTime @default(now())
   updatedAt         DateTime @default(now()) @updatedAt
   views             ArticleView[]
   chunks            ArticleChunk[]
+  socialPublishState SocialPublishState?
 
   @@index([keyword])
   @@index([createdAt])
   @@index([categories])
+}
+
+model SocialPublishState {
+  id              String   @id @default(uuid())
+  articleId       String   @unique
+  article         Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  xStatus         String   @default("pending") // "pending" | "success" | "failed"
+  threadsStatus   String   @default("pending") // "pending" | "success" | "failed"
+  facebookStatus  String   @default("pending") // "pending" | "success" | "failed"
+  instagramStatus String   @default("pending") // "pending" | "success" | "failed"
+  attempts        Int      @default(0)
+  lastAttempt     DateTime?
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([articleId])
 }
 
 model ArticleChunk {

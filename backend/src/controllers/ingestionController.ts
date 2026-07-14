@@ -7,6 +7,7 @@ import { scrapeArticle } from '../services/scraperService';
 import { getCopyrightFreeImage } from '../services/imageService';
 import { indexArticleInRag } from '../services/ragBridge';
 import { invalidateNewsCacheByPrefixes } from '../utils/cacheInvalidation';
+import { triggerVideoGeneration } from '../services/videoService';
 import {
   getIngestionStatus,
   isIngestionRunning,
@@ -437,11 +438,13 @@ export async function runIngestionPipeline(
         }
       });
 
-      ingestedCount++;
+      ingestedCount++;      
       await indexArticleInRag(createdArticle);
       await invalidateCache(synthesis.categories, keyword);
+      
+      // Trigger AI video generation (asynchronous, fires webhook when ready)
+      void triggerVideoGeneration(createdArticle.id, synthesis.aiImagePrompt);
 
-      // Run image enrichment in the background to avoid blocking the frontend
       void getCopyrightFreeImage(
         synthesis.imageSearchQuery,
         synthesis.categories[0] || 'News',
@@ -603,6 +606,9 @@ export async function runIngestionPipeline(
           await indexArticleInRag(createdArticle);
           runningExcludedKeywords.push(keyword);
           await invalidateCache(articleCats);
+          
+          // Trigger AI video generation (asynchronous, fires webhook when ready)
+          void triggerVideoGeneration(createdArticle.id, synthesis.aiImagePrompt);
         } catch (keywordErr) {
           console.error(`[Ingestion] Failed synthesis for topic "${keyword}":`, keywordErr);
           errorsCount++;
