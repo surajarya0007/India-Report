@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const DEFAULT_SITE_URL = 'https://dailynewsinsights.com';
+export const DEFAULT_SITE_URL = 'https://www.dailynewsinsights.com';
 
 export const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ||
