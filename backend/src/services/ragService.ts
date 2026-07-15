@@ -747,3 +747,25 @@ export function articleMatchesCategory(article: { categories?: string[] }, categ
   if (!category) return true;
   return !!article.categories?.includes(category);
 }
+
+/**
+ * Prunes article chunks that are older than a specific number of days.
+ * This keeps the database size small and optimized.
+ */
+export async function pruneOldArticleChunks(days = 7): Promise<number> {
+  console.log(`[RAG] Pruning article chunks older than ${days} days...`);
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+
+  const result = await prisma.articleChunk.deleteMany({
+    where: {
+      createdAt: {
+        lt: cutoffDate,
+      },
+    },
+  });
+
+  console.log(`[RAG] Successfully pruned ${result.count} chunks.`);
+  return result.count;
+}
+
